@@ -163,14 +163,6 @@ input:checked+.tt::before{transform:translateX(22px)}
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────
-var FB_CFG = {
-  apiKey:"AIzaSyAcBpTCS6UwIXHcaq94tRBpDvBRjcMzVwo",
-  authDomain:"go-kendra.firebaseapp.com",
-  projectId:"go-kendra",
-  storageBucket:"go-kendra.firebasestorage.app",
-  messagingSenderId:"78459469028",
-  appId:"1:78459469028:web:41e406f3a6505d745d40f1"
-};
 var APP_PW   = "gokendra";
 var LC_DATE  = "2026-05-07";
 var NC_DATE  = "2026-05-25";
@@ -228,87 +220,33 @@ var S = {v:'loading',tab:'home',obs:0,user:null,day:null,cheers:[],priv:null,bdg
 var selB = null, selT = [];
 
 // ── STORAGE ────────────────────────────────────────────
-var db = null;
 function lsGet(k){try{var v=localStorage.getItem('gk-'+k);return v?JSON.parse(v):null;}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem('gk-'+k,JSON.stringify(v));}catch(e){}}
 
-function initFirebase(){
-  try{
-    if(typeof firebase !== 'undefined'){
-      firebase.initializeApp(FB_CFG);
-      db = firebase.firestore();
-      return true;
-    }
-  }catch(e){console.warn('Firebase init failed:',e.message);}
-  return false;
+function loadAll(){
+  S.day = lsGet('day-'+TODAY) || empty();
+  if(!Array.isArray(S.day.moods)) S.day.moods = migrateMoods(S.day);
+  S.cheers = lsGet('cheers') || [];
+  var cfg = lsGet('cfg');
+  S.priv = (cfg && cfg.priv) || DEFP;
+  S.bdgs = (cfg && cfg.bdgs) || BDGS;
 }
 
-async function dbGet(col,id){
-  if(!db) return null;
-  try{var d=await db.collection(col).doc(id).get();return d.exists?d.data():null;}
-  catch(e){return null;}
-}
-async function dbSet(col,id,data){
-  if(!db) return;
-  try{await db.collection(col).doc(id).set(data,{merge:true});}
-  catch(e){console.warn('dbSet failed:',e.message);}
-}
-
-async function loadAll(){
-  try{
-    var fbReady = initFirebase();
-    if(fbReady){
-      var dayDoc = await dbGet('days',TODAY);
-      S.day = dayDoc || empty();
-      if(!Array.isArray(S.day.moods)) S.day.moods = migrateMoods(S.day);
-      var chSnap = await db.collection('cheers').orderBy('ts','desc').limit(40).get();
-      S.cheers = chSnap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-      var cfg = await dbGet('settings','app');
-      S.priv = (cfg && cfg.priv) || DEFP;
-      S.bdgs = (cfg && cfg.bdgs) || BDGS;
-    } else {
-      S.day = lsGet('day-'+TODAY) || empty();
-      if(!Array.isArray(S.day.moods)) S.day.moods = migrateMoods(S.day);
-      S.cheers = lsGet('cheers') || [];
-      var cfg2 = lsGet('cfg');
-      S.priv = (cfg2 && cfg2.priv) || DEFP;
-      S.bdgs = (cfg2 && cfg2.bdgs) || BDGS;
-    }
-  }catch(e){
-    console.error('loadAll error:',e);
-    S.day = lsGet('day-'+TODAY) || empty();
-    if(!Array.isArray(S.day.moods)) S.day.moods = migrateMoods(S.day);
-    S.cheers = lsGet('cheers') || [];
-    S.priv = DEFP; S.bdgs = BDGS;
-  }
-}
-
-async function saveDay(){
+function saveDay(){
   if(!S.day) return;
   lsSet('day-'+TODAY, S.day);
-  if(db) dbSet('days',TODAY,S.day);
 }
-async function saveCfg(){
+function saveCfg(){
   lsSet('cfg',{priv:S.priv,bdgs:S.bdgs});
-  if(db) dbSet('settings','app',{priv:S.priv,bdgs:S.bdgs});
 }
-async function loadCalDay(dt){
+function loadCalDay(dt){
   if(S.calD[dt]!==undefined) return;
-  var v = lsGet('day-'+dt);
-  if(!v && db){
-    v = await dbGet('days',dt);
-    if(v) lsSet('day-'+dt,v);
-  }
-  S.calD[dt] = v || null;
+  S.calD[dt] = lsGet('day-'+dt) || null;
 }
-async function addCheer(name,msg){
+function addCheer(name,msg){
   var c = {name:name,msg:msg,ts:new Date().toISOString()};
   S.cheers = [c].concat(S.cheers||[]).slice(0,40);
   lsSet('cheers',S.cheers);
-  if(db){
-    try{await db.collection('cheers').add({name:name,msg:msg,ts:firebase.firestore.FieldValue.serverTimestamp()});}
-    catch(e){}
-  }
 }
 
 // ── DATA HELPERS ───────────────────────────────────────
@@ -469,7 +407,7 @@ function vObD(){
     +'<div style="font-size:15px;color:var(--ink2);line-height:1.8;margin-bottom:40px;">My peeps are ready.<br>My squad is cheering.<br>Let\'s get this thing.</div>'
     +'<button class="btn btn-ink" onclick="finOb()">Go Kendra <i class="fa-solid fa-rocket"></i></button></div>';
 }
-async function finOb(){localStorage.setItem('gk-ob','1');S.priv=S.priv||DEFP;try{await saveCfg();}catch(e){}S.v='app';R();}
+function finOb(){localStorage.setItem('gk-ob','1');S.priv=S.priv||DEFP;try{saveCfg();}catch(e){}S.v='app';R();}
 
 // ── HOME ───────────────────────────────────────────────
 function vHome(){
@@ -613,13 +551,13 @@ function vCin(){
     +'</div></div>';
 }
 function setCinMood(i){S.cinD.mood=i;R();}
-async function saveCin(){
+function saveCin(){
   if(S.cinD.mood===null) return;
   S.day=S.day||empty();
   if(!Array.isArray(S.day.moods)) S.day.moods=[];
   var entry={id:Date.now(),ts:new Date().toISOString(),mood:S.cinD.mood,nausea:S.cinD.nausea,pain:S.cinD.pain,energy:S.cinD.energy,notes:S.cinD.notes};
   S.day.moods.push(entry);
-  await saveDay();S.cin=false;R();
+  saveDay();S.cin=false;R();
   toast('Check-in saved — '+ML[entry.mood]+' at '+fmtT(entry.ts));
 }
 
@@ -804,12 +742,12 @@ function tickWo(){
   }
   R();
 }
-async function doneWo(){
+function doneWo(){
   clearInterval(S.woi);
   var dur=Math.round((Date.now()-S.wo.total)/60000),done=S.wo.ex.length,type=S.wo.type;
   S.wo=null;S.day=S.day||empty();
   S.day.wos=(S.day.wos||[]).concat({type:type,dur:dur,done:done});
-  await saveDay();R();
+  saveDay();R();
   toast(type==='mobility'?'Mobility done. Peepsqueak is proud.':'Strength done. Peepsi is proud.');
 }
 function skipEx(){if(!S.wo)return;S.wo.i++;if(S.wo.i>=S.wo.ex.length){doneWo();return;}S.wo.set=1;S.wo.ph='ready';R();}
@@ -965,18 +903,18 @@ function vSquad(){
 }
 
 // ── EVENT HANDLERS ─────────────────────────────────────
-async function togMed(p){S.day=S.day||empty();S.day.meds[p]=!S.day.meds[p];await saveDay();R();if(S.day.meds[p])toast(p==='am'?'Morning meds done.':'Evening meds done.');}
-async function addFood(item){S.day=S.day||empty();(S.day.food=S.day.food||[]).push({item:item,kd:undefined});await saveDay();R();}
-async function addCustomFood(){var e=document.getElementById('fc');if(!e||!e.value.trim())return;await addFood(e.value.trim());}
-async function keptDown(i,v){if(!S.day||!S.day.food)return;S.day.food[i].kd=v;await saveDay();R();toast(v?'Kept it down!':'Rinse and wait 30 min.');}
-async function rmFood(i){if(!S.day||!S.day.food)return;S.day.food.splice(i,1);await saveDay();R();}
+function togMed(p){S.day=S.day||empty();S.day.meds[p]=!S.day.meds[p];saveDay();R();if(S.day.meds[p])toast(p==='am'?'Morning meds done.':'Evening meds done.');}
+function addFood(item){S.day=S.day||empty();(S.day.food=S.day.food||[]).push({item:item,kd:undefined});saveDay();R();}
+function addCustomFood(){var e=document.getElementById('fc');if(!e||!e.value.trim())return;addFood(e.value.trim());}
+function keptDown(i,v){if(!S.day||!S.day.food)return;S.day.food[i].kd=v;saveDay();R();toast(v?'Kept it down!':'Rinse and wait 30 min.');}
+function rmFood(i){if(!S.day||!S.day.food)return;S.day.food.splice(i,1);saveDay();R();}
 function selBris(n){selB=n;var bs=document.querySelectorAll('.bb');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');var el=document.getElementById('b'+n);if(el)el.classList.add('on');}
 function togTag(id){var idx=selT.indexOf(id);if(idx>=0)selT.splice(idx,1);else selT.push(id);var els=document.querySelectorAll('[id^=dt]');for(var i=0;i<els.length;i++)els[i].classList.toggle('on',selT.indexOf(els[i].id.replace('dt',''))>=0);}
-async function logDemon(){
+function logDemon(){
   if(selB===null){toast('Pick a Bristol type first');return;}
   S.day=S.day||empty();(S.day.demon=S.day.demon||[]).push({b:selB,tags:selT.slice()});
   var sb=selB,st=selT.slice();
-  await saveDay();selB=null;selT=[];
+  saveDay();selB=null;selT=[];
   var msg=null;
   if(st.indexOf('spicy')>=0||sb>=6) msg='Lava mode. Vaseline barrier cream, Pedialyte, avoid acidic foods.';
   else if(st.indexOf('grumbles')>=0) msg='Warning system on. Stay close, keep loperamide handy.';
@@ -986,20 +924,20 @@ async function logDemon(){
   if(msg){var te=document.getElementById('demon-tip');if(te)te.innerHTML='<div class="card mt3" style="background:var(--pul);border-color:var(--pum);"><div style="font-size:14px;line-height:1.6;">'+msg+'</div></div>';}
   toast('Demon logged.');
 }
-async function rmDemon(i){if(!S.day||!S.day.demon)return;S.day.demon.splice(i,1);await saveDay();R();}
-async function setHyd(v){S.day=S.day||empty();S.day.hyd=v;await saveDay();R();}
-async function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0)+d);await saveDay();R();if(S.day.hyd>=8)toast('Hydration hero!');}
-async function addLaps(d){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.laps=Math.max(0,(S.day.move.laps||0)+d);await saveDay();R();if(S.day.move.laps>=2)toast('2 laps done!');}
-async function togOut(v){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.out=v;await saveDay();R();if(v)toast('Outside achieved.');}
-async function saveDist(){var e=document.getElementById('dst');if(!e)return;S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.dist=e.value.trim();await saveDay();toast('Distance saved.');}
-async function sendCheer(){
+function rmDemon(i){if(!S.day||!S.day.demon)return;S.day.demon.splice(i,1);saveDay();R();}
+function setHyd(v){S.day=S.day||empty();S.day.hyd=v;saveDay();R();}
+function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0)+d);saveDay();R();if(S.day.hyd>=8)toast('Hydration hero!');}
+function addLaps(d){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.laps=Math.max(0,(S.day.move.laps||0)+d);saveDay();R();if(S.day.move.laps>=2)toast('2 laps done!');}
+function togOut(v){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.out=v;saveDay();R();if(v)toast('Outside achieved.');}
+function saveDist(){var e=document.getElementById('dst');if(!e)return;S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.dist=e.value.trim();saveDay();toast('Distance saved.');}
+function sendCheer(){
   var n=(document.getElementById('cn')||{}).value||'';
   var m=(document.getElementById('cm')||{}).value||'';
   if(!n.trim()||!m.trim()){toast('Name and message needed');return;}
-  try{await addCheer(n.trim(),m.trim());R();toast('Cheer sent!');}
+  try{addCheer(n.trim(),m.trim());R();toast('Cheer sent!');}
   catch(e){toast('Could not send, check connection');}
 }
-function selDay(dt){S.cd=dt;loadCalDay(dt).then(function(){R();});}
+function selDay(dt){S.cd=dt;loadCalDay(dt);R();}
 function go(tab){S.tab=tab;S.lt='food';R();}
 
 function doExport(){
@@ -1024,12 +962,12 @@ function doExport(){
 function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.remove('show');void t.offsetWidth;t.classList.add('show');}
 
 // ── INIT ───────────────────────────────────────────────
-async function init(){
+function init(){
   try{
     var saved=localStorage.getItem('gk-u');
     if(saved){try{S.user=JSON.parse(saved);}catch(e){}}
     R();
-    await loadAll();
+    loadAll();
     S.v=S.user?'app':'pw';
     R();
   }catch(e){
@@ -1043,8 +981,6 @@ async function init(){
 init();
 </script>
 
-<!-- Firebase (loaded AFTER inline storage fallbacks) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" onerror="console.warn('Firebase CDN failed')"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" onerror="console.warn('Firebase CDN failed')"></script>
 </body>
 </html>
