@@ -412,19 +412,19 @@ function pwV(){
   return '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--s4);">'+
   '<div style="width:64px;height:64px;margin-bottom:var(--s5);">'+SL+'</div>'+
   '<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--purple);margin-bottom:var(--s2);">Go Kendra</div>'+
-  '<div style="font-size:14px;color:var(--ink-2);margin-bottom:var(--s7);">kendra's comeback tracker</div>'+
+  '<div style="font-size:14px;color:var(--ink-2);margin-bottom:var(--s7);">kendra\'s comeback tracker</div>'+
   '<div style="width:100%;max-width:320px;">'+
   '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Your name</div>'+
   '<input class="input mb3" type="text" id="nm" placeholder="naur, john, mom…" autocomplete="off">'+
   '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Secret word</div>'+
   '<input class="input mb4" type="password" id="pw" placeholder="••••••••" autocomplete="off">'+
-  '<button class="btn btn-primary" onclick="doLogin()">Let's go <i class="fa-solid fa-arrow-right"></i></button>'+
+  '<button class="btn btn-primary" onclick="doLogin()">Let\'s go <i class="fa-solid fa-arrow-right"></i></button>'+
   '<div id="err" style="display:none;text-align:center;color:var(--rose);font-size:14px;margin-top:var(--s3);">Wrong word — try again</div>'+
   '</div></div>';
 }
 function doLogin(){
   const n=(document.getElementById('nm')||{}).value||'',p=(document.getElementById('pw')||{}).value||'';
-  if(!n.trim()){toast('What's your name?');return;}
+  if(!n.trim()){toast('What\'s your name?');return;}
   if(p.trim().toLowerCase()!==APP_PW){const e=document.getElementById('err');if(e)e.style.display='block';return;}
   S.user={name:n.trim(),isk:n.toLowerCase().includes('kendra')||n.toLowerCase().includes('ken')};
   localStorage.setItem('gk-u',JSON.stringify(S.user));
@@ -462,8 +462,8 @@ function savePrivOb(){const ks=['poop','detail','mood','sym','food','wo'];const 
 function obDone(){
   return '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:var(--s4);">'+
   '<div style="width:72px;height:72px;margin:0 auto var(--s5);">'+SL+'</div>'+
-  '<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--purple);margin-bottom:var(--s3);">You're all set</div>'+
-  '<div style="font-size:15px;color:var(--ink-2);line-height:1.8;margin-bottom:var(--s6);">My peeps are ready.<br>My squad is cheering.<br>Let's get this thing.</div>'+
+  '<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--purple);margin-bottom:var(--s3);">You\'re all set</div>'+
+  '<div style="font-size:15px;color:var(--ink-2);line-height:1.8;margin-bottom:var(--s6);">My peeps are ready.<br>My squad is cheering.<br>Let\'s get this thing.</div>'+
   '<button class="btn btn-primary" onclick="finOb()">Go Kendra <i class="fa-solid fa-rocket"></i></button></div>';
 }
 async function finOb(){localStorage.setItem('gk-ob','1');S.priv=S.priv||DEF_PRIV;try{await saveCfg();}catch{}S.v='app';R();}
@@ -530,7 +530,7 @@ function homeV(){
     (m.notes?'<div class="tl-sub" style="font-style:italic;">"'+m.notes+'"</div>':'')+
     '</div></div>'
     ).join('');
-    timeline='<div class="sec px"><div class="sh"><div class="t-label">Today's mood log</div>'+(moods.length>4?'<button style="background:none;border:none;font-size:12px;font-weight:600;color:var(--purple);cursor:pointer;" onclick="go('log')">View all</button>':'')+
+    timeline='<div class="sec px"><div class="sh"><div class="t-label">Today\'s mood log</div>'+(moods.length>4?'<button style="background:none;border:none;font-size:12px;font-weight:600;color:var(--purple);cursor:pointer;" onclick="go('log')">View all</button>':'')+
     '</div><div class="card" style="padding:var(--s3) var(--s4);"><div class="timeline">'+items+'</div></div></div>';
   }
 
@@ -660,7 +660,7 @@ function foodLog(){
   const d=S.day||empty(),food=d.food||[];
   return '<div>'+
   '<div style="font-family:var(--serif);font-size:18px;margin-bottom:var(--s3);">What did I eat?</div>'+
-  '<div class="f-pills mb4">'+FOOD_LIST.map(f=>'<button class="f-pill" onclick="addFood(''+f.replace(/'/g,"\'")+'')" >'+f+'</button>').join('')+'</div>'+
+  '<div class="f-pills mb4">'+FOOD_LIST.map(function(f){return '<button class="f-pill" data-food="'+f.replace(/"/g,"&quot;")+'" onclick="pickFood(this.dataset.food)">'+f+'</button>';}).join('')+'</div>'+
   '<div style="display:flex;gap:var(--s2);margin-bottom:var(--s5);"><input class="input" type="text" id="fc" placeholder="Something else…" style="flex:1;"><button class="btn btn-outline btn-sm btn-auto" onclick="addCustomFood()">Add</button></div>'+
   (food.length?'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Logged today</div>'+food.map((f,i)=>'<div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:var(--s3) var(--s4);"><div><div style="font-size:14px;font-weight:600;">'+f.item+'</div>'+(f.kd===true?'<div style="font-size:12px;color:var(--sage);font-weight:500;">Kept it down</div>':f.kd===false?'<div style="font-size:12px;color:var(--rose);font-weight:500;">Lost it</div>':'')+'</div><div style="display:flex;gap:var(--s2);align-items:center;">'+(f.kd===undefined?'<button class="btn btn-sm btn-auto" style="height:36px;background:var(--sage-l);color:var(--sage);border:1px solid rgba(74,140,111,.25);" onclick="keptDown('+i+',true)">Kept</button><button class="btn btn-sm btn-auto" style="height:36px;background:var(--rose-l);color:var(--rose);border:1px solid rgba(201,80,104,.25);" onclick="keptDown('+i+',false)">Lost</button>':'')+
   '<button style="background:none;border:none;cursor:pointer;color:var(--ink-3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmFood('+i+')"><i class="fa-regular fa-xmark"></i></button></div></div>').join(''):
@@ -692,9 +692,9 @@ function demonLog(){
   '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Bristol Scale (1–7)</div>'+
   '<div class="bristol-g mb4">'+BRISTOL.map(b=>'<button class="b-btn'+(selB===b.n?' on':'')+'" id="b'+b.n+'" onclick="selBris('+b.n+')"><div class="b-num">'+b.n+'</div><div class="b-lbl">'+b.l+'</div></button>').join('')+'</div>'+
   '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Tags</div>'+
-  '<div class="chips mb4">'+DTAGS.map(t=>'<div class="chip'+(selT.includes(t.id)?' on':'')+'" id="dt'+t.id+'" onclick="togTag(''+t.id+'')">'+t.l+'</div>').join('')+'</div>'+
+  '<div class="chips mb4">'+DTAGS.map(t=>'<div class="chip'+(selT.includes(t.id)?' on':'')+'" id="dt'+t.id+'" data-tag="'+t.id+'" onclick="togTag(this.dataset.tag)">'+t.l+'</div>').join('')+'</div>'+
   '<button class="btn btn-primary mb4" onclick="logDemon()">Log demon</button>'+
-  (dem.length?'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Today's visits</div>'+
+  (dem.length?'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);margin-bottom:var(--s2);">Today\'s visits</div>'+
   dem.map((de,i)=>{const b=BRISTOL.find(x=>x.n===de.b);return '<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:var(--s3) var(--s4);"><div><div style="font-size:14px;font-weight:600;">Bristol '+de.b+' — '+(b?b.l:'?')+(de.tags&&de.tags.includes('spicy')?' · Spicy':'')+(de.tags&&de.tags.includes('winner')?' · Solid W':'')+'</div><div style="font-size:12px;color:var(--ink-2);">'+(de.tags&&de.tags.length?de.tags.join(' · '):'No tags')+'</div></div><button style="background:none;border:none;cursor:pointer;color:var(--ink-3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmDemon('+i+')"><i class="fa-regular fa-xmark"></i></button></div>';}).join(''):'')+
   '<div id="demon-tip"></div><div style="height:var(--s5);"></div></div>';
 }
@@ -874,7 +874,7 @@ function squadV(){
   '<div class="ph" style="background:var(--teal-l);">'+
   '<div style="display:flex;align-items:center;gap:var(--s3);">'+
   '<div style="width:40px;height:40px;">'+peep(IMG_PSQ,40,'Q','var(--teal)')+'</div>'+
-  '<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;">Peepsqueak's Corner</div>'+
+  '<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;">Peepsqueak\'s Corner</div>'+
   '<div style="font-size:12px;color:var(--ink-3);">'+S.cheers.length+' cheers in the squad</div></div></div></div>'+
   '<div class="px">'+
   '<div class="sec"><div class="t-label mb2">What my squad sees today</div>'+
@@ -904,6 +904,7 @@ function squadV(){
 
 // ═══ EVENT HANDLERS ════════════════════════════════════
 async function togMed(p){S.day=S.day||empty();S.day.meds[p]=!S.day.meds[p];await saveDay();R();if(S.day.meds[p])toast(p==='am'?'Morning meds done.':'Evening meds done.');}
+function pickFood(item){addFood(item);}
 async function addFood(item){S.day=S.day||empty();(S.day.food=S.day.food||[]).push({item,kd:undefined});await saveDay();R();}
 async function addCustomFood(){const e=document.getElementById('fc');if(!e?.value?.trim())return;await addFood(e.value.trim());}
 async function keptDown(i,v){if(!S.day?.food)return;S.day.food[i].kd=v;await saveDay();R();toast(v?'Kept it down!':'Ugh, the worst. Rinse and wait.');}
@@ -928,7 +929,7 @@ async function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0
 async function addLaps(d){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.laps=Math.max(0,(S.day.move.laps||0)+d);await saveDay();R();if(S.day.move.laps>=2)toast('2 laps — Hall of Fame!');}
 async function togOut(v){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.out=v;await saveDay();R();if(v)toast('Outside achieved. Fresh air is actual medicine.');}
 async function saveDist(){const e=document.getElementById('dst');if(!e)return;S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.dist=e.value.trim();await saveDay();toast('Distance saved.');}
-async function sendCheer(){const n=(document.getElementById('cn')||{}).value||'',m=(document.getElementById('cm')||{}).value||'';if(!n.trim()||!m.trim()){toast('Name and message needed');return;}try{await addCheerDB(n.trim(),m.trim());R();toast('Cheer sent!');}catch{toast('Couldn't send — check connection');}}
+async function sendCheer(){const n=(document.getElementById('cn')||{}).value||'',m=(document.getElementById('cm')||{}).value||'';if(!n.trim()||!m.trim()){toast('Name and message needed');return;}try{await addCheerDB(n.trim(),m.trim());R();toast('Cheer sent!');}catch{toast('Couldn\'t send — check connection');}}
 function selDay(dt){S.cd=dt;loadCalDay(dt).then(()=>R());}
 function go(tab){S.tab=tab;S.lt='food';R();}
 
@@ -942,10 +943,8 @@ function doExport(){
   if((d.demon||[]).length){lines.push('');lines.push('Bowel movements ('+d.demon.length+'x):');d.demon.forEach(de=>{const b=BRISTOL.find(x=>x.n===de.b);lines.push('  · Bristol '+de.b+' ('+(b?.l||'?')+') — '+((de.tags||[]).join(', ')||'no tags'));});}
   const mv=d.move||{};if(mv.laps)lines.push('Laps: '+mv.laps);if(mv.dist)lines.push('Distance: '+mv.dist);if(mv.out)lines.push('Went outside: yes');
   if((d.wos||[]).length)lines.push('Training: '+d.wos.map(w=>w.type+' ('+w.dur+'m)').join(', '));
-  if(d.notes)lines.push('
-Notes: '+d.notes);
-  const txt=lines.join('
-');
+  if(d.notes)lines.push('\nNotes: '+d.notes);
+  const txt=lines.join('\n');
   const el=document.getElementById('exp-out');
   if(el){el.style.display='block';el.innerHTML='<div style="background:var(--raised);border-radius:var(--r2);padding:var(--s4);border:1.5px dashed var(--divider);font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:monospace;color:var(--ink);margin-bottom:var(--s3);">'+txt+'</div><button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(()=>toast('Copied!'))"><i class="fa-regular fa-copy"></i> Copy to clipboard</button>';}
 }
