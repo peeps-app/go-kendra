@@ -268,6 +268,17 @@ input:checked+.tog-track::before{transform:translateX(22px)}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
+// Global error trap — show something instead of white screen
+window.onerror = function(msg, src, line, col, err) {
+  document.getElementById('app').innerHTML = '<div style="padding:40px;font-family:sans-serif;max-width:400px;margin:0 auto;">' +
+    '<div style="font-size:32px;margin-bottom:16px;">⚠️</div>' +
+    '<div style="font-size:18px;font-weight:700;margin-bottom:8px;">Something went wrong</div>' +
+    '<div style="font-size:14px;color:#666;margin-bottom:16px;">' + msg + '</div>' +
+    '<div style="font-size:12px;color:#999;">Line ' + line + ' · ' + (src||'').split('/').pop() + '</div>' +
+    '</div>';
+  return false;
+};
+
 // ═══ CONFIG ═══════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:"AIzaSyAcBpTCS6UwIXHcaq94tRBpDvBRjcMzVwo",
@@ -363,23 +374,82 @@ function moodTip(){
 }
 
 // ═══ FIREBASE ══════════════════════════════════════════
-firebase.initializeApp(FIREBASE_CONFIG);
-const db=firebase.firestore();
+// Storage backend — Firebase when available, window.storage as fallback
+let db = null;
+let useLocalStorage = false;
+try {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+} catch(e) {
+  console.warn('Firebase unavailable, using local storage fallback:', e.message);
+  useLocalStorage = true;
+}
+
+// Local storage helpers (fallback)
+const lsGet = (k) => { try { const v=localStorage.getItem('gk-'+k); return v?JSON.parse(v):null; } catch{return null;} };
+const lsSet = (k,v) => { try { localStorage.setItem('gk-'+k, JSON.stringify(v)); } catch{} };
+
+// Window storage helpers (Claude artifact)
+const wsGet = async (k) => { try { const r=await window.storage.get('gk-'+k,true); return r?JSON.parse(r.value):null; } catch{return null;} };
+const wsSet = async (k,v) => { try { await window.storage.set('gk-'+k,JSON.stringify(v),true); } catch{} };
 
 async function loadAll(){
   try{
-    const[dDoc,cSnap,cfgDoc]=await Promise.all([db.collection('days').doc(TODAY).get(),db.collection('cheers').orderBy('ts','desc').limit(40).get(),db.collection('settings').doc('app').get()]);
-    S.day=dDoc.exists?dDoc.data():empty();
-    if(!S.day.moods) S.day.moods=getMoods(S.day); // migrate legacy
-    S.cheers=cSnap.docs.map(d=>({id:d.id,...d.data()}));
-    if(cfgDoc.exists){const d=cfgDoc.data();S.priv=d.priv||DEF_PRIV;S.bdgs=d.bdgs||BADGES;}
-    else{S.priv=DEF_PRIV;S.bdgs=BADGES;}
-  }catch(e){S.day=empty();S.priv=DEF_PRIV;S.bdgs=BADGES;}
+    if(!useLocalStorage && db){
+      const[dDoc,cSnap,cfgDoc]=await Promise.all([db.collection('days').doc(TODAY).get(),db.collection('cheers').orderBy('ts','desc').limit(40).get(),db.collection('settings').doc('app').get()]);
+      S.day=dDoc.exists?dDoc.data():empty();
+      if(!S.day.moods) S.day.moods=getMoods(S.day);
+      S.cheers=cSnap.docs.map(d=>({id:d.id,...d.data()}));
+      if(cfgDoc.exists){const d=cfgDoc.data();S.priv=d.priv||DEF_PRIV;S.bdgs=d.bdgs||BADGES;}
+      else{S.priv=DEF_PRIV;S.bdgs=BADGES;}
+    } else {
+      // Fallback: try window.storage first, then localStorage
+      const ws = typeof window.storage !== 'undefined';
+      S.day = ws ? (await wsGet('day-'+TODAY)||empty()) : (lsGet('day-'+TODAY)||empty());
+      if(!S.day.moods) S.day.moods=getMoods(S.day);
+      S.cheers = ws ? (await wsGet('cheers')||[]) : (lsGet('cheers')||[]);
+      const cfg = ws ? await wsGet('cfg') : lsGet('cfg');
+      S.priv = cfg?.priv||DEF_PRIV;
+      S.bdgs = cfg?.bdgs||BADGES;
+    }
+  }catch(e){console.error('loadAll error:',e);S.day=empty();S.priv=DEF_PRIV;S.bdgs=BADGES;}
 }
-async function saveDay(){try{await db.collection('days').doc(TODAY).set(S.day,{merge:true});}catch(e){toast('Save failed — check connection');}}
-async function saveCfg(){try{await db.collection('settings').doc('app').set({priv:S.priv,bdgs:S.bdgs},{merge:true});}catch{}}
-async function addCheerDB(name,msg){await db.collection('cheers').add({name,msg,ts:firebase.firestore.FieldValue.serverTimestamp()});const s=await db.collection('cheers').orderBy('ts','desc').limit(40).get();S.cheers=s.docs.map(d=>({id:d.id,...d.data()}));}
-async function loadCalDay(dt){if(S.calD[dt]!==undefined)return;try{const d=await db.collection('days').doc(dt).get();S.calD[dt]=d.exists?d.data():null;}catch{S.calD[dt]=null;}}
+async function saveDay(){
+  try{
+    if(!useLocalStorage && db){ await db.collection('days').doc(TODAY).set(S.day,{merge:true}); }
+    else if(typeof window.storage !== 'undefined'){ await wsSet('day-'+TODAY, S.day); }
+    else { lsSet('day-'+TODAY, S.day); }
+  }catch(e){console.error('saveDay:',e);}
+}
+async function saveCfg(){
+  try{
+    if(!useLocalStorage && db){ await db.collection('settings').doc('app').set({priv:S.priv,bdgs:S.bdgs},{merge:true}); }
+    else if(typeof window.storage !== 'undefined'){ await wsSet('cfg',{priv:S.priv,bdgs:S.bdgs}); }
+    else { lsSet('cfg',{priv:S.priv,bdgs:S.bdgs}); }
+  }catch{}
+}
+async function addCheerDB(name,msg){
+  try{
+    if(!useLocalStorage && db){
+      await db.collection('cheers').add({name,msg,ts:firebase.firestore.FieldValue.serverTimestamp()});
+      const s=await db.collection('cheers').orderBy('ts','desc').limit(40).get();
+      S.cheers=s.docs.map(d=>({id:d.id,...d.data()}));
+    } else {
+      const cheer={name,msg,ts:new Date().toISOString()};
+      S.cheers=[cheer,...(S.cheers||[])].slice(0,40);
+      if(typeof window.storage!=='undefined') await wsSet('cheers',S.cheers);
+      else lsSet('cheers',S.cheers);
+    }
+  }catch(e){console.error('addCheer:',e);}
+}
+async function loadCalDay(dt){
+  if(S.calD[dt]!==undefined)return;
+  try{
+    if(!useLocalStorage && db){const d=await db.collection('days').doc(dt).get();S.calD[dt]=d.exists?d.data():null;}
+    else if(typeof window.storage!=='undefined'){S.calD[dt]=await wsGet('day-'+dt);}
+    else{S.calD[dt]=lsGet('day-'+dt);}
+  }catch{S.calD[dt]=null;}
+}
 
 // ═══ RENDER ════════════════════════════════════════════
 function R(){
