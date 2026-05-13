@@ -149,13 +149,9 @@ input:checked+.tt::before{transform:translateX(22px)}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 .fi{animation:fadeIn .22s ease}
 
-/* Lucide icon sizing */
-[data-lucide], i[data-lucide] { display:inline-flex; align-items:center; justify-content:center; }
-i[data-lucide] svg { width:1em; height:1em; stroke:currentColor; fill:none; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
-/* Nav icons slightly larger */
-.nb i[data-lucide] svg { width:19px; height:19px; }
-/* Stat tile icons */
-.si svg { width:16px; height:16px; vertical-align:middle; }
+.nb svg{stroke:currentColor;display:block;}
+.nb.on svg{stroke:var(--pu);}
+.btn svg{vertical-align:middle;flex-shrink:0;}
 
 /* ── CONFETTI ─────────────────────────────────────────── */
 .confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;}
@@ -166,17 +162,16 @@ i[data-lucide] svg { width:1em; height:1em; stroke:currentColor; fill:none; stro
   100%{transform:translateY(100vh) rotate(720deg) scale(.6);opacity:0}
 }
 </style>
-<script src="https://unpkg.com/lucide@0.358.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 <div id="app"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;"><div style="width:40px;height:40px;border-radius:50%;border:3px solid var(--pu);border-top-color:transparent;animation:pulse 1s linear infinite;"></div></div></div>
 <div id="toast"></div>
 <div id="nav" style="display:none">
-  <button class="nb" data-t="home"  onclick="go('home')"><i data-lucide="regular" ></i>Today</button>
-  <button class="nb" data-t="log"   onclick="go('log')"><i data-lucide="regular" ></i>Log</button>
-  <button class="nb" data-t="train" onclick="go('train')"><i data-lucide="regular" ></i>Train</button>
-  <button class="nb" data-t="cal"   onclick="go('cal')"><i data-lucide="regular" ></i>Calendar</button>
-  <button class="nb" data-t="squad" onclick="go('squad')"><i data-lucide="regular" ></i>Squad</button>
+  <button class="nb" data-t="home"  onclick="go('home')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Today</button>
+  <button class="nb" data-t="log"   onclick="go('log')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Log</button>
+  <button class="nb" data-t="train" onclick="go('train')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Train</button>
+  <button class="nb" data-t="cal"   onclick="go('cal')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Calendar</button>
+  <button class="nb" data-t="squad" onclick="go('squad')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Squad</button>
 </div>
 
 <script>
@@ -185,8 +180,8 @@ var PW_PATIENT = "gokendra";  // Kendra + Naur
 var PW_CARE    = "careteam";   // Care team — medical portal
 var PW_FRIENDS = "gopeeps";    // Friends — cheer + wishlist
 var WISHLIST_URL = "";         // Paste Amazon wishlist URL here
-var LC_DATE  = "2026-05-07";
-var NC_DATE  = "2026-05-25";
+var LC_DATE  = localStorage.getItem('gk-lc') || "2026-05-07";
+var NC_DATE  = localStorage.getItem('gk-nc') || "2026-05-25";
 
 // ── CONSTANTS ──────────────────────────────────────────
 var MC  = ['#c95068','#c9920a','#7b8fa8','#2ebfa5','#4a8c6f'];
@@ -215,29 +210,31 @@ var STR = [
   {n:"Standing marches",dur:30,u:"sec",note:"hold IV pole",tip:"almost done, so proud"}
 ];
 var BDGS = [
-  {i:"star",n:"She Did It",d:"First bowel movement",e:true},
-  {i:"star",n:"Flow State",d:"First spontaneous pee",e:true},
-  {i:"star",n:"Tube Free",d:"NGT removed",e:true},
-  {i:"star",n:"Pain Boss",d:"Off the PCA pump",e:true},
-  {i:"star",n:"Fresh Air",d:"Made it outside",e:true},
-  {i:"star",n:"Pancake Legend",d:"Those chocolate banana pancakes",e:true},
-  {i:"star",n:"Step Queen",d:"10k steps in hospital",e:true},
-  {i:"lock",n:"Tummy Wins",d:"Kept a meal down",e:false},
-  {i:"lock",n:"Hydration Hero",d:"8 glasses in a day",e:false},
-  {i:"lock",n:"Peepsi Approved",d:"Completed a workout",e:false},
-  {i:"lock",n:"Hall of Fame",d:"Walked 2 hallway laps",e:false},
-  {i:"lock",n:"Nadir Survivor",d:"Tough week survived",e:false},
-  {i:"lock",n:"Cycle Complete",d:"Full GemTax cycle",e:false},
-  {i:"lock",n:"7-Day Streak",d:"Logged 7 days in a row",e:false},
-  {i:"lock",n:"Home Sweet Home",d:"Discharged - week 1",e:false}
+  {ico:"droplet",  color:"#8956FF", n:"The OG Pewp",         d:"First bowel movement",            e:true},
+  {ico:"droplets", color:"#4A7DFF", n:"Tinkle Queen",         d:"First spontaneous tinkle",            e:true},
+  {ico:"sparkles", color:"#2ebfa5", n:"Free as a Bird",       d:"NGT removed — no more nose tube",  e:true},
+  {ico:"circlecheck",color:"#3A9E78",n:"No Pump No Problem",  d:"Off the PCA pump entirely",        e:true},
+  {ico:"sun",      color:"#D4920A", n:"Vitamin D",            d:"Made it outside",                  e:true},
+  {ico:"utensils", color:"#E8546A", n:"Pancake Legend",       d:"Those chocolate banana pancakes",  e:true},
+  {ico:"activity", color:"#8956FF", n:"Step Queen",           d:"10k steps in the hospital",        e:true},
+  {ico:"circlecheck",color:"#3A9E78",n:"Solid Gold",          d:"Kept a meal down",                 e:false},
+  {ico:"droplet",  color:"#4A7DFF", n:"Sippin Champion",      d:"8 glasses in a day",               e:false},
+  {ico:"dumbbell", color:"#4A7DFF", n:"Sweat Equity",         d:"Completed a strength circuit w/ Peepsi", e:false},
+  {ico:"activity", color:"#2ebfa5", n:"Loose & Limber",       d:"Completed a mobility circuit w/ Peepsqueak", e:false},
+  {ico:"house",    color:"#8956FF", n:"Hall Monitor",         d:"Walked 2 hallway laps",            e:false},
+  {ico:"heart",    color:"#E8546A", n:"Feelin Pewped",        d:"Got through the tough nadir week", e:false},
+  {ico:"star",     color:"#D4920A", n:"Full Lap",             d:"Full GemTax cycle done",           e:false},
+  {ico:"calendar", color:"#3A9E78", n:"Week Slayed",          d:"Logged 7 days in a row",           e:false},
+  {ico:"sparkles", color:"#8956FF", n:"Home Sweet Home",      d:"Discharged — week 1 done",         e:false}
 ];
 var DEFP = {poop:true,detail:false,mood:true,sym:true,food:true,wo:true};
 var TODAY = new Date().toISOString().split('T')[0];
 var LC = new Date(LC_DATE);
 var NC = new Date(NC_DATE);
+function recomputeCycleDates(){LC=new Date(localStorage.getItem('gk-lc')||LC_DATE);NC=new Date(localStorage.getItem('gk-nc')||NC_DATE);}
 
 // ── STATE ──────────────────────────────────────────────
-var S = {v:'loading',tab:'home',obs:0,user:null,role:'patient',day:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false};
+var S = {v:'loading',tab:'home',obs:0,user:null,role:'patient',day:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false,foodQ:'',calQ:''};
 var selB = null, selT = [];
 
 // ── STORAGE ────────────────────────────────────────────
@@ -298,6 +295,55 @@ function cycle(){
   return {day:day,tot:tot,dtn:dtn,pct:pct,z:z,zc:zc,msg:msg,bg:bg};
 }
 
+
+// ── INLINE ICONS ─────────────────────────────────────
+var ICONS={
+house:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+clipboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="16" y2="11"/><line x1="12" y1="15" x2="16" y2="15"/><line x1="8" y1="11" x2="8.01" y2="11"/></svg>',
+dumbbell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 17.5h11M3 10.5h18M3 13.5h18"/><rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><rect x="6" y="5" width="3" height="14" rx="1"/><rect x="15" y="5" width="3" height="14" rx="1"/></svg>',
+calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+sparkles:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M5 3l.75 2.25L8 6l-2.25.75L5 9l-.75-2.25L2 6l2.25-.75z"/><path d="M19 15l.75 2.25L22 18l-2.25.75L19 21l-.75-2.25L16 18l2.25-.75z"/></svg>',
+pill:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/></svg>',
+utensils:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>',
+droplet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>',
+smile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+xmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+arrowright:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+chevright:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+chevleft:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+pen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+filetext:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+circlecheck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+starfill:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+rocket:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
+gift:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>',
+download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+syringe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4m-5-3 3-3M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5m-6 6 4 4m-9 8-3 3m9-14 6 6"/></svg>',
+activity:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+beaker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l3 9H6zM6 12l-3 7a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1l-3-7"/></svg>',
+scan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+};
+function ico(name,sz,color){
+  var s=ICONS[name]||ICONS.xmark;
+  sz=sz||16;
+  s=s.replace('<svg ','<svg width="'+sz+'" height="'+sz+'" style="display:inline-block;vertical-align:middle;flex-shrink:0;" ');
+  if(color) s=s.replace(/currentColor/g,color);
+  return s;
+}
+
 // ── PEEP SVG (inline, no base64) ──────────────────────
 function peepSvg(fill,stroke){
   return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
@@ -321,10 +367,10 @@ function R(){
   var app=document.getElementById('app'),nav=document.getElementById('nav');
   if(!app) return;
   if(S.v==='loading'){app.innerHTML=vLoading();nav.style.display='none';return;}
-  if(S.v==='pw')    {app.innerHTML=vPw();    nav.style.display='none';if(typeof lucide!=='undefined')lucide.createIcons();return;}
-  if(S.v==='ob')    {app.innerHTML=vOb();    nav.style.display='none';if(typeof lucide!=='undefined')lucide.createIcons();return;}
-  if(S.role==='care'){nav.style.display='none';app.innerHTML=vCarePortal();if(typeof lucide!=='undefined')setTimeout(function(){lucide.createIcons();},0);return;}
-  if(S.role==='friends'){nav.style.display='none';app.innerHTML=vFriendsPortal();if(typeof lucide!=='undefined')setTimeout(function(){lucide.createIcons();},0);return;}
+  if(S.v==='pw')    {app.innerHTML=vPw();    nav.style.display='none';return;}
+  if(S.v==='ob')    {app.innerHTML=vOb();    nav.style.display='none';return;}
+  if(S.role==='care'){nav.style.display='none';app.innerHTML=vCarePortal();return;}
+  if(S.role==='friends'){nav.style.display='none';app.innerHTML=vFriendsPortal();return;}
   nav.style.display='flex';
   var nbs=document.querySelectorAll('.nb');
   for(var i=0;i<nbs.length;i++) nbs[i].classList.toggle('on',nbs[i].dataset.t===S.tab);
@@ -334,13 +380,12 @@ function R(){
     var el=document.createElement('div');
     el.innerHTML=vCin();
     document.body.appendChild(el.firstChild);
-    if(typeof lucide!=='undefined')lucide.createIcons();
+    
     return;
   }
-  if(S.wo){app.innerHTML=vWoAct();if(typeof lucide!=='undefined')lucide.createIcons();return;}
+  if(S.wo){app.innerHTML=vWoAct();return;}
   var screens={home:vHome,log:vLog,train:vTrain,cal:vCal,squad:vSquad};
   app.innerHTML=(screens[S.tab]||vHome)();
-  if(typeof lucide !== 'undefined') setTimeout(function(){lucide.createIcons();},0);
 }
 
 // ── LOADING ────────────────────────────────────────────
@@ -362,7 +407,7 @@ function vPw(){
     +'<input class="inp mb3" type="text" id="nm" placeholder="naur, john, mom..." autocomplete="off">'
     +'<div class="lbl mb2">Secret word</div>'
     +'<input class="inp mb4" type="password" id="pw" placeholder="..." autocomplete="off">'
-    +'<button class="btn btn-ink" onclick="doLogin()">Let\'s go <i data-lucide="solid" ></i></button>'
+    +'<button class="btn btn-ink" onclick="doLogin()">Let\'s go <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     +'<div id="err" style="display:none;text-align:center;color:var(--ro);font-size:14px;margin-top:12px;">Wrong word, try again</div>'
     +'<div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--div);">'
     +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:10px;">Access levels</div>'
@@ -411,7 +456,7 @@ function vObC(){
     +row(SL,'Peepachu','var(--am)','Kenny\'s Korner','She holds all the cheers from everyone rooting for Kendra.',true)
     +'</div>'
     +'<div style="margin-top:auto;padding-top:24px;">'
-    +'<button class="btn btn-ink" onclick="S.obs=1;R()">Next: privacy settings <i data-lucide="solid" ></i></button>'
+    +'<button class="btn btn-ink" onclick="S.obs=1;R()">Next: privacy settings <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     +'</div></div>';
 }
 function vObP(){
@@ -433,7 +478,7 @@ function vObP(){
     +row('Workout completed','wo')
     +'</div>'
     +'<div style="margin-top:auto;padding-top:24px;">'
-    +'<button class="btn btn-ink" onclick="savePrivOb()">Looks good <i data-lucide="solid" ></i></button>'
+    +'<button class="btn btn-ink" onclick="savePrivOb()">Looks good <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     +'</div></div>';
 }
 function savePrivOb(){
@@ -446,11 +491,92 @@ function vObD(){
     +'<div style="width:72px;height:72px;margin:0 auto 20px;">'+SQ+'</div>'
     +'<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--pu);margin-bottom:12px;">You\'re all set</div>'
     +'<div style="font-size:15px;color:var(--ink2);line-height:1.8;margin-bottom:40px;">My peeps are ready.<br>My squad is cheering.<br>Let\'s get this thing.</div>'
-    +'<button class="btn btn-ink" onclick="finOb()">Go Kendra <i data-lucide="solid" ></i></button></div>';
+    +'<button class="btn btn-ink" onclick="finOb()">Go Kendra <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
 }
 function finOb(){localStorage.setItem('gk-ob','1');S.priv=S.priv||DEFP;try{saveCfg();}catch(e){}S.v='app';R();}
 
 // ── HOME ───────────────────────────────────────────────
+
+// ── CYCLE-BASED SUGGESTIONS ───────────────────────────
+function getCycleSuggestions(){
+  var c=cycle(),d=S.day||empty(),evs=eventsForDay(TODAY);
+  var hadPara=evs.some(function(e){return e.type==='para';});
+  var hadChemo=evs.some(function(e){return e.type==='chemo';});
+  var tips=[];
+  // Override: paracentesis today
+  if(hadPara){
+    return [{
+      label:'You had a paracentesis today',
+      color:'var(--bl)',
+      food:['Clear broths','Electrolyte drinks','Pedialyte popsicles','Small soft nibbles'],
+      activity:'Rest completely today. No laps, no workout. Let your body stabilize.',
+      watch:'Watch for: dizziness when standing, unusual pain at the site, fever over 100.4°F.'
+    }];
+  }
+  // Override: chemo today
+  if(hadChemo||c.day===1){
+    return [{
+      label:'Chemo day',
+      color:'var(--ro)',
+      food:['Cold foods tolerate better','Small bites every 1-2 hrs','Ginger ale (flat)','Bland starchy foods','Avoid strong smells near food'],
+      activity:'Gentle movement only — a slow walk to the window counts.',
+      watch:'Nausea peaks 24-72 hrs after infusion. Keep anti-nausea meds close.'
+    }];
+  }
+  // Zone-based
+  if(c.day<=3){
+    tips=[{
+      label:'Rough zone — day '+c.day,
+      color:'var(--ro)',
+      food:['Flat ginger ale','Crackers or dry toast','Cold foods (easier on nausea)','Pedialyte if not eating much','Small bites only — no big meals'],
+      activity:'Rest is the right call today. If you feel up to it, 1 slow lap is plenty.',
+      watch:'Nausea usually peaks around day 2-3 then starts easing.'
+    }];
+  } else if(c.day<=7){
+    tips=[{
+      label:'Early recovery — day '+c.day,
+      color:'var(--am)',
+      food:['Eggs, yogurt, soft proteins','Oatmeal or cream of wheat','Banana or mashed potato','Avoid raw veg, spicy, fried'],
+      activity:'2 hallway laps is a great goal. Mobility circuit if energy holds.',
+      watch:'Counts are dropping this week. Watch for any fever — call if over 100.4°F.'
+    }];
+  } else if(c.day<=14){
+    tips=[{
+      label:'Nadir zone — day '+c.day,
+      color:'var(--pu)',
+      food:['High protein: chicken, eggs, cottage cheese','Cooked veg only','Avoid raw fruit/veg (infection risk)','Small frequent meals'],
+      activity:'Keep it gentle — mobility circuit only. No intense exertion.',
+      watch:'Lowest immune point. No sick visitors. Wash hands constantly. Any fever = call team immediately.'
+    }];
+  } else {
+    tips=[{
+      label:'Building back — day '+c.day,
+      color:'var(--sg)',
+      food:['More variety — body can handle it','High calorie + high protein','Push fluids','Treat yourself if something sounds good'],
+      activity:'Strength circuit is fair game if energy is there. Outdoor walk encouraged.',
+      watch:'Counts coming back up. Great time to push movement a bit more.'
+    }];
+  }
+  return tips;
+}
+
+
+function vCycleTipsCard(){
+  var tips=getCycleSuggestions();
+  if(!tips.length) return '';
+  var t=tips[0];
+  var foodItems=t.food.map(function(f){return '<li style="font-size:13px;color:var(--ink2);margin-bottom:3px;">'+f+'</li>';}).join('');
+  return '<div class="card mb3" style="border-left:3px solid '+t.color+';background:var(--raised);">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+    +'<div style="width:8px;height:8px;border-radius:50%;background:'+t.color+';flex-shrink:0;"></div>'
+    +'<div style="font-family:var(--serif);font-size:15px;color:var(--ink);">'+t.label+'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    +'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Eat</div><ul style="padding-left:14px;list-style:disc;">'+foodItems+'</ul></div>'
+    +'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Move</div><div style="font-size:13px;color:var(--ink2);line-height:1.5;">'+t.activity+'</div>'
+    +(t.watch?'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-top:8px;margin-bottom:4px;">Watch for</div><div style="font-size:12px;color:var(--ink3);line-height:1.5;">'+t.watch+'</div>':'')+'</div>'
+    +'</div></div>';
+}
+
 function vHome(){
   var d=S.day||empty(),moods=d.moods||[],lm=latestMood(d),c=cycle(),am=d.meds&&d.meds.am,pm=d.meds&&d.meds.pm,allM=am&&pm;
   var hr=new Date().getHours();
@@ -461,10 +587,10 @@ function vHome(){
   if(!moods.length){
     moodCard='<div class="card mb3" style="border:2px dashed var(--pum);background:var(--pul);cursor:pointer;" onclick="openCin()">'
       +'<div class="flex fca g3">'
-      +'<div style="width:44px;height:44px;background:var(--pu);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="regular" style="font-size:20px;color:#fff;"></i></div>'
+      +'<div style="width:44px;height:44px;background:var(--pu);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'
       +'<div><div style="font-family:var(--serif);font-size:16px;color:var(--pud);">How are you feeling right now?</div>'
       +'<div style="font-size:12px;color:var(--ink2);margin-top:2px;">Tap to log your first check-in today</div></div>'
-      +'<i data-lucide="solid" style="color:var(--pu);margin-left:auto;flex-shrink:0;"></i></div></div>';
+      +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>';
   } else {
     var sparkH=32,sparkW=220,pts='';
     if(moods.length>=2){
@@ -490,7 +616,7 @@ function vHome(){
       +(moods.length>=2?'<div style="margin:8px 0;">'+sparkSvg+'</div>':'')
       +'<div style="font-size:12px;color:var(--ink3);">'+moods.length+' check-in'+(moods.length!==1?'s':'')+' today</div>'
       +'</div>'
-      +'<button class="btn btn-ink btn-auto btn-sm" onclick="openCin()" style="flex-shrink:0;"><i data-lucide="solid" ></i></button>'
+      +'<button class="btn btn-ink btn-auto btn-sm" onclick="openCin()" style="flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
       +'</div></div>';
   }
 
@@ -499,7 +625,7 @@ function vHome(){
   for(var mi=0;mi<showM.length;mi++){
     var m=showM[mi];
     tlItems+='<div class="tli">'
-      +'<div class="tld" style="background:'+MC_bg(m.mood)+'"><i data-lucide="regular" style="font-size:13px;color:'+MC_color(m.mood)+'"></i></div>'
+      +'<div class="tld" style="background:'+MC_bg(m.mood)+'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'
       +'<div class="tlb">'
       +'<div class="tlt">'+fmtT(m.ts)+'</div>'
       +'<div class="tll" style="color:'+MC_color(m.mood)+';">'+ML[m.mood]+'</div>'
@@ -518,21 +644,22 @@ function vHome(){
     +'<div class="px mt3">'
     +vCycleBanner(c)
     +moodCard
-    +(moods.length===0?'<button class="btn btn-ink mb3" onclick="openCin()"><i data-lucide="regular" ></i> Log how I feel right now</button>':'')
+    +(moods.length===0?'<button class="btn btn-ink mb3" onclick="openCin()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Log how I feel right now</button>':'')
     +'<div class="stats mb3">'
-    +'<div class="st'+(allM?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+(allM?'Done':((am?1:0)+(pm?1:0))+'/2')+'</span><span class="ss">Meds</span></div>'
-    +'<div class="st'+(fN>=3?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+fN+'</span><span class="ss">Nibbles</span></div>'
-    +'<div class="st'+(hyd>=8?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+hyd+'</span><span class="ss">Glasses</span></div>'
-    +'<div class="st'+(wN>0?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+(wN>0?'Done':'--')+'</span><span class="ss">Train</span></div>'
+    +'<div class="st'+(allM?' ok':'')+'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sv">'+(allM?'Done':((am?1:0)+(pm?1:0))+'/2')+'</span><span class="ss">Meds</span></div>'
+    +'<div class="st'+(fN>=3?' ok':'')+'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sv">'+fN+'</span><span class="ss">Nibbles</span></div>'
+    +'<div class="st'+(hyd>=8?' ok':'')+'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sv">'+hyd+'</span><span class="ss">Glasses</span></div>'
+    +'<div class="st'+(wN>0?' ok':'')+'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sv">'+(wN>0?'Done':'--')+'</span><span class="ss">Train</span></div>'
     +'</div>'
     +'<div class="g2 mb3">'
-    +'<button class="btn btn-pu" onclick="go(\'log\')"><i data-lucide="regular" ></i> Log today</button>'
-    +'<button class="btn btn-pu" onclick="go(\'train\')"><i data-lucide="regular" ></i> Train</button>'
+    +'<button class="btn btn-pu" onclick="go(\'log\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Log today</button>'
+    +'<button class="btn btn-pu" onclick="go(\'train\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Train</button>'
     +'</div>'
-    +'<button class="btn btn-out mb3" onclick="doExport()"><i data-lucide="regular" ></i> Export for portal</button>'
+    +'<button class="btn btn-out mb3" onclick="doExport()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Export for portal</button>'
     +'<div id="exp-out" style="display:none;margin-bottom:16px;"></div>'
     +'</div>'
     +timeline
+    +'<div style="text-align:center;padding-bottom:8px;"><button onclick="logOut()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--ink3);display:inline-flex;align-items:center;gap:4px;">'+ico('logout',12)+' Sign out</button></div>'
     +'<div style="height:24px;"></div></div>';
 }
 
@@ -575,7 +702,7 @@ function updateCin(){
   };
   sh.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
     +'<div style="font-family:var(--serif);font-size:22px;font-style:italic;">How are you feeling?</div>'
-    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><i data-lucide="x"></i></button>'
+    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     +'</div>'
     +'<div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">'+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'</div>'
     +'<div class="mood-row mb4">'+mBtns+'</div>'
@@ -586,8 +713,8 @@ function updateCin(){
       +'<div style="margin-top:12px;"><div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">Notes (optional)</div>'
       +'<textarea class="inp" id="cin-notes" rows="2" placeholder="Anything on your mind..." style="height:70px;" oninput="S.cinD.notes=this.value">'+d.notes+'</textarea></div>'
       +'</div>':'')
-    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><i data-lucide="check"></i> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>');
-  if(typeof lucide !== 'undefined') lucide.createIcons({el:sh});
+    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>');
+  
 }
 function setCinMood(i){S.cinD.mood=i;updateCin();}
 function setCinField(k,v){S.cinD[k]=v;updateCin();}
@@ -619,7 +746,7 @@ function vCin(){
     +'<div id="cin-sh">'
     +'<div class="flex fjb fca mb5">'
     +'<div style="font-family:var(--serif);font-size:22px;font-style:italic;">How are you feeling?</div>'
-    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><i data-lucide="regular" ></i></button>'
+    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     +'</div>'
     +'<div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">'+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'</div>'
     +'<div class="mood-row mb4">'+mBtns+'</div>'
@@ -630,7 +757,7 @@ function vCin(){
       +'<div style="margin-top:12px;"><div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">Notes (optional)</div>'
       +'<textarea class="inp" id="cin-notes" rows="2" placeholder="Anything on your mind..." style="height:70px;" oninput="S.cinD.notes=this.value">'+d.notes+'</textarea></div>'
       +'</div>':'')
-    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><i data-lucide="regular" ></i> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>')
+    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>')
     +'</div></div>';
 }
 function saveCin(){
@@ -645,7 +772,7 @@ function saveCin(){
 
 // ── LOG ─────────────────────────────────────────────────
 function vLog(){
-  var tabs=[{id:'food',l:'Food'},{id:'demon',l:'Demon'},{id:'hyd',l:'Hydration'},{id:'move',l:'Movement'},{id:'meds',l:'Meds'}];
+  var tabs=[{id:'food',l:'Food'},{id:'demon',l:'Pewp'},{id:'hyd',l:'Sippin'},{id:'move',l:'Steps'},{id:'meds',l:'Meds'},{id:'proc',l:'Procedures'}];
   var tabHtml='<div class="stabs">';
   for(var i=0;i<tabs.length;i++) tabHtml+='<button class="stab'+(S.lt===tabs[i].id?' on':'')+'" onclick="S.lt=\''+tabs[i].id+'\';R()">'+tabs[i].l+'</button>';
   tabHtml+='</div>';
@@ -654,13 +781,17 @@ function vLog(){
   else if(S.lt==='demon') body=vDemon();
   else if(S.lt==='hyd')   body=vHyd();
   else if(S.lt==='move')  body=vMove();
+  else if(S.lt==='proc') body=vProcs();
   else body=vMeds();
   return '<div class="fi"><div class="ph"><div style="font-family:var(--serif);font-size:20px;font-style:italic;">Daily Log</div></div>'+tabHtml+'<div class="px mt4">'+body+'</div></div>';
 }
 function vFood(){
   var d=S.day||empty(),food=d.food||[];
+  var q=(S.foodQ||'').toLowerCase();
+  var filtered=q?FOOD.filter(function(f){return f.toLowerCase().indexOf(q)>=0;}):FOOD;
   var pills='<div class="fpills">';
-  for(var i=0;i<FOOD.length;i++) pills+='<button class="fp" data-food="'+FOOD[i]+'" onclick="addFood(this.dataset.food)">'+FOOD[i]+'</button>';
+  for(var i=0;i<filtered.length;i++) pills+='<button class="fp" data-food="'+filtered[i]+'" onclick="addFood(this.dataset.food)">'+filtered[i]+'</button>';
+  if(!filtered.length) pills+='<div style="font-size:13px;color:var(--ink3);padding:8px;">No matches</div>';
   pills+='</div>';
   var logged='';
   if(food.length){
@@ -674,14 +805,15 @@ function vFood(){
         +'<div style="display:flex;gap:8px;align-items:center;">'
         +(f.kd===undefined?'<button class="btn btn-auto btn-sm" style="height:36px;background:var(--sgl);color:var(--sg);border:1px solid rgba(74,140,111,.25);" onclick="keptDown('+i+',true)">Kept</button>'
           +'<button class="btn btn-auto btn-sm" style="height:36px;background:var(--rol);color:var(--ro);border:1px solid rgba(201,80,104,.25);" onclick="keptDown('+i+',false)">Lost</button>':'')
-        +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmFood('+i+')"><i data-lucide="regular" ></i></button>'
+        +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmFood('+i+')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
         +'</div></div>';
     }
   } else {
-    logged='<div class="empty-s"><i data-lucide="regular" ></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">Nothing logged yet</div><div style="font-size:13px;color:var(--ink3);">Tap a food above to add it</div></div>';
+    logged='<div class="empty-s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">Nothing logged yet</div><div style="font-size:13px;color:var(--ink3);">Tap a food above to add it</div></div>';
   }
   return '<div>'
-    +'<div style="font-family:var(--serif);font-size:18px;margin-bottom:12px;">What did I eat?</div>'
+    +'<div style="font-family:var(--serif);font-size:18px;margin-bottom:10px;">What did I eat?</div>'
+    +'<div style="position:relative;margin-bottom:10px;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;">'+ico('search',14,'var(--ink3)')+'</span><input class="inp" type="text" placeholder="Search foods..." value="'+(S.foodQ||'')+'" oninput="S.foodQ=this.value;R()" style="padding-left:32px;height:42px;"></div>'
     +pills
     +'<div style="display:flex;gap:8px;margin-bottom:24px;"><input class="inp" type="text" id="fc" placeholder="Something else..." style="flex:1;"><button class="btn btn-out btn-sm btn-auto" onclick="addCustomFood()">Add</button></div>'
     +logged
@@ -693,15 +825,15 @@ function vMeds(){
     +'<div style="font-family:var(--serif);font-size:18px;margin-bottom:16px;">Meds today</div>'
     +'<div class="g2 mb5">'
     +'<div class="card" style="text-align:center;cursor:pointer;border-color:'+(m.am?'var(--pu)':'var(--div)')+';background:'+(m.am?'var(--pul)':'var(--card)')+'" onclick="togMed(\'am\')">'
-    +'<i data-lucide="regular" style="font-size:28px;color:'+(m.am?'var(--pu)':'var(--ink3)')+';margin-bottom:8px;display:block;"></i>'
+    +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
     +'<div style="font-size:14px;font-weight:600;">Morning</div>'
     +'<div style="font-size:12px;color:'+(m.am?'var(--pu)':'var(--ink3)')+';">'+(m.am?'Done':'Tap to log')+'</div></div>'
     +'<div class="card" style="text-align:center;cursor:pointer;border-color:'+(m.pm?'var(--pu)':'var(--div)')+';background:'+(m.pm?'var(--pul)':'var(--card)')+'" onclick="togMed(\'pm\')">'
-    +'<i data-lucide="regular" style="font-size:28px;color:'+(m.pm?'var(--pu)':'var(--ink3)')+';margin-bottom:8px;display:block;"></i>'
+    +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
     +'<div style="font-size:14px;font-weight:600;">Evening</div>'
     +'<div style="font-size:12px;color:'+(m.pm?'var(--pu)':'var(--ink3)')+';">'+(m.pm?'Done':'Tap to log')+'</div></div>'
     +'</div>'
-    +(m.am&&m.pm?'<div class="card" style="background:var(--sgl);border-color:rgba(74,140,111,.3)"><div class="flex fca g3"><i data-lucide="solid" style="color:var(--sg);font-size:20px;"></i><div style="font-size:14px;font-weight:600;color:var(--sg);">Both meds done. Nailed it.</div></div></div>':'')
+    +(m.am&&m.pm?'<div class="card" style="background:var(--sgl);border-color:rgba(74,140,111,.3)"><div class="flex fca g3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><div style="font-size:14px;font-weight:600;color:var(--sg);">Both meds done. Nailed it.</div></div></div>':'')
     +'</div>';
 }
 function vDemon(){
@@ -724,23 +856,23 @@ function vDemon(){
       +(de.tags&&de.tags.indexOf('spicy')>=0?' · Spicy':'')
       +(de.tags&&de.tags.indexOf('winner')>=0?' · Solid W':'')+'</div>'
       +'<div style="font-size:12px;color:var(--ink2);">'+(de.tags&&de.tags.length?de.tags.join(' · '):'No tags')+'</div></div>'
-      +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmDemon('+i+')"><i data-lucide="regular" ></i></button></div>';
+      +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmDemon('+i+')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
   }
   return '<div>'
-    +'<div style="margin-bottom:16px;"><div style="font-family:var(--serif);font-size:18px;">Demon Log</div>'
-    +'<div style="font-size:12px;color:var(--ink3);">'+dem.length+' visit'+(dem.length!==1?'s':'')+' today — real medical data</div></div>'
+    +'<div style="margin-bottom:16px;"><div style="font-family:var(--serif);font-size:18px;">Pewp Log</div>'
+    +'<div style="font-size:12px;color:var(--ink3);">'+dem.length+' pewp'+(dem.length!==1?'s':'')+' today — real medical data</div></div>'
     +'<div class="lbl mb2">Bristol Scale (1–7)</div>'
     +'<div class="bg mb4">'+btns+'</div>'
     +'<div class="lbl mb2">Tags</div>'
     +tags
-    +'<button class="btn btn-ink mb4" onclick="logDemon()">Log demon</button>'
-    +(dem.length?'<div class="lbl mb2">Today\'s visits</div>'+visits:'')
+    +'<button class="btn btn-ink mb4" onclick="logDemon()">Log the pewp</button>'
+    +(dem.length?'<div class="lbl mb2">Today\'s pewps</div>'+visits:'')
     +'<div id="demon-tip"></div><div style="height:24px;"></div></div>';
 }
 function vHyd(){
   var d=S.day||empty(),g=d.hyd||0;
   var drops='';
-  for(var i=0;i<10;i++) drops+='<div class="drop'+(i<g?' on':'')+'" onclick="setHyd('+(i+1)+')"><i data-lucide="solid" ></i></div>';
+  for(var i=0;i<10;i++) drops+='<div class="drop'+(i<g?' on':'')+'" onclick="setHyd('+(i+1)+')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>';
   return '<div style="text-align:center;padding:16px 0;">'
     +'<div style="font-family:var(--serif);font-size:48px;letter-spacing:-1px;color:var(--te);">'+g+'</div>'
     +'<div style="font-size:14px;color:var(--ink2);font-weight:600;margin-bottom:16px;">glasses today — goal: 8</div>'
@@ -748,10 +880,10 @@ function vHyd(){
     +'<div class="drops">'+drops+'</div>'
     +'<div style="display:flex;gap:12px;justify-content:center;">'
     +'<button class="btn btn-out btn-sm btn-auto" style="width:120px;" onclick="addHyd(-1)">One fewer</button>'
-    +'<button class="btn btn-te btn-sm btn-auto" style="width:120px;" onclick="addHyd(1)"><i data-lucide="regular" ></i> One more</button>'
+    +'<button class="btn btn-te btn-sm btn-auto" style="width:120px;" onclick="addHyd(1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> One more</button>'
     +'</div>'
     +(g>=8?'<div class="card" style="background:var(--tel);border-color:rgba(46,191,165,.3);margin-top:16px;max-width:340px;margin-left:auto;margin-right:auto;">'
-      +'<div class="flex fca g3"><i data-lucide="solid" style="color:var(--te);font-size:20px;"></i>'
+      +'<div class="flex fca g3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
       +'<div style="font-size:14px;font-weight:600;color:var(--te);">Hydration hero — 8 glasses!</div></div></div>':'')
     +'</div>';
 }
@@ -770,12 +902,80 @@ function vMove(){
     +'<div><div style="font-family:var(--serif);font-size:18px;">Went outside</div><div style="font-size:12px;color:var(--ink3);margin-top:2px;">Fresh air is actual medicine</div></div>'
     +'<label class="tog"><input type="checkbox" '+(m.out?'checked':'')+' onchange="togOut(this.checked)"><div class="tt"></div></label></div></div>'
     +(m.out?'<div class="card" style="background:var(--sgl);border-color:rgba(74,140,111,.3)">'
-      +'<div class="flex fca g3"><i data-lucide="solid" style="color:var(--sg);font-size:20px;"></i>'
+      +'<div class="flex fca g3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
       +'<div style="font-size:14px;font-weight:600;color:var(--sg);">Outside achieved. Fresh air is actual medicine.</div></div></div>':'')
     +'<div style="height:24px;"></div></div>';
 }
 
 // ── TRAIN ──────────────────────────────────────────────
+
+function vProcs(){
+  var today=TODAY;
+  var todayEvents=eventsForDay(today);
+  var procTypes=EV_TYPES.filter(function(e){return e.id!=='para-watch'&&e.id!=='other';});
+  var html='<div>';
+  html+='<div style="font-family:var(--serif);font-size:18px;margin-bottom:4px;">Log a procedure or event</div>';
+  html+='<div style="font-size:12px;color:var(--ink3);margin-bottom:16px;">These appear on the calendar with icons.</div>';
+  // Quick-add buttons
+  html+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">';
+  for(var i=0;i<procTypes.length;i++){
+    var et=procTypes[i];
+    html+='<button class="fp" style="display:flex;align-items:center;gap:6px;border-color:'+et.color+';color:'+et.color+';" onclick="quickLogProc(''+et.id+'')">'+ico(et.ico,13,et.color)+et.l+'</button>';
+  }
+  html+='</div>';
+  // Manual chemo date update
+  html+='<div class="card mb3" style="border-left:3px solid var(--ro);">';
+  html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:8px;">Update chemo dates</div>';
+  html+='<div style="font-size:13px;color:var(--ink2);margin-bottom:10px;">Update when chemo actually happened or changes schedule.</div>';
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;"><label style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:6px;flex:1;">Last infusion<input class="inp" type="date" id="lc-date" value="'+(localStorage.getItem('gk-lc')||LC_DATE)+'" style="height:40px;font-size:13px;"></label></div>';
+  html+='<div style="display:flex;gap:8px;margin-bottom:10px;"><label style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:6px;flex:1;">Next infusion<input class="inp" type="date" id="nc-date" value="'+(localStorage.getItem('gk-nc')||NC_DATE)+'" style="height:40px;font-size:13px;"></label></div>';
+  html+='<button class="btn btn-ink btn-sm" onclick="saveChemoDates()">'+ico('check',14)+' Save dates</button>';
+  html+='</div>';
+  // Today events
+  if(todayEvents.length){
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:8px;">Logged today</div>';
+    for(var i=0;i<todayEvents.length;i++){
+      var ev=todayEvents[i];
+      html+='<div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-left:3px solid '+evColor(ev.type)+';">';
+      html+=ico(evIco(ev.type),16,evColor(ev.type));
+      html+='<div style="flex:1;"><div style="font-size:14px;font-weight:600;">'+ev.title+'</div>';
+      html+='<div style="font-size:12px;color:var(--ink3);">'+(ev.time?ev.time+' · ':'')+evLabel(ev.type)+'</div></div>';
+      html+='<button onclick="deleteEvent('+ev.id+')" style="background:none;border:none;cursor:pointer;color:var(--ink3);">'+ico('xmark',14)+'</button>';
+      html+='</div>';
+    }
+  }
+  html+='<div style="height:24px;"></div></div>';
+  return html;
+}
+function quickLogProc(type){
+  var label=evLabel(type);
+  var ev={id:Date.now(),date:TODAY,title:label,type:type,time:'',notes:''};
+  S.events=(S.events||[]).concat(ev);
+  if(type==='para'){
+    var base=new Date(TODAY+'T12:00:00');
+    for(var wi=3;wi<=6;wi++){
+      var wd=new Date(base);wd.setDate(wd.getDate()+wi);
+      var wdt=wd.toISOString().split('T')[0];
+      S.events.push({id:Date.now()+wi,date:wdt,title:'Tummy watch (day '+wi+')',type:'para-watch',time:'',notes:'Monitor for bloating.',soft:true});
+    }
+    confetti();toast('Paracentesis logged — watch windows added days 3-6');
+  } else if(type==='chemo'){
+    localStorage.setItem('gk-lc',TODAY);recomputeCycleDates();
+    confetti('big');toast('Chemo day logged! Cycle reset to today.');
+  } else {
+    toast(label+' logged');
+  }
+  saveEvents();R();
+}
+function saveChemoDates(){
+  var lc=document.getElementById('lc-date');
+  var nc=document.getElementById('nc-date');
+  if(lc&&lc.value) localStorage.setItem('gk-lc',lc.value);
+  if(nc&&nc.value) localStorage.setItem('gk-nc',nc.value);
+  recomputeCycleDates();
+  toast('Dates updated');R();
+}
+
 function vTrain(){
   var d=S.day||empty();
   return '<div class="fi"><div class="ph"><div style="display:flex;align-items:center;gap:12px;">'
@@ -784,7 +984,7 @@ function vTrain(){
     +'<div style="font-size:12px;color:var(--ink3);">'+(d.wos.length?d.wos.length+' session'+(d.wos.length!==1?'s':'')+' done':'Ready when you are')+'</div></div></div></div>'
     +'<div class="px"><div class="mt4">'
     +'<div style="background:var(--rol);border-radius:10px;padding:12px 16px;border-left:3px solid var(--ro);font-size:13px;color:var(--ro);font-weight:500;margin-bottom:16px;">'
-    +'<i data-lucide="regular" ></i> No core exercises · Left arm light only (DVT precaution)</div>'
+    +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> No core exercises · Left arm light only (DVT precaution)</div>'
     +'<div class="card mb3" style="cursor:pointer;border-left:4px solid var(--pu);" onclick="startWo(\'mobility\')">'
     +'<div style="display:flex;align-items:center;gap:16px;">'
     +'<div style="width:48px;height:48px;">'+SQ+'</div>'
@@ -792,7 +992,7 @@ function vTrain(){
     +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--pu);margin-bottom:3px;">with Peepsqueak</div>'
     +'<div style="font-family:var(--serif);font-size:18px;color:var(--pu);">Mobility Circuit</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-top:2px;">'+MOB.length+' exercises · ~15 min</div></div>'
-    +'<i data-lucide="regular" style="color:var(--ink3);"></i></div></div>'
+    +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>'
     +'<div class="card mb3" style="cursor:pointer;border-left:4px solid var(--te);" onclick="startWo(\'strength\')">'
     +'<div style="display:flex;align-items:center;gap:16px;">'
     +'<div style="width:48px;height:48px;">'+SP+'</div>'
@@ -800,7 +1000,7 @@ function vTrain(){
     +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--te);margin-bottom:3px;">with Peepsi</div>'
     +'<div style="font-family:var(--serif);font-size:18px;color:var(--te);">Strength Circuit</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-top:2px;">'+STR.length+' exercises · ~25 min</div></div>'
-    +'<i data-lucide="regular" style="color:var(--ink3);"></i></div></div>'
+    +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>'
     +(d.wos.length?'<div class="lbl mb2">Completed today</div>'+(function(){var s='';for(var i=0;i<d.wos.length;i++){var w=d.wos[i];s+='<div class="card mb2" style="display:flex;align-items:center;gap:12px;padding:12px 16px;"><div style="width:36px;height:36px;">'+(w.type==='mobility'?SQ:SP)+'</div><div><div style="font-size:14px;font-weight:600;">'+(w.type==='mobility'?'Mobility':'Strength')+' circuit</div><div style="font-size:12px;color:var(--ink2);">'+w.dur+' min</div></div></div>';}return s;})():'')
     +'</div><div style="height:24px;"></div></div></div>';
 }
@@ -915,25 +1115,29 @@ function confetti(intensity){
 
 // ── EVENTS ──────────────────────────────────────────────
 var EV_TYPES = [
-  {id:'chemo',   l:'Chemo / Infusion',  color:'#E8546A'},
-  {id:'appt',    l:'Doctor Appointment', color:'#8956FF'},
-  {id:'lab',     l:'Labs / Blood draw',  color:'#D4920A'},
-  {id:'scan',    l:'Imaging / Scan',     color:'#4A7DFF'},
-  {id:'para',    l:'Paracentesis',        color:'#4A7DFF'},
-  {id:'para-watch',l:'Tummy Watch',        color:'#D4920A'},
-  {id:'other',   l:'Other',              color:'#7B82A0'}
+  {id:'chemo',   l:'Chemo day',         color:'#E8546A', ico:'activity'},
+  {id:'para',    l:'Paracentesis',       color:'#4A7DFF', ico:'droplets'},
+  {id:'appt',    l:'Appointment',        color:'#8956FF', ico:'users'},
+  {id:'lab',     l:'Labs / Blood draw',  color:'#D4920A', ico:'beaker'},
+  {id:'scan',    l:'Imaging / Scan',     color:'#3A9E78', ico:'scan'},
+  {id:'para-watch',l:'Tummy watch',      color:'#D4920A', ico:'activity',soft:true},
+  {id:'proc',    l:'Procedure',          color:'#7B82A0', ico:'syringe'},
+  {id:'other',   l:'Other',             color:'#7B82A0', ico:'calendar'}
 ];
 function evColor(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].color;}return '#7B82A0';}
 function evLabel(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].l;}return 'Other';}
+function evIco(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].ico||'calendar';}return 'calendar';}
 function eventsForDay(dt){return(S.events||[]).filter(function(e){return e.date===dt;});}
 function saveEvents(){lsSet('events',S.events);}
 function deleteEvent(id){S.events=(S.events||[]).filter(function(e){return e.id!==id;});saveEvents();R();}
-function openAddEvent(dt){S.addingEvent=true;S.evDate=dt;S.evForm={title:'',type:'appt',time:'',notes:''};R();setTimeout(function(){if(typeof lucide!=='undefined')lucide.createIcons();},50);}
+function openAddEvent(dt){S.addingEvent=true;S.evDate=dt;S.evForm={title:'',type:'appt',time:'',notes:''};R();setTimeout(function(){},50);}
 function closeAddEvent(){S.addingEvent=false;R();}
 function saveEvent(){
   var f=S.evForm||{};
   if(!f.title||!f.title.trim()){toast('Add a title');return;}
   var ev={id:Date.now(),date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',notes:f.notes||''};
+  // If logging actual chemo, update the last-chemo date
+  if(f.type==='chemo'){localStorage.setItem('gk-lc',S.evDate);recomputeCycleDates();}
   S.events=(S.events||[]).concat(ev);
   // Paracentesis: auto-create 5-day watch windows (days 3-6 post-procedure)
   if(f.type==='para'){
@@ -1005,12 +1209,16 @@ function vCal(){
 
       var moodBg=avgMood!=null?MC_bg(avgMood):'transparent';
       var moodDot=avgMood!=null?'<div style="width:6px;height:6px;border-radius:50%;background:'+MC[avgMood]+';flex-shrink:0;"></div>':'';
+      var calQ=(S.calQ||'').toLowerCase();
+      var filteredEvs=calQ?dayEvents.filter(function(e){return e.title.toLowerCase().indexOf(calQ)>=0||evLabel(e.type).toLowerCase().indexOf(calQ)>=0;}):dayEvents;
+      var hasMatch=!calQ||(filteredEvs.length>0)||(avgMood!=null);
       var eventDots='';
-      for(var ei=0;ei<Math.min(dayEvents.length,3);ei++){
-        eventDots+='<div style="width:5px;height:5px;border-radius:50%;background:'+evColor(dayEvents[ei].type)+';flex-shrink:0;"></div>';
+      for(var ei=0;ei<Math.min(filteredEvs.length,2);ei++){
+        eventDots+=ico(evIco(filteredEvs[ei].type),9,evColor(filteredEvs[ei].type));
       }
 
-      row+='<div onclick="selDay(''+dtStr+'')" style="min-height:60px;border:1.5px solid '+(isSelected?'var(--pu)':isToday?'var(--pu)':'var(--div)')+';border-radius:8px;padding:6px;cursor:pointer;background:'+(isSelected?'var(--pul)':isChemo?'var(--rol)':avgMood!=null?moodBg:'var(--card)')+';position:relative;transition:all .12s;">'
+      var dimCell=calQ&&!hasMatch;
+      row+='<div onclick="selDay(''+dtStr+'')" style="opacity:'+(dimCell?'0.3':'1')+';min-height:60px;border:1.5px solid '+(isSelected?'var(--pu)':isToday?'var(--pu)':'var(--div)')+';border-radius:8px;padding:6px;cursor:pointer;background:'+(isSelected?'var(--pul)':isChemo?'var(--rol)':avgMood!=null?moodBg:'var(--card)')+';position:relative;transition:all .12s;">'
         +'<div style="font-size:13px;font-weight:'+(isToday?'700':'500')+';color:'+(isToday?'var(--pu)':isChemo?'var(--ro)':'var(--ink)')+';margin-bottom:4px;">'+day+'</div>'
         +(isChemo?'<div style="font-size:8px;font-weight:800;color:var(--ro);text-transform:uppercase;letter-spacing:.5px;line-height:1;">Chemo</div>':'')
         +'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:auto;">'
@@ -1038,7 +1246,7 @@ function vCal(){
         +'<div style="font-size:14px;font-weight:600;">'+ev.title+'</div>'
         +'<div style="font-size:12px;color:var(--ink3);">'+(ev.time?ev.time+' · ':'')+evLabel(ev.type)+'</div>'
         +'</div>'
-        +'<button onclick="deleteEvent('+ev.id+')" style="background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>'
+        +'<button onclick="deleteEvent('+ev.id+')" style="background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
         +'</div>';
     }
 
@@ -1057,7 +1265,7 @@ function vCal(){
     selDetail='<div style="margin-top:16px;background:var(--card);border-radius:12px;border:1px solid var(--div);overflow:hidden;">'
       +'<div style="padding:14px 16px;border-bottom:1px solid var(--div);display:flex;align-items:center;justify-content:space-between;">'
       +'<div style="font-family:var(--serif);font-size:15px;font-style:italic;color:var(--ink);">'+selDateStr+'</div>'
-      +'<button class="btn btn-pu btn-sm btn-auto" onclick="openAddEvent(''+S.cd+'')" style="height:32px;font-size:12px;gap:4px;"><i data-lucide="plus" style="width:12px;height:12px;"></i> Add event</button>'
+      +'<button class="btn btn-pu btn-sm btn-auto" onclick="openAddEvent(''+S.cd+'')" style="height:32px;font-size:12px;gap:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Add event</button>'
       +'</div>'
       +(sdEvents.length||sdMoods.length?
         (sdMoods.length?'<div style="padding:8px 16px 4px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:4px;">Mood</div>'+moodHtml+'</div>':'')
@@ -1083,7 +1291,7 @@ function vCal(){
       +'<div style="background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px 40px;animation:slideUp .25s ease;">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
       +'<div style="font-family:var(--serif);font-size:20px;font-style:italic;">Add Event</div>'
-      +'<button onclick="closeAddEvent()" style="background:none;border:none;cursor:pointer;color:var(--ink3);"><i data-lucide="x"></i></button>'
+      +'<button onclick="closeAddEvent()" style="background:none;border:none;cursor:pointer;color:var(--ink3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
       +'</div>'
       +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:8px;">Type</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:16px;">'+typeOpts+'</div>'
@@ -1091,7 +1299,7 @@ function vCal(){
       +'<input class="inp mb3" type="text" id="ev-title" placeholder="e.g. Dr. Wilky appointment" value="'+(f.title||'')+'" oninput="S.evForm.title=this.value">'
       +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:6px;">Time (optional)</div>'
       +'<input class="inp mb4" type="time" id="ev-time" value="'+(f.time||'')+'" oninput="S.evForm.time=this.value" style="height:48px;">'
-      +'<button class="btn btn-ink" onclick="saveEvent()"><i data-lucide="check"></i> Save event</button>'
+      +'<button class="btn btn-ink" onclick="saveEvent()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Save event</button>'
       +'</div></div>';
   }
 
@@ -1102,10 +1310,11 @@ function vCal(){
     +'<div style="font-size:12px;color:var(--ink3);margin-top:1px;">Cycle day '+cycle().day+' of '+cycle().tot+'</div>'
     +'</div>'
     +'<div style="display:flex;gap:8px;align-items:center;">'
-    +'<button onclick="prevMonth()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);"><i data-lucide="chevron-left" style="width:16px;height:16px;"></i></button>'
-    +'<button onclick="nextMonth()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></button>'
-    +'<button onclick="exportICS()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);" title="Export to Calendar"><i data-lucide="download" style="width:16px;height:16px;"></i></button>'
+    +'<button onclick="prevMonth()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+    +'<button onclick="nextMonth()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+    +'<button onclick="exportICS()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);" title="Export to Calendar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     +'</div></div></div>'
+    +'<div style="background:var(--card);border-bottom:1px solid var(--div);padding:8px 16px;"><div style="position:relative;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;">'+ico('search',13,'var(--ink3)')+'</span><input class="inp" type="text" placeholder="Search events &amp; procedures..." value="'+(S.calQ||'')+'" oninput="S.calQ=this.value;R()" style="padding-left:32px;height:36px;font-size:13px;"></div></div>'
     +'<div class="px" style="padding-top:12px;">'
     // Day-of-week headers
     +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">'
@@ -1149,22 +1358,29 @@ function vSquad(){
   var bdgs=S.bdgs||BDGS;
   for(var i=0;i<bdgs.length;i++){
     var b=bdgs[i];
-    badgesHtml+='<div class="bc'+(b.e?' e':'')+'"><i class="fa-'+(b.e?'solid':'regular')+' fa-'+(b.e?'star':'lock')+'" style="font-size:24px;color:'+(b.e?'var(--am)':'var(--ink4)')+';margin-bottom:8px;display:block;"></i>'
-      +'<div style="font-family:var(--serif);font-size:14px;margin-bottom:4px;">'+b.n+'</div>'
-      +'<div style="font-size:11px;color:var(--ink3);">'+b.d+'</div>'
-      +(b.e?'':'<div style="font-size:11px;color:var(--ink4);margin-top:4px;">Locked</div>')+'</div>';
+    var bc=b.color||'var(--pu)';
+    var bg=b.e?bc+'1a':bc+'0d'; // 10% fill: earned = 1a (~10%), locked = 0d (~5%)
+    var iconColor=b.e?bc:'var(--ink4)';
+    var borderColor=b.e?bc+'40':'var(--div)';
+    badgesHtml+='<div style="border-radius:12px;padding:14px 12px;border:1.5px solid '+borderColor+';text-align:center;background:'+bg+';">'
+      +'<div style="width:40px;height:40px;border-radius:50%;background:'+bc+(b.e?'22':'11')+';display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">'
+      +ico(b.ico||'star',20,iconColor)
+      +'</div>'
+      +'<div style="font-family:var(--serif);font-size:13px;color:'+(b.e?'var(--ink)':'var(--ink3)')+';margin-bottom:3px;">'+b.n+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);line-height:1.4;">'+b.d+'</div>'
+      +(b.e?'':'<div style="font-size:10px;font-weight:700;color:var(--ink4);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;">Locked</div>')+'</div>';
   }
   badgesHtml+='</div>';
   return '<div class="fi">'
     +'<div class="ph" style="background:var(--aml);">'
     +'<div style="display:flex;align-items:center;gap:12px;">'
-    +'<div style="width:40px;height:40px;">'+SQ+'</div>'
-    +'<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;">Peepsqueak\'s Corner</div>'
-    +'<div style="font-size:12px;color:var(--ink3);">'+S.cheers.length+' cheers in the squad</div></div></div></div>'
+    +'<div style="width:40px;height:40px;">'+SL+'</div>'
+    +'<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;">Kenny\'s Korner</div>'
+    +'<div style="font-size:12px;color:var(--ink3);">'+S.cheers.length+' cheer'+(S.cheers.length!==1?'s':'')+' for Kendra</div></div></div></div>'
     +'<div class="px">'
     +'<div class="sec"><div class="lbl mb2">What my squad sees today</div>'
     +'<div class="card" style="background:var(--tel);border-color:rgba(46,191,165,.3);">'
-    +(p.poop&&d.demon&&d.demon.length?'<div style="font-size:14px;margin-bottom:8px;">She went to the bathroom ('+d.demon.length+'x)</div>':'')
+    +(p.poop&&d.demon&&d.demon.length?'<div style="font-size:14px;margin-bottom:8px;">She pewped ('+d.demon.length+'x)</div>':'')
     +(p.mood&&lm&&lm.mood!=null?'<div style="font-size:14px;margin-bottom:8px;">Latest vibe: <span style="font-weight:600;color:'+MC_color(lm.mood)+';">'+ML[lm.mood]+'</span><span style="color:var(--ink3);font-size:12px;"> ('+fmtT(lm.ts)+')</span></div>':'')
     +(p.mood&&moods.length>1?'<div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">'+moods.length+' mood check-ins today</div>':'')
     +(p.sym&&lm&&lm.nausea!=null?'<div style="font-size:14px;margin-bottom:8px;">Nausea: '+['Bad','Medium','Mild','None'][lm.nausea]+' · Pain: '+['Bad','Medium','Mild','None'][lm.pain||0]+'</div>':'')
@@ -1172,10 +1388,11 @@ function vSquad(){
     +(p.wo&&d.wos&&d.wos.length?'<div style="font-size:14px;">Completed a '+d.wos[0].type+' circuit</div>':'')
     +(!d.demon&&!d.food&&!lm?'<div style="font-size:14px;color:var(--ink2);font-style:italic;">Nothing logged yet today</div>':'')
     +'</div></div>'
-    +'<div class="sec"><div class="lbl mb2">Leave a cheer</div>'
-    +'<div class="card"><input class="inp mb3" type="text" id="cn" placeholder="Your name"><textarea class="inp mb3" id="cm" rows="3" placeholder="Tell Kendra something amazing..." style="height:80px;"></textarea><button class="btn btn-te" onclick="sendCheer()"><i data-lucide="regular" ></i> Send cheer</button></div></div>'
+    +(S.user&&S.user.isk
+    ?'<div class="sec"><div style="font-size:13px;color:var(--ink3);font-style:italic;text-align:center;padding:4px 0 16px;">Your squad sends the love here</div></div>'
+    :'<div class="sec"><div class="lbl mb2">Leave a cheer for Kendra</div><div class="card"><input class="inp mb3" type="text" id="cn" placeholder="Your name"><textarea class="inp mb3" id="cm" rows="3" placeholder="Tell her something amazing..." style="height:80px;"></textarea><button class="btn btn-te" onclick="sendCheer()">'+ico('heart',16)+' Send cheer</button></div></div>')
     +'<div class="sec"><div class="lbl mb2">The cheer wall</div>'
-    +(cheersHtml||'<div class="empty-s"><i data-lucide="regular" ></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">No cheers yet</div><div style="font-size:13px;color:var(--ink3);">Be the first</div></div>')
+    +(cheersHtml||'<div class="empty-s"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">No cheers yet</div><div style="font-size:13px;color:var(--ink3);">Be the first</div></div>')
     +'</div>'
     +'<div class="sec"><div class="lbl mb2">Badges earned</div>'+badgesHtml+'</div>'
     +'<div style="height:24px;"></div></div></div>';
@@ -1205,7 +1422,7 @@ function logDemon(){
 }
 function rmDemon(i){if(!S.day||!S.day.demon)return;S.day.demon.splice(i,1);saveDay();R();}
 function setHyd(v){S.day=S.day||empty();S.day.hyd=v;saveDay();R();}
-function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0)+d);saveDay();R();if(S.day.hyd===8){confetti('big');toast('Hydration hero — 8 glasses!');}}
+function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0)+d);saveDay();R();if(S.day.hyd===8){confetti('big');toast('Sippin champion — 8 glasses!');}}
 function addLaps(d){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.laps=Math.max(0,(S.day.move.laps||0)+d);saveDay();R();if(S.day.move.laps===2){confetti();toast('2 laps — Hall of Fame!');}}
 function togOut(v){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.out=v;saveDay();R();if(v){confetti();toast('Outside achieved!');}}
 function saveDist(){var e=document.getElementById('dst');if(!e)return;S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.dist=e.value.trim();saveDay();toast('Distance saved.');}
@@ -1225,8 +1442,8 @@ function doExport(){
   var lines=['KENDRA DAILY LOG -- '+date,'Cycle Day '+c.day+' of '+c.tot+' ('+c.z+')','','Meds: AM '+(d.meds&&d.meds.am?'Done':'Not done')+' | PM '+(d.meds&&d.meds.pm?'Done':'Not done')];
   if(moods.length){lines.push('');lines.push('Mood check-ins ('+moods.length+'x):');for(var i=0;i<moods.length;i++){var m=moods[i];lines.push('  - '+fmtT(m.ts)+' -- '+ML[m.mood]+(m.nausea!=null?' / Nausea: '+['Bad','Medium','Mild','None'][m.nausea]:'')+(m.pain!=null?' / Pain: '+['Bad','Medium','Mild','None'][m.pain]:'')+(m.notes?' / "'+m.notes+'"':''));}}
   if((d.food||[]).length){lines.push('');lines.push('Food ('+d.food.length+' nibbles):');for(var i=0;i<d.food.length;i++)lines.push('  - '+d.food[i].item+' -- '+(d.food[i].kd===true?'kept':d.food[i].kd===false?'lost':'untracked'));}
-  lines.push('Hydration: '+(d.hyd||0)+' glasses');
-  if((d.demon||[]).length){lines.push('');lines.push('Bowel movements ('+d.demon.length+'x):');for(var i=0;i<d.demon.length;i++){var de=d.demon[i],bm=null;for(var j=0;j<BRIT.length;j++){if(BRIT[j].n===de.b){bm=BRIT[j];break;}}lines.push('  - Bristol '+de.b+' ('+(bm?bm.l:'?')+') -- '+((de.tags||[]).join(', ')||'no tags'));}}
+  lines.push('Sippin: '+(d.hyd||0)+' glasses');
+  if((d.demon||[]).length){lines.push('');lines.push('Pewps ('+d.demon.length+'x):');for(var i=0;i<d.demon.length;i++){var de=d.demon[i],bm=null;for(var j=0;j<BRIT.length;j++){if(BRIT[j].n===de.b){bm=BRIT[j];break;}}lines.push('  - Bristol '+de.b+' ('+(bm?bm.l:'?')+') -- '+((de.tags||[]).join(', ')||'no tags'));}}
   var mv=d.move||{};if(mv.laps)lines.push('Laps: '+mv.laps);if(mv.dist)lines.push('Distance: '+mv.dist);if(mv.out)lines.push('Went outside: yes');
   if((d.wos||[]).length)lines.push('Training: '+d.wos.map(function(w){return w.type+' ('+w.dur+'m)';}).join(', '));
   var txt=lines.join('\n');
@@ -1234,7 +1451,7 @@ function doExport(){
   if(el){
     el.style.display='block';
     el.innerHTML='<div style="background:var(--raised);border-radius:10px;padding:16px;border:1.5px dashed var(--div);font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:monospace;color:var(--ink);margin-bottom:12px;">'+txt+'</div>'
-      +'<button class="btn btn-ink btn-sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(function(){toast(\'Copied!\');})"><i data-lucide="regular" ></i> Copy to clipboard</button>';
+      +'<button class="btn btn-ink btn-sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(function(){toast(\'Copied!\');})"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Copy to clipboard</button>';
   }
 }
 
@@ -1343,7 +1560,7 @@ function vCarePortal(){
     +'I'm uploading lab results for Kendra, a 34-year-old woman with peritoneal EHE on Gemcitabine + Docetaxel. She has a PICC-associated DVT, low albumin, and is on methadone for pain. Summarize in 3 sections: (1) What's flagged — plain English, her context not generic; (2) What this week will likely feel like physically; (3) How to support her right now — 3-5 specific actionable things. Warm, direct, no jargon without explanation.'
     +'</span></div>'
     +'<textarea class="inp" id="lab-text" rows="6" placeholder="Paste Claude&#39;s summary here..." style="height:120px;font-size:13px;"></textarea>'
-    +'<button class="btn btn-ink mt3" onclick="saveLabSummary()"><i data-lucide="check"></i> Save</button>'
+    +'<button class="btn btn-ink mt3" onclick="saveLabSummary()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Save</button>'
     +'</div>':'')
 
     // Summaries list
@@ -1352,7 +1569,7 @@ function vCarePortal(){
       return '<div style="padding:14px 16px;'+(i>0?'border-top:1px solid var(--div);':'')+'">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
         +'<div style="font-size:12px;font-weight:700;color:var(--ink2);">'+new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'</div>'
-        +'<button onclick="deleteLabSummary(''+s.id+'')" style="background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;"><i data-lucide="x" style="width:13px;height:13px;"></i></button>'
+        +'<button onclick="deleteLabSummary(''+s.id+'')" style="background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
         +'</div>'
         +'<div style="font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;">'+s.text+'</div>'
         +'</div>';
@@ -1422,7 +1639,7 @@ function vFriendsPortal(){
     +(WISHLIST_URL?'<div style="background:var(--pul);border-radius:12px;border:1px solid var(--pum);padding:16px;margin-bottom:12px;text-align:center;">'
     +'<div style="font-family:var(--serif);font-size:17px;color:var(--pud);margin-bottom:6px;">Send her something</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-bottom:14px;">Kendra&#39;s Amazon wish list — things that actually help.</div>'
-    +'<a href="'+WISHLIST_URL+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--pu);color:#fff;border-radius:999px;padding:12px 24px;font-size:15px;font-weight:600;text-decoration:none;"><i data-lucide="gift"></i> View wish list</a>'
+    +'<a href="'+WISHLIST_URL+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--pu);color:#fff;border-radius:999px;padding:12px 24px;font-size:15px;font-weight:600;text-decoration:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> View wish list</a>'
     +'</div>':'')
 
     // Leave a cheer
@@ -1430,7 +1647,7 @@ function vFriendsPortal(){
     +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:12px;">Leave a cheer for Kendra</div>'
     +'<input class="inp mb3" type="text" id="cn" placeholder="Your name">'
     +'<textarea class="inp mb3" id="cm" rows="3" placeholder="Tell her something amazing..." style="height:80px;"></textarea>'
-    +'<button class="btn btn-te" onclick="sendCheer()"><i data-lucide="heart"></i> Send</button>'
+    +'<button class="btn btn-te" onclick="sendCheer()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Send</button>'
     +'</div>'
 
     // Recent cheers
@@ -1474,7 +1691,7 @@ function init(){
   }catch(e){
     console.error('Init error:',e);
     document.getElementById('app').innerHTML='<div style="padding:40px;font-family:sans-serif;text-align:center;max-width:400px;margin:0 auto;">'
-      +'<div style="font-size:32px;margin-bottom:16px;"><i data-lucide="regular" ></i></div>'
+      +'<div style="font-size:32px;margin-bottom:16px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'
       +'<div style="font-size:18px;font-weight:600;margin-bottom:8px;">Something went wrong</div>'
       +'<div style="font-size:14px;color:#666;">'+e.message+'</div></div>';
   }
