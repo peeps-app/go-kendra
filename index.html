@@ -8,25 +8,25 @@
 <title>Go Kendra</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 <style>
 :root{
-  --ink:#1a0f2e;--ink2:#4a3f5c;--ink3:#8b7fa0;--ink4:#c0b8d0;
-  --bg:#f8f5f2;--card:#fff;--raised:#f3f0f9;--div:rgba(90,60,150,.09);
-  --pu:#7c5cdb;--pud:#5e3fbf;--pul:#ede8f9;--pum:#d8cff5;
+  --ink:#161B33;--ink2:#3D4466;--ink3:#7B82A0;--ink4:#B8BCCD;
+  --bg:#F5F2FF;--card:#FFFFFF;--raised:#EDE8FF;--div:rgba(137,86,255,.10);
+  --pu:#8956FF;--pud:#6B35E8;--pul:#EDE8FF;--pum:#D2BFFF;
   --te:#2ebfa5;--tel:#e4f7f4;
-  --am:#c9920a;--aml:#fdf5e0;
-  --ro:#c95068;--rol:#faedf0;
-  --bl:#4a7dff;--bll:#eaefff;
-  --sg:#4a8c6f;--sgl:#e8f4ee;
-  --m0:#c95068;--m0l:#faedf0;
-  --m1:#c9920a;--m1l:#fdf5e0;
-  --m2:#7b8fa8;--m2l:#edf0f4;
+  --am:#D4920A;--aml:#FDF5E0;
+  --ro:#E8546A;--rol:#FDEEF1;
+  --bl:#4A7DFF;--bll:#EAF0FF;
+  --sg:#3A9E78;--sgl:#E8F7F1;
+  --m0:#E8546A;--m0l:#FDEEF1;
+  --m1:#D4920A;--m1l:#FDF5E0;
+  --m2:#7B82A0;--m2l:#EEF0F6;
   --m3:#2ebfa5;--m3l:#e4f7f4;
-  --m4:#4a8c6f;--m4l:#e8f4ee;
-  --sh1:0 1px 3px rgba(26,15,46,.06),0 4px 14px rgba(26,15,46,.04);
-  --sh2:0 4px 20px rgba(26,15,46,.10);
-  --sh3:0 12px 40px rgba(26,15,46,.14);
+  --m4:#3A9E78;--m4l:#E8F7F1;
+  --sh1:0 1px 2px rgba(22,27,51,.06),0 2px 8px rgba(137,86,255,.06);
+  --sh2:0 4px 16px rgba(137,86,255,.10);
+  --sh3:0 8px 32px rgba(22,27,51,.14);
   --serif:'Instrument Serif',Georgia,serif;
   --sans:'DM Sans',system-ui,sans-serif;
 }
@@ -148,22 +148,43 @@ input:checked+.tt::before{transform:translateX(22px)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 .fi{animation:fadeIn .22s ease}
+
+/* Lucide icon sizing */
+[data-lucide], i[data-lucide] { display:inline-flex; align-items:center; justify-content:center; }
+i[data-lucide] svg { width:1em; height:1em; stroke:currentColor; fill:none; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+/* Nav icons slightly larger */
+.nb i[data-lucide] svg { width:19px; height:19px; }
+/* Stat tile icons */
+.si svg { width:16px; height:16px; vertical-align:middle; }
+
+/* ── CONFETTI ─────────────────────────────────────────── */
+.confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;}
+.cp{position:absolute;top:-10px;border-radius:2px;animation:cpFall linear forwards;}
+@keyframes cpFall{
+  0%  {transform:translateY(0) rotate(0deg) scale(1);opacity:1}
+  80% {opacity:1}
+  100%{transform:translateY(100vh) rotate(720deg) scale(.6);opacity:0}
+}
 </style>
+<script src="https://unpkg.com/lucide@0.358.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 <div id="app"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;"><div style="width:40px;height:40px;border-radius:50%;border:3px solid var(--pu);border-top-color:transparent;animation:pulse 1s linear infinite;"></div></div></div>
 <div id="toast"></div>
 <div id="nav" style="display:none">
-  <button class="nb" data-t="home"  onclick="go('home')"><i class="fa-regular fa-house"></i>Today</button>
-  <button class="nb" data-t="log"   onclick="go('log')"><i class="fa-regular fa-clipboard-list"></i>Log</button>
-  <button class="nb" data-t="train" onclick="go('train')"><i class="fa-regular fa-dumbbell"></i>Train</button>
-  <button class="nb" data-t="cal"   onclick="go('cal')"><i class="fa-regular fa-calendar-days"></i>Calendar</button>
-  <button class="nb" data-t="squad" onclick="go('squad')"><i class="fa-regular fa-users"></i>Squad</button>
+  <button class="nb" data-t="home"  onclick="go('home')"><i data-lucide="regular" ></i>Today</button>
+  <button class="nb" data-t="log"   onclick="go('log')"><i data-lucide="regular" ></i>Log</button>
+  <button class="nb" data-t="train" onclick="go('train')"><i data-lucide="regular" ></i>Train</button>
+  <button class="nb" data-t="cal"   onclick="go('cal')"><i data-lucide="regular" ></i>Calendar</button>
+  <button class="nb" data-t="squad" onclick="go('squad')"><i data-lucide="regular" ></i>Squad</button>
 </div>
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────
-var APP_PW   = "gokendra";
+var PW_PATIENT = "gokendra";  // Kendra + Naur
+var PW_CARE    = "careteam";   // Care team — medical portal
+var PW_FRIENDS = "gopeeps";    // Friends — cheer + wishlist
+var WISHLIST_URL = "";         // Paste Amazon wishlist URL here
 var LC_DATE  = "2026-05-07";
 var NC_DATE  = "2026-05-25";
 
@@ -216,7 +237,7 @@ var LC = new Date(LC_DATE);
 var NC = new Date(NC_DATE);
 
 // ── STATE ──────────────────────────────────────────────
-var S = {v:'loading',tab:'home',obs:0,user:null,day:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''}};
+var S = {v:'loading',tab:'home',obs:0,user:null,role:'patient',day:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false};
 var selB = null, selT = [];
 
 // ── STORAGE ────────────────────────────────────────────
@@ -230,6 +251,8 @@ function loadAll(){
   var cfg = lsGet('cfg');
   S.priv = (cfg && cfg.priv) || DEFP;
   S.bdgs = (cfg && cfg.bdgs) || BDGS;
+  S.events = lsGet('events') || [];
+  S.labSummaries = lsGet('lab-summaries') || [];
 }
 
 function saveDay(){
@@ -298,8 +321,10 @@ function R(){
   var app=document.getElementById('app'),nav=document.getElementById('nav');
   if(!app) return;
   if(S.v==='loading'){app.innerHTML=vLoading();nav.style.display='none';return;}
-  if(S.v==='pw')    {app.innerHTML=vPw();    nav.style.display='none';return;}
-  if(S.v==='ob')    {app.innerHTML=vOb();    nav.style.display='none';return;}
+  if(S.v==='pw')    {app.innerHTML=vPw();    nav.style.display='none';if(typeof lucide!=='undefined')lucide.createIcons();return;}
+  if(S.v==='ob')    {app.innerHTML=vOb();    nav.style.display='none';if(typeof lucide!=='undefined')lucide.createIcons();return;}
+  if(S.role==='care'){nav.style.display='none';app.innerHTML=vCarePortal();if(typeof lucide!=='undefined')setTimeout(function(){lucide.createIcons();},0);return;}
+  if(S.role==='friends'){nav.style.display='none';app.innerHTML=vFriendsPortal();if(typeof lucide!=='undefined')setTimeout(function(){lucide.createIcons();},0);return;}
   nav.style.display='flex';
   var nbs=document.querySelectorAll('.nb');
   for(var i=0;i<nbs.length;i++) nbs[i].classList.toggle('on',nbs[i].dataset.t===S.tab);
@@ -309,17 +334,19 @@ function R(){
     var el=document.createElement('div');
     el.innerHTML=vCin();
     document.body.appendChild(el.firstChild);
+    if(typeof lucide!=='undefined')lucide.createIcons();
     return;
   }
-  if(S.wo){app.innerHTML=vWoAct();return;}
+  if(S.wo){app.innerHTML=vWoAct();if(typeof lucide!=='undefined')lucide.createIcons();return;}
   var screens={home:vHome,log:vLog,train:vTrain,cal:vCal,squad:vSquad};
   app.innerHTML=(screens[S.tab]||vHome)();
+  if(typeof lucide !== 'undefined') setTimeout(function(){lucide.createIcons();},0);
 }
 
 // ── LOADING ────────────────────────────────────────────
 function vLoading(){
   return '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">'
-    +'<div style="width:56px;height:56px;animation:pulse 1.4s ease-in-out infinite;">'+SL+'</div>'
+    +'<div style="width:56px;height:56px;animation:pulse 1.4s ease-in-out infinite;">'+SQ+'</div>'
     +'<div style="font-family:var(--serif);font-size:24px;font-style:italic;color:var(--pu);">Go Kendra</div>'
     +'</div>';
 }
@@ -327,7 +354,7 @@ function vLoading(){
 // ── PASSWORD ───────────────────────────────────────────
 function vPw(){
   return '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;">'
-    +'<div style="width:64px;height:64px;margin-bottom:24px;">'+SL+'</div>'
+    +'<div style="width:64px;height:64px;margin-bottom:24px;">'+SQ+'</div>'
     +'<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--pu);margin-bottom:8px;">Go Kendra</div>'
     +'<div style="font-size:14px;color:var(--ink2);margin-bottom:40px;">kendra\'s comeback tracker</div>'
     +'<div style="width:100%;max-width:320px;">'
@@ -335,18 +362,32 @@ function vPw(){
     +'<input class="inp mb3" type="text" id="nm" placeholder="naur, john, mom..." autocomplete="off">'
     +'<div class="lbl mb2">Secret word</div>'
     +'<input class="inp mb4" type="password" id="pw" placeholder="..." autocomplete="off">'
-    +'<button class="btn btn-ink" onclick="doLogin()">Let\'s go <i class="fa-solid fa-arrow-right"></i></button>'
+    +'<button class="btn btn-ink" onclick="doLogin()">Let\'s go <i data-lucide="solid" ></i></button>'
     +'<div id="err" style="display:none;text-align:center;color:var(--ro);font-size:14px;margin-top:12px;">Wrong word, try again</div>'
+    +'<div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--div);">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:10px;">Access levels</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +'<div class="flex fca" style="gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--pu);flex-shrink:0;"></div><div style="font-size:13px;color:var(--ink2);"><span style="font-weight:600;">Kendra &amp; Naur</span> — full patient app</div></div>'
+    +'<div class="flex fca" style="gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--bl);flex-shrink:0;"></div><div style="font-size:13px;color:var(--ink2);"><span style="font-weight:600;">Care team</span> — charts &amp; lab updates</div></div>'
+    +'<div class="flex fca" style="gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--am);flex-shrink:0;"></div><div style="font-size:13px;color:var(--ink2);"><span style="font-weight:600;">Friends</span> — send love &amp; wishlist</div></div>'
+    +'</div></div>'
     +'</div></div>';
 }
 function doLogin(){
   var n=(document.getElementById('nm')||{}).value||'';
   var p=(document.getElementById('pw')||{}).value||'';
   if(!n.trim()){toast('What\'s your name?');return;}
-  if(p.trim().toLowerCase()!==APP_PW){var e=document.getElementById('err');if(e)e.style.display='block';return;}
-  S.user={name:n.trim(),isk:n.toLowerCase().indexOf('kendra')>=0||n.toLowerCase().indexOf('ken')>=0};
+  var pw=p.trim().toLowerCase();
+  var role=null;
+  if(pw===PW_PATIENT) role='patient';
+  else if(pw===PW_CARE) role='care';
+  else if(pw===PW_FRIENDS) role='friends';
+  if(!role){var e=document.getElementById('err');if(e)e.style.display='block';return;}
+  S.role=role;
+  S.user={name:n.trim(),role:role,isk:n.toLowerCase().indexOf('kendra')>=0||n.toLowerCase().indexOf('ken')>=0};
   localStorage.setItem('gk-u',JSON.stringify(S.user));
-  if(S.user.isk&&!localStorage.getItem('gk-ob')){S.v='ob';S.obs=0;}else{S.v='app';}
+  if(role==='patient'&&S.user.isk&&!localStorage.getItem('gk-ob')){S.v='ob';S.obs=0;}
+  else{S.v='app';}
   R();
 }
 
@@ -365,12 +406,12 @@ function vObC(){
     +'<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--pu);margin-bottom:8px;">Meet your coaches</div>'
     +'<div style="font-size:14px;color:var(--ink2);">My squad, here for me 24/7</div></div>'
     +'<div class="card-flush">'
-    +row(SL,'Peepachu','var(--am)','My Main Peep','My home screen mascot. Reacts to my day.',false)
-    +row(SP,'Peepsi','var(--bl)','Head Coach','Coaches me through every workout. No excuses.',false)
-    +row(SQ,'Peepsqueak','var(--te)','My Squad','Holds all the cheers from everyone rooting for me.',true)
+    +row(SQ,'Peepsqueak','var(--te)','My Main Peep','He lives on the home screen and coaches mobility. My hype octopus.',false)
+    +row(SP,'Peepsi','var(--bl)','Strength Coach','He coaches every strength session. No excuses, no judgment.',false)
+    +row(SL,'Peepachu','var(--am)','Kenny\'s Korner','She holds all the cheers from everyone rooting for Kendra.',true)
     +'</div>'
     +'<div style="margin-top:auto;padding-top:24px;">'
-    +'<button class="btn btn-ink" onclick="S.obs=1;R()">Next: privacy settings <i class="fa-solid fa-arrow-right"></i></button>'
+    +'<button class="btn btn-ink" onclick="S.obs=1;R()">Next: privacy settings <i data-lucide="solid" ></i></button>'
     +'</div></div>';
 }
 function vObP(){
@@ -392,7 +433,7 @@ function vObP(){
     +row('Workout completed','wo')
     +'</div>'
     +'<div style="margin-top:auto;padding-top:24px;">'
-    +'<button class="btn btn-ink" onclick="savePrivOb()">Looks good <i class="fa-solid fa-arrow-right"></i></button>'
+    +'<button class="btn btn-ink" onclick="savePrivOb()">Looks good <i data-lucide="solid" ></i></button>'
     +'</div></div>';
 }
 function savePrivOb(){
@@ -402,10 +443,10 @@ function savePrivOb(){
 }
 function vObD(){
   return '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;">'
-    +'<div style="width:72px;height:72px;margin:0 auto 20px;">'+SL+'</div>'
+    +'<div style="width:72px;height:72px;margin:0 auto 20px;">'+SQ+'</div>'
     +'<div style="font-family:var(--serif);font-size:28px;font-style:italic;color:var(--pu);margin-bottom:12px;">You\'re all set</div>'
     +'<div style="font-size:15px;color:var(--ink2);line-height:1.8;margin-bottom:40px;">My peeps are ready.<br>My squad is cheering.<br>Let\'s get this thing.</div>'
-    +'<button class="btn btn-ink" onclick="finOb()">Go Kendra <i class="fa-solid fa-rocket"></i></button></div>';
+    +'<button class="btn btn-ink" onclick="finOb()">Go Kendra <i data-lucide="solid" ></i></button></div>';
 }
 function finOb(){localStorage.setItem('gk-ob','1');S.priv=S.priv||DEFP;try{saveCfg();}catch(e){}S.v='app';R();}
 
@@ -420,10 +461,10 @@ function vHome(){
   if(!moods.length){
     moodCard='<div class="card mb3" style="border:2px dashed var(--pum);background:var(--pul);cursor:pointer;" onclick="openCin()">'
       +'<div class="flex fca g3">'
-      +'<div style="width:44px;height:44px;background:var(--pu);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-regular fa-face-smile" style="font-size:20px;color:#fff;"></i></div>'
+      +'<div style="width:44px;height:44px;background:var(--pu);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="regular" style="font-size:20px;color:#fff;"></i></div>'
       +'<div><div style="font-family:var(--serif);font-size:16px;color:var(--pud);">How are you feeling right now?</div>'
       +'<div style="font-size:12px;color:var(--ink2);margin-top:2px;">Tap to log your first check-in today</div></div>'
-      +'<i class="fa-solid fa-plus" style="color:var(--pu);margin-left:auto;flex-shrink:0;"></i></div></div>';
+      +'<i data-lucide="solid" style="color:var(--pu);margin-left:auto;flex-shrink:0;"></i></div></div>';
   } else {
     var sparkH=32,sparkW=220,pts='';
     if(moods.length>=2){
@@ -449,7 +490,7 @@ function vHome(){
       +(moods.length>=2?'<div style="margin:8px 0;">'+sparkSvg+'</div>':'')
       +'<div style="font-size:12px;color:var(--ink3);">'+moods.length+' check-in'+(moods.length!==1?'s':'')+' today</div>'
       +'</div>'
-      +'<button class="btn btn-ink btn-auto btn-sm" onclick="openCin()" style="flex-shrink:0;"><i class="fa-solid fa-plus"></i></button>'
+      +'<button class="btn btn-ink btn-auto btn-sm" onclick="openCin()" style="flex-shrink:0;"><i data-lucide="solid" ></i></button>'
       +'</div></div>';
   }
 
@@ -458,7 +499,7 @@ function vHome(){
   for(var mi=0;mi<showM.length;mi++){
     var m=showM[mi];
     tlItems+='<div class="tli">'
-      +'<div class="tld" style="background:'+MC_bg(m.mood)+'"><i class="fa-regular fa-face-smile" style="font-size:13px;color:'+MC_color(m.mood)+'"></i></div>'
+      +'<div class="tld" style="background:'+MC_bg(m.mood)+'"><i data-lucide="regular" style="font-size:13px;color:'+MC_color(m.mood)+'"></i></div>'
       +'<div class="tlb">'
       +'<div class="tlt">'+fmtT(m.ts)+'</div>'
       +'<div class="tll" style="color:'+MC_color(m.mood)+';">'+ML[m.mood]+'</div>'
@@ -473,22 +514,22 @@ function vHome(){
     +'<div style="font-family:var(--serif);font-size:22px;font-style:italic;">'+greet+'</div>'
     +'<div style="font-size:12px;color:var(--ink3);margin-top:1px;">'+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+'</div>'
     +'</div>'
-    +'<div style="width:40px;height:40px;">'+SL+'</div></div>'
+    +'<div style="width:40px;height:40px;">'+SQ+'</div></div>'
     +'<div class="px mt3">'
     +vCycleBanner(c)
     +moodCard
-    +(moods.length===0?'<button class="btn btn-ink mb3" onclick="openCin()"><i class="fa-regular fa-plus"></i> Log how I feel right now</button>':'')
+    +(moods.length===0?'<button class="btn btn-ink mb3" onclick="openCin()"><i data-lucide="regular" ></i> Log how I feel right now</button>':'')
     +'<div class="stats mb3">'
-    +'<div class="st'+(allM?' ok':'')+'"><i class="fa-regular fa-pills si"></i><span class="sv">'+(allM?'Done':((am?1:0)+(pm?1:0))+'/2')+'</span><span class="ss">Meds</span></div>'
-    +'<div class="st'+(fN>=3?' ok':'')+'"><i class="fa-regular fa-utensils si"></i><span class="sv">'+fN+'</span><span class="ss">Nibbles</span></div>'
-    +'<div class="st'+(hyd>=8?' ok':'')+'"><i class="fa-regular fa-droplet si"></i><span class="sv">'+hyd+'</span><span class="ss">Glasses</span></div>'
-    +'<div class="st'+(wN>0?' ok':'')+'"><i class="fa-regular fa-dumbbell si"></i><span class="sv">'+(wN>0?'Done':'--')+'</span><span class="ss">Train</span></div>'
+    +'<div class="st'+(allM?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+(allM?'Done':((am?1:0)+(pm?1:0))+'/2')+'</span><span class="ss">Meds</span></div>'
+    +'<div class="st'+(fN>=3?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+fN+'</span><span class="ss">Nibbles</span></div>'
+    +'<div class="st'+(hyd>=8?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+hyd+'</span><span class="ss">Glasses</span></div>'
+    +'<div class="st'+(wN>0?' ok':'')+'"><i data-lucide="regular" ></i><span class="sv">'+(wN>0?'Done':'--')+'</span><span class="ss">Train</span></div>'
     +'</div>'
     +'<div class="g2 mb3">'
-    +'<button class="btn btn-pu" onclick="go(\'log\')"><i class="fa-regular fa-pen"></i> Log today</button>'
-    +'<button class="btn btn-pu" onclick="go(\'train\')"><i class="fa-regular fa-dumbbell"></i> Train</button>'
+    +'<button class="btn btn-pu" onclick="go(\'log\')"><i data-lucide="regular" ></i> Log today</button>'
+    +'<button class="btn btn-pu" onclick="go(\'train\')"><i data-lucide="regular" ></i> Train</button>'
     +'</div>'
-    +'<button class="btn btn-out mb3" onclick="doExport()"><i class="fa-regular fa-file-lines"></i> Export for portal</button>'
+    +'<button class="btn btn-out mb3" onclick="doExport()"><i data-lucide="regular" ></i> Export for portal</button>'
     +'<div id="exp-out" style="display:none;margin-bottom:16px;"></div>'
     +'</div>'
     +timeline
@@ -509,6 +550,48 @@ function vCycleBanner(c){
 }
 
 // ── CHECK-IN ───────────────────────────────────────────
+
+// ── CHECK-IN IN-PLACE UPDATE (no full re-render) ──────
+function updateCin(){
+  var sh = document.getElementById('cin-sh');
+  if(!sh) return;
+  var d = S.cinD;
+  var mBtns = '';
+  for(var i=0;i<ML.length;i++){
+    var on=d.mood===i;
+    mBtns+='<div class="mo'+(on?' on':'')+'" style="'+(on?'--mc:'+MC[i]+';background:'+MCL[i]+';border-color:'+MC[i]+';':'')+'cursor:pointer;" onclick="setCinMood('+i+')">'
+      +'<div class="dot" style="background:'+MC[i]+';'+(on?'width:26px;height:26px;':'')+'"></div>'
+      +'<div class="lbl" style="'+(on?'color:'+MC[i]+';font-weight:700;':'')+'">'+ML[i]+'</div></div>';
+  }
+  var optRow=function(key,label,val){
+    var opts=['Bad','Medium','Mild','None'];
+    var s='<div style="margin-bottom:12px;"><div style="font-size:13px;font-weight:600;margin-bottom:8px;">'+label+'</div><div style="display:flex;gap:8px;">';
+    for(var i=0;i<opts.length;i++){
+      var on=val===i;
+      s+='<div style="flex:1;border-radius:10px;border:1.5px solid '+(on?'var(--pu)':'var(--div)')+';background:'+(on?'var(--pul)':'var(--raised)')+';padding:8px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:'+(on?'var(--pud)':'var(--ink3)')+'" onclick="setCinField(''+key+'','+i+')">'+opts[i]+'</div>';
+    }
+    s+='</div></div>';
+    return s;
+  };
+  sh.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
+    +'<div style="font-family:var(--serif);font-size:22px;font-style:italic;">How are you feeling?</div>'
+    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><i data-lucide="x"></i></button>'
+    +'</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">'+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'</div>'
+    +'<div class="mood-row mb4">'+mBtns+'</div>'
+    +(d.mood!=null?'<div>'
+      +optRow('nausea','Nausea',d.nausea)
+      +optRow('pain','Pain',d.pain)
+      +optRow('energy','Energy',d.energy)
+      +'<div style="margin-top:12px;"><div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">Notes (optional)</div>'
+      +'<textarea class="inp" id="cin-notes" rows="2" placeholder="Anything on your mind..." style="height:70px;" oninput="S.cinD.notes=this.value">'+d.notes+'</textarea></div>'
+      +'</div>':'')
+    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><i data-lucide="check"></i> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>');
+  if(typeof lucide !== 'undefined') lucide.createIcons({el:sh});
+}
+function setCinMood(i){S.cinD.mood=i;updateCin();}
+function setCinField(k,v){S.cinD[k]=v;updateCin();}
+
 function openCin(){S.cin=true;S.cinD={mood:null,nausea:null,pain:null,energy:null,notes:''};R();}
 function closeCin(){S.cin=false;R();}
 function vCin(){
@@ -526,7 +609,7 @@ function vCin(){
     var s='<div style="margin-bottom:12px;"><div style="font-size:13px;font-weight:600;margin-bottom:8px;">'+label+'</div><div style="display:flex;gap:8px;">';
     for(var i=0;i<opts.length;i++){
       var on=val===i;
-      s+='<div style="flex:1;border-radius:10px;border:1.5px solid '+(on?'var(--pu)':'var(--div)')+';background:'+(on?'var(--pul)':'var(--card)')+';padding:8px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:'+(on?'var(--pud)':'var(--ink3)')+'" onclick="S.cinD.'+key+'='+i+';R()">'+opts[i]+'</div>';
+      s+='<div style="flex:1;border-radius:10px;border:1.5px solid '+(on?'var(--pu)':'var(--div)')+';background:'+(on?'var(--pul)':'var(--card)')+';padding:8px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:'+(on?'var(--pud)':'var(--ink3)')+'" onclick="setCinField(''+key+'','+i+')">'+opts[i]+'</div>';
     }
     s+='</div></div>';
     return s;
@@ -536,7 +619,7 @@ function vCin(){
     +'<div id="cin-sh">'
     +'<div class="flex fjb fca mb5">'
     +'<div style="font-family:var(--serif);font-size:22px;font-style:italic;">How are you feeling?</div>'
-    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><i class="fa-regular fa-xmark"></i></button>'
+    +'<button class="btn btn-out btn-auto btn-sm" onclick="closeCin()" style="width:36px;height:36px;min-height:unset;border-radius:8px;padding:0;"><i data-lucide="regular" ></i></button>'
     +'</div>'
     +'<div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">'+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'</div>'
     +'<div class="mood-row mb4">'+mBtns+'</div>'
@@ -547,10 +630,9 @@ function vCin(){
       +'<div style="margin-top:12px;"><div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">Notes (optional)</div>'
       +'<textarea class="inp" id="cin-notes" rows="2" placeholder="Anything on your mind..." style="height:70px;" oninput="S.cinD.notes=this.value">'+d.notes+'</textarea></div>'
       +'</div>':'')
-    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><i class="fa-regular fa-check"></i> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>')
+    +(d.mood!=null?'<button class="btn btn-ink mt4" onclick="saveCin()"><i data-lucide="regular" ></i> Save check-in</button>':'<button class="btn btn-out mt4" style="opacity:.4;cursor:default;">Select a mood above</button>')
     +'</div></div>';
 }
-function setCinMood(i){S.cinD.mood=i;R();}
 function saveCin(){
   if(S.cinD.mood===null) return;
   S.day=S.day||empty();
@@ -592,11 +674,11 @@ function vFood(){
         +'<div style="display:flex;gap:8px;align-items:center;">'
         +(f.kd===undefined?'<button class="btn btn-auto btn-sm" style="height:36px;background:var(--sgl);color:var(--sg);border:1px solid rgba(74,140,111,.25);" onclick="keptDown('+i+',true)">Kept</button>'
           +'<button class="btn btn-auto btn-sm" style="height:36px;background:var(--rol);color:var(--ro);border:1px solid rgba(201,80,104,.25);" onclick="keptDown('+i+',false)">Lost</button>':'')
-        +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmFood('+i+')"><i class="fa-regular fa-xmark"></i></button>'
+        +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmFood('+i+')"><i data-lucide="regular" ></i></button>'
         +'</div></div>';
     }
   } else {
-    logged='<div class="empty-s"><i class="fa-regular fa-utensils"></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">Nothing logged yet</div><div style="font-size:13px;color:var(--ink3);">Tap a food above to add it</div></div>';
+    logged='<div class="empty-s"><i data-lucide="regular" ></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">Nothing logged yet</div><div style="font-size:13px;color:var(--ink3);">Tap a food above to add it</div></div>';
   }
   return '<div>'
     +'<div style="font-family:var(--serif);font-size:18px;margin-bottom:12px;">What did I eat?</div>'
@@ -611,15 +693,15 @@ function vMeds(){
     +'<div style="font-family:var(--serif);font-size:18px;margin-bottom:16px;">Meds today</div>'
     +'<div class="g2 mb5">'
     +'<div class="card" style="text-align:center;cursor:pointer;border-color:'+(m.am?'var(--pu)':'var(--div)')+';background:'+(m.am?'var(--pul)':'var(--card)')+'" onclick="togMed(\'am\')">'
-    +'<i class="fa-regular fa-pills" style="font-size:28px;color:'+(m.am?'var(--pu)':'var(--ink3)')+';margin-bottom:8px;display:block;"></i>'
+    +'<i data-lucide="regular" style="font-size:28px;color:'+(m.am?'var(--pu)':'var(--ink3)')+';margin-bottom:8px;display:block;"></i>'
     +'<div style="font-size:14px;font-weight:600;">Morning</div>'
     +'<div style="font-size:12px;color:'+(m.am?'var(--pu)':'var(--ink3)')+';">'+(m.am?'Done':'Tap to log')+'</div></div>'
     +'<div class="card" style="text-align:center;cursor:pointer;border-color:'+(m.pm?'var(--pu)':'var(--div)')+';background:'+(m.pm?'var(--pul)':'var(--card)')+'" onclick="togMed(\'pm\')">'
-    +'<i class="fa-regular fa-moon" style="font-size:28px;color:'+(m.pm?'var(--pu)':'var(--ink3)')+';margin-bottom:8px;display:block;"></i>'
+    +'<i data-lucide="regular" style="font-size:28px;color:'+(m.pm?'var(--pu)':'var(--ink3)')+';margin-bottom:8px;display:block;"></i>'
     +'<div style="font-size:14px;font-weight:600;">Evening</div>'
     +'<div style="font-size:12px;color:'+(m.pm?'var(--pu)':'var(--ink3)')+';">'+(m.pm?'Done':'Tap to log')+'</div></div>'
     +'</div>'
-    +(m.am&&m.pm?'<div class="card" style="background:var(--sgl);border-color:rgba(74,140,111,.3)"><div class="flex fca g3"><i class="fa-solid fa-circle-check" style="color:var(--sg);font-size:20px;"></i><div style="font-size:14px;font-weight:600;color:var(--sg);">Both meds done. Nailed it.</div></div></div>':'')
+    +(m.am&&m.pm?'<div class="card" style="background:var(--sgl);border-color:rgba(74,140,111,.3)"><div class="flex fca g3"><i data-lucide="solid" style="color:var(--sg);font-size:20px;"></i><div style="font-size:14px;font-weight:600;color:var(--sg);">Both meds done. Nailed it.</div></div></div>':'')
     +'</div>';
 }
 function vDemon(){
@@ -642,7 +724,7 @@ function vDemon(){
       +(de.tags&&de.tags.indexOf('spicy')>=0?' · Spicy':'')
       +(de.tags&&de.tags.indexOf('winner')>=0?' · Solid W':'')+'</div>'
       +'<div style="font-size:12px;color:var(--ink2);">'+(de.tags&&de.tags.length?de.tags.join(' · '):'No tags')+'</div></div>'
-      +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmDemon('+i+')"><i class="fa-regular fa-xmark"></i></button></div>';
+      +'<button style="background:none;border:none;cursor:pointer;color:var(--ink3);width:40px;height:40px;display:flex;align-items:center;justify-content:center;" onclick="rmDemon('+i+')"><i data-lucide="regular" ></i></button></div>';
   }
   return '<div>'
     +'<div style="margin-bottom:16px;"><div style="font-family:var(--serif);font-size:18px;">Demon Log</div>'
@@ -658,7 +740,7 @@ function vDemon(){
 function vHyd(){
   var d=S.day||empty(),g=d.hyd||0;
   var drops='';
-  for(var i=0;i<10;i++) drops+='<div class="drop'+(i<g?' on':'')+'" onclick="setHyd('+(i+1)+')"><i class="fa-solid fa-droplet"></i></div>';
+  for(var i=0;i<10;i++) drops+='<div class="drop'+(i<g?' on':'')+'" onclick="setHyd('+(i+1)+')"><i data-lucide="solid" ></i></div>';
   return '<div style="text-align:center;padding:16px 0;">'
     +'<div style="font-family:var(--serif);font-size:48px;letter-spacing:-1px;color:var(--te);">'+g+'</div>'
     +'<div style="font-size:14px;color:var(--ink2);font-weight:600;margin-bottom:16px;">glasses today — goal: 8</div>'
@@ -666,10 +748,10 @@ function vHyd(){
     +'<div class="drops">'+drops+'</div>'
     +'<div style="display:flex;gap:12px;justify-content:center;">'
     +'<button class="btn btn-out btn-sm btn-auto" style="width:120px;" onclick="addHyd(-1)">One fewer</button>'
-    +'<button class="btn btn-te btn-sm btn-auto" style="width:120px;" onclick="addHyd(1)"><i class="fa-regular fa-droplet"></i> One more</button>'
+    +'<button class="btn btn-te btn-sm btn-auto" style="width:120px;" onclick="addHyd(1)"><i data-lucide="regular" ></i> One more</button>'
     +'</div>'
     +(g>=8?'<div class="card" style="background:var(--tel);border-color:rgba(46,191,165,.3);margin-top:16px;max-width:340px;margin-left:auto;margin-right:auto;">'
-      +'<div class="flex fca g3"><i class="fa-solid fa-circle-check" style="color:var(--te);font-size:20px;"></i>'
+      +'<div class="flex fca g3"><i data-lucide="solid" style="color:var(--te);font-size:20px;"></i>'
       +'<div style="font-size:14px;font-weight:600;color:var(--te);">Hydration hero — 8 glasses!</div></div></div>':'')
     +'</div>';
 }
@@ -688,7 +770,7 @@ function vMove(){
     +'<div><div style="font-family:var(--serif);font-size:18px;">Went outside</div><div style="font-size:12px;color:var(--ink3);margin-top:2px;">Fresh air is actual medicine</div></div>'
     +'<label class="tog"><input type="checkbox" '+(m.out?'checked':'')+' onchange="togOut(this.checked)"><div class="tt"></div></label></div></div>'
     +(m.out?'<div class="card" style="background:var(--sgl);border-color:rgba(74,140,111,.3)">'
-      +'<div class="flex fca g3"><i class="fa-solid fa-sun" style="color:var(--sg);font-size:20px;"></i>'
+      +'<div class="flex fca g3"><i data-lucide="solid" style="color:var(--sg);font-size:20px;"></i>'
       +'<div style="font-size:14px;font-weight:600;color:var(--sg);">Outside achieved. Fresh air is actual medicine.</div></div></div>':'')
     +'<div style="height:24px;"></div></div>';
 }
@@ -697,12 +779,12 @@ function vMove(){
 function vTrain(){
   var d=S.day||empty();
   return '<div class="fi"><div class="ph"><div style="display:flex;align-items:center;gap:12px;">'
-    +'<div style="width:40px;height:40px;">'+SP+'</div>'
-    +'<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;color:var(--bl);">Coach Peepsi</div>'
+    +'<div style="display:flex;gap:-4px;"><div style="width:36px;height:36px;">'+SQ+'</div><div style="width:36px;height:36px;margin-left:-8px;">'+SP+'</div></div>'
+    +'<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;color:var(--ink);">Peepsqueak &amp; Peepsi</div>'
     +'<div style="font-size:12px;color:var(--ink3);">'+(d.wos.length?d.wos.length+' session'+(d.wos.length!==1?'s':'')+' done':'Ready when you are')+'</div></div></div></div>'
     +'<div class="px"><div class="mt4">'
     +'<div style="background:var(--rol);border-radius:10px;padding:12px 16px;border-left:3px solid var(--ro);font-size:13px;color:var(--ro);font-weight:500;margin-bottom:16px;">'
-    +'<i class="fa-regular fa-triangle-exclamation"></i> No core exercises · Left arm light only (DVT precaution)</div>'
+    +'<i data-lucide="regular" ></i> No core exercises · Left arm light only (DVT precaution)</div>'
     +'<div class="card mb3" style="cursor:pointer;border-left:4px solid var(--pu);" onclick="startWo(\'mobility\')">'
     +'<div style="display:flex;align-items:center;gap:16px;">'
     +'<div style="width:48px;height:48px;">'+SQ+'</div>'
@@ -710,7 +792,7 @@ function vTrain(){
     +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--pu);margin-bottom:3px;">with Peepsqueak</div>'
     +'<div style="font-family:var(--serif);font-size:18px;color:var(--pu);">Mobility Circuit</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-top:2px;">'+MOB.length+' exercises · ~15 min</div></div>'
-    +'<i class="fa-regular fa-chevron-right" style="color:var(--ink3);"></i></div></div>'
+    +'<i data-lucide="regular" style="color:var(--ink3);"></i></div></div>'
     +'<div class="card mb3" style="cursor:pointer;border-left:4px solid var(--te);" onclick="startWo(\'strength\')">'
     +'<div style="display:flex;align-items:center;gap:16px;">'
     +'<div style="width:48px;height:48px;">'+SP+'</div>'
@@ -718,7 +800,7 @@ function vTrain(){
     +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--te);margin-bottom:3px;">with Peepsi</div>'
     +'<div style="font-family:var(--serif);font-size:18px;color:var(--te);">Strength Circuit</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-top:2px;">'+STR.length+' exercises · ~25 min</div></div>'
-    +'<i class="fa-regular fa-chevron-right" style="color:var(--ink3);"></i></div></div>'
+    +'<i data-lucide="regular" style="color:var(--ink3);"></i></div></div>'
     +(d.wos.length?'<div class="lbl mb2">Completed today</div>'+(function(){var s='';for(var i=0;i<d.wos.length;i++){var w=d.wos[i];s+='<div class="card mb2" style="display:flex;align-items:center;gap:12px;padding:12px 16px;"><div style="width:36px;height:36px;">'+(w.type==='mobility'?SQ:SP)+'</div><div><div style="font-size:14px;font-weight:600;">'+(w.type==='mobility'?'Mobility':'Strength')+' circuit</div><div style="font-size:12px;color:var(--ink2);">'+w.dur+' min</div></div></div>';}return s;})():'')
     +'</div><div style="height:24px;"></div></div></div>';
 }
@@ -748,7 +830,7 @@ function doneWo(){
   S.wo=null;S.day=S.day||empty();
   S.day.wos=(S.day.wos||[]).concat({type:type,dur:dur,done:done});
   saveDay();R();
-  toast(type==='mobility'?'Mobility done. Peepsqueak is proud.':'Strength done. Peepsi is proud.');
+  confetti('big');toast(type==='mobility'?'Mobility done. Peepsqueak is so proud!':'Strength done. Peepsi is proud of those gains!');
 }
 function skipEx(){if(!S.wo)return;S.wo.i++;if(S.wo.i>=S.wo.ex.length){doneWo();return;}S.wo.set=1;S.wo.ph='ready';R();}
 function skipRest(){if(!S.wo||S.wo.ph!=='rest')return;S.wo.set++;S.wo.ph='ready';R();}
@@ -799,61 +881,258 @@ function vWoRest(w){
     +'<button style="background:none;border:none;color:rgba(255,255,255,.35);font-size:13px;margin-top:16px;cursor:pointer;font-family:var(--sans);" onclick="S.wo.ph=\'ready\';S.wo.set++;R()">skip rest</button></div>';
 }
 
-// ── CALENDAR ───────────────────────────────────────────
-function vCal(){
-  var c=cycle(),NCD=NC.toISOString().split('T')[0],days=[],strip='';
-  for(var i=0;i<c.tot;i++){
-    var d2=new Date(LC);d2.setDate(d2.getDate()+i);
-    var dt=d2.toISOString().split('T')[0];
-    days.push({dt:dt,lbl:d2.toLocaleDateString('en-US',{month:'short',day:'numeric'}),dn:i+1,tod:dt===TODAY,chm:dt===NCD});
-    loadCalDay(dt);
+
+
+// ── CONFETTI ───────────────────────────────────────────
+var CONF_COLORS = ['#8956FF','#D2BFFF','#2ebfa5','#D4920A','#E8546A','#4A7DFF','#ffffff'];
+var CONF_SHAPES = ['square','circle','rect'];
+function confetti(intensity){
+  var n = intensity==='big' ? 80 : 40;
+  var wrap = document.createElement('div');
+  wrap.className = 'confetti-wrap';
+  document.body.appendChild(wrap);
+  for(var i=0;i<n;i++){
+    (function(delay){
+      setTimeout(function(){
+        var p = document.createElement('div');
+        p.className = 'cp';
+        var color = CONF_COLORS[Math.floor(Math.random()*CONF_COLORS.length)];
+        var size = 6 + Math.random()*8;
+        var isCircle = Math.random() > 0.6;
+        var isRect = !isCircle && Math.random() > 0.5;
+        p.style.cssText = 'left:'+Math.random()*100+'%;'
+          +'width:'+(isRect?size*0.5:size)+'px;height:'+(isRect?size*1.8:size)+'px;'
+          +'background:'+color+';'
+          +'border-radius:'+(isCircle?'50%':'2px')+';'
+          +'animation-duration:'+(1.4+Math.random()*1.2)+'s;'
+          +'animation-delay:0s;';
+        wrap.appendChild(p);
+      }, delay);
+    })(i * 18);
   }
-  for(var i=0;i<days.length;i++){
-    var d2=days[i],dm=S.calD[d2.dt],ms=dm&&Array.isArray(dm.moods)?dm.moods:(dm&&dm.feel&&dm.feel.mood!=null?[{mood:dm.feel.mood}]:[]);
-    var avg=ms.length?Math.round(ms.reduce(function(s,m){return s+(m.mood||0);},0)/ms.length):null;
-    strip+='<div class="cd'+(d2.tod?' tod':'')+(d2.chm?' chm':'')+(dm?' has':'')+'" onclick="selDay(\''+d2.dt+'\')" style="'+(S.cd===d2.dt?'border-color:var(--pu);':'')+'"><div style="font-size:10px;font-weight:700;color:var(--ink3);">Day '+d2.dn+'</div><div style="font-size:13px;font-weight:700;margin:2px 0;">'+d2.lbl+'</div>'
-      +(d2.chm?'<div style="font-size:9px;font-weight:800;color:var(--ro);text-transform:uppercase;">Chemo</div>':'')
-      +(d2.tod?'<div style="font-size:9px;font-weight:800;color:var(--pu);text-transform:uppercase;">Today</div>':'')
-      +'<div class="dots">'
-      +(dm&&dm.meds&&dm.meds.am?'<div class="dot5" style="background:var(--pu);"></div>':'')
-      +(avg!=null?'<div class="dot5" style="background:'+MC[Math.min(4,Math.max(0,avg))]+';"></div>':'')
-      +(dm&&(dm.wos||[]).length?'<div class="dot5" style="background:var(--te);"></div>':'')
-      +'</div></div>';
-  }
-  var sel=S.cd||TODAY,sd=S.calD[sel],selMoods=sd&&Array.isArray(sd.moods)?sd.moods:(sd&&sd.feel&&sd.feel.mood!=null?[{mood:sd.feel.mood,ts:sel+'T12:00:00',notes:''}]:[]);
-  var detail='';
-  if(sd){
-    var items='';
-    for(var i=0;i<selMoods.length;i++){
-      var m=selMoods[i];
-      items+='<div class="tli"><div class="tld" style="background:'+MC_bg(m.mood)+'"><i class="fa-regular fa-face-smile" style="font-size:13px;color:'+MC_color(m.mood)+'"></i></div>'
-        +'<div class="tlb"><div class="tlt">'+fmtT(m.ts)+'</div><div class="tll" style="color:'+MC_color(m.mood)+';">'+ML[m.mood]+'</div>'
-        +(m.notes?'<div class="tls" style="font-style:italic;">"'+m.notes+'"</div>':'')
-        +'</div></div>';
-    }
-    detail='<div class="card mt3">'
-      +'<div style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--pu);margin-bottom:12px;">'+new Date(sel+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+'</div>'
-      +(selMoods.length?'<div class="lbl mb2">Mood ('+selMoods.length+' check-in'+(selMoods.length!==1?'s':'')+')</div><div class="tl">'+items+'</div>':'<div style="font-size:14px;color:var(--ink3);">No mood logs this day</div>')
-      +((sd.food||[]).length?'<div style="font-size:14px;margin-top:8px;"><span style="font-weight:600;">Food:</span> '+sd.food.map(function(x){return x.item;}).join(', ')+'</div>':'')
-      +((sd.wos||[]).length?'<div style="font-size:14px;margin-top:8px;"><span style="font-weight:600;">Training:</span> '+sd.wos.map(function(w){return w.type;}).join(', ')+'</div>':'')
-      +(sd.move&&sd.move.out?'<div style="font-size:14px;margin-top:8px;">Went outside</div>':'')
-      +'</div>';
-  } else {
-    detail='<div class="empty-s mt3"><i class="fa-regular fa-calendar-days"></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">'+(sel===TODAY?'Log something to see it here':'Nothing logged this day')+'</div></div>';
-  }
-  return '<div class="fi"><div class="ph">'
-    +'<div style="font-family:var(--serif);font-size:20px;font-style:italic;">Cycle Calendar</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:2px;">Day '+c.day+' of '+c.tot+' · next infusion in '+c.dtn+' days</div></div>'
-    +'<div style="padding:12px 16px 0;">'
-    +'<div class="cal-strip">'+strip+'</div>'
-    +'<div style="display:flex;gap:16px;font-size:11px;font-weight:600;color:var(--ink3);padding:8px 0 12px;">'
-    +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pu);margin-right:4px;"></span>Meds</span>'
-    +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--te);margin-right:4px;"></span>Training</span>'
-    +'<span style="color:var(--ro);">● Chemo</span></div>'
-    +detail+'</div></div>';
+  setTimeout(function(){if(wrap.parentNode)wrap.parentNode.removeChild(wrap);}, 3200);
 }
 
-// ── SQUAD ──────────────────────────────────────────────
+// ── EVENTS ──────────────────────────────────────────────
+var EV_TYPES = [
+  {id:'chemo',   l:'Chemo / Infusion',  color:'#E8546A'},
+  {id:'appt',    l:'Doctor Appointment', color:'#8956FF'},
+  {id:'lab',     l:'Labs / Blood draw',  color:'#D4920A'},
+  {id:'scan',    l:'Imaging / Scan',     color:'#4A7DFF'},
+  {id:'para',    l:'Paracentesis',        color:'#4A7DFF'},
+  {id:'para-watch',l:'Tummy Watch',        color:'#D4920A'},
+  {id:'other',   l:'Other',              color:'#7B82A0'}
+];
+function evColor(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].color;}return '#7B82A0';}
+function evLabel(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].l;}return 'Other';}
+function eventsForDay(dt){return(S.events||[]).filter(function(e){return e.date===dt;});}
+function saveEvents(){lsSet('events',S.events);}
+function deleteEvent(id){S.events=(S.events||[]).filter(function(e){return e.id!==id;});saveEvents();R();}
+function openAddEvent(dt){S.addingEvent=true;S.evDate=dt;S.evForm={title:'',type:'appt',time:'',notes:''};R();setTimeout(function(){if(typeof lucide!=='undefined')lucide.createIcons();},50);}
+function closeAddEvent(){S.addingEvent=false;R();}
+function saveEvent(){
+  var f=S.evForm||{};
+  if(!f.title||!f.title.trim()){toast('Add a title');return;}
+  var ev={id:Date.now(),date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',notes:f.notes||''};
+  S.events=(S.events||[]).concat(ev);
+  // Paracentesis: auto-create 5-day watch windows (days 3-6 post-procedure)
+  if(f.type==='para'){
+    var base=new Date(S.evDate+'T12:00:00');
+    for(var wi=3;wi<=6;wi++){
+      var wd=new Date(base);wd.setDate(wd.getDate()+wi);
+      var wdt=wd.toISOString().split('T')[0];
+      S.events.push({id:Date.now()+wi,date:wdt,title:'Tummy watch (day '+wi+' post-para)',type:'para-watch',time:'',notes:'Monitor for bloating. May need paracentesis if uncomfortable.',soft:true});
+    }
+    toast('Paracentesis logged — watch windows added for days 3-6');
+  } else {
+    toast('Event added');
+  }
+  saveEvents();S.addingEvent=false;R();
+}
+function exportICS(){
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Go Kendra//EN'];
+  (S.events||[]).forEach(function(e){
+    var dt=e.date.replace(/-/g,'');
+    var dtStr=e.time?dt+'T'+e.time.replace(':','')+'00':dt;
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:'+e.id+'@gokendra');
+    lines.push('DTSTART'+(e.time?'':'VALUE=DATE')+':'+dtStr);
+    lines.push('SUMMARY:'+e.title+(e.type==='chemo'?' (Chemo)':e.type==='appt'?' (Appt)':''));
+    if(e.notes)lines.push('DESCRIPTION:'+e.notes);
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='kendra-appointments.ics';a.click();
+  URL.revokeObjectURL(url);
+  toast('Calendar file downloaded');
+}
+
+// ── FULL CALENDAR ──────────────────────────────────────
+function vCal(){
+  var now=new Date();
+  if(!S.calMonth) S.calMonth={y:now.getFullYear(),m:now.getMonth()};
+  var cy=S.calMonth.y,cm=S.calMonth.m;
+  var firstDay=new Date(cy,cm,1),lastDay=new Date(cy,cm+1,0);
+  var startDow=firstDay.getDay(); // 0=Sun
+  var daysInMonth=lastDay.getDate();
+  var NCD=NC.toISOString().split('T')[0];
+  var monthName=firstDay.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  // Build 6-row grid
+  var cells=[];
+  for(var i=0;i<startDow;i++) cells.push(null);
+  for(var d=1;d<=daysInMonth;d++) cells.push(d);
+  while(cells.length%7!==0) cells.push(null);
+
+  var gridRows='';
+  for(var r=0;r<cells.length/7;r++){
+    var row='<div style="display:contents;">';
+    for(var c=0;c<7;c++){
+      var day=cells[r*7+c];
+      if(!day){row+='<div style="min-height:60px;"></div>';continue;}
+      var dtStr=cy+'-'+(cm+1<10?'0':'')+(cm+1)+'-'+(day<10?'0':'')+day;
+      var isToday=dtStr===TODAY;
+      var isChemo=dtStr===NCD;
+      var dm=S.calD[dtStr];
+      var moods=dm&&Array.isArray(dm.moods)?dm.moods:(dm&&dm.feel&&dm.feel.mood!=null?[{mood:dm.feel.mood}]:[]);
+      var avgMood=moods.length?Math.round(moods.reduce(function(s,m){return s+(m.mood||0);},0)/moods.length):null;
+      var dayEvents=eventsForDay(dtStr);
+      var isSelected=S.cd===dtStr;
+      // Load cal data async if not loaded
+      if(dm===undefined) loadCalDay(dtStr);
+
+      var moodBg=avgMood!=null?MC_bg(avgMood):'transparent';
+      var moodDot=avgMood!=null?'<div style="width:6px;height:6px;border-radius:50%;background:'+MC[avgMood]+';flex-shrink:0;"></div>':'';
+      var eventDots='';
+      for(var ei=0;ei<Math.min(dayEvents.length,3);ei++){
+        eventDots+='<div style="width:5px;height:5px;border-radius:50%;background:'+evColor(dayEvents[ei].type)+';flex-shrink:0;"></div>';
+      }
+
+      row+='<div onclick="selDay(''+dtStr+'')" style="min-height:60px;border:1.5px solid '+(isSelected?'var(--pu)':isToday?'var(--pu)':'var(--div)')+';border-radius:8px;padding:6px;cursor:pointer;background:'+(isSelected?'var(--pul)':isChemo?'var(--rol)':avgMood!=null?moodBg:'var(--card)')+';position:relative;transition:all .12s;">'
+        +'<div style="font-size:13px;font-weight:'+(isToday?'700':'500')+';color:'+(isToday?'var(--pu)':isChemo?'var(--ro)':'var(--ink)')+';margin-bottom:4px;">'+day+'</div>'
+        +(isChemo?'<div style="font-size:8px;font-weight:800;color:var(--ro);text-transform:uppercase;letter-spacing:.5px;line-height:1;">Chemo</div>':'')
+        +'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:auto;">'
+        +moodDot+eventDots
+        +'</div></div>';
+    }
+    row+='</div>';
+    gridRows+=row;
+  }
+
+  // Selected day detail
+  var selDetail='';
+  if(S.cd){
+    var sd=S.calD[S.cd];
+    var sdMoods=sd&&Array.isArray(sd.moods)?sd.moods:(sd&&sd.feel&&sd.feel.mood!=null?[{mood:sd.feel.mood,ts:S.cd+'T12:00:00',notes:''}]:[]);
+    var sdEvents=eventsForDay(S.cd);
+    var selDateStr=new Date(S.cd+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+    var evHtml='';
+    for(var i=0;i<sdEvents.length;i++){
+      var ev=sdEvents[i];
+      evHtml+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--div);'+(ev.soft?'opacity:.7;':'')+'">'
+        +'<div style="width:10px;height:10px;border-radius:50%;background:'+evColor(ev.type)+';flex-shrink:0;"></div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:14px;font-weight:600;">'+ev.title+'</div>'
+        +'<div style="font-size:12px;color:var(--ink3);">'+(ev.time?ev.time+' · ':'')+evLabel(ev.type)+'</div>'
+        +'</div>'
+        +'<button onclick="deleteEvent('+ev.id+')" style="background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>'
+        +'</div>';
+    }
+
+    var moodHtml='';
+    if(sdMoods.length){
+      for(var i=0;i<sdMoods.length;i++){
+        var m=sdMoods[i];
+        moodHtml+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">'
+          +'<div style="width:8px;height:8px;border-radius:50%;background:'+MC_color(m.mood)+';flex-shrink:0;"></div>'
+          +'<div style="font-size:13px;font-weight:600;color:'+MC_color(m.mood)+';">'+ML[m.mood]+'</div>'
+          +(m.ts?'<div style="font-size:12px;color:var(--ink3);margin-left:auto;">'+fmtT(m.ts)+'</div>':'')
+          +'</div>';
+      }
+    }
+
+    selDetail='<div style="margin-top:16px;background:var(--card);border-radius:12px;border:1px solid var(--div);overflow:hidden;">'
+      +'<div style="padding:14px 16px;border-bottom:1px solid var(--div);display:flex;align-items:center;justify-content:space-between;">'
+      +'<div style="font-family:var(--serif);font-size:15px;font-style:italic;color:var(--ink);">'+selDateStr+'</div>'
+      +'<button class="btn btn-pu btn-sm btn-auto" onclick="openAddEvent(''+S.cd+'')" style="height:32px;font-size:12px;gap:4px;"><i data-lucide="plus" style="width:12px;height:12px;"></i> Add event</button>'
+      +'</div>'
+      +(sdEvents.length||sdMoods.length?
+        (sdMoods.length?'<div style="padding:8px 16px 4px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:4px;">Mood</div>'+moodHtml+'</div>':'')
+        +(sdEvents.length?'<div style="padding:8px 16px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:4px;">Events</div>'+evHtml+'</div>':'')
+        :'<div style="padding:16px;"><div style="font-size:13px;color:var(--ink3);">'+(S.cd===TODAY?'Nothing logged yet today — start a check-in.':'Nothing logged this day.')+'</div></div>'
+      )
+      +'</div>';
+  }
+
+  // Add event modal
+  var modal='';
+  if(S.addingEvent){
+    var f=S.evForm||{};
+    var typeOpts='';
+    for(var i=0;i<EV_TYPES.length;i++){
+      var et=EV_TYPES[i],sel=(f.type||'appt')===et.id;
+      typeOpts+='<div onclick="S.evForm.type=''+et.id+'';R()" style="flex:1;padding:8px 4px;border-radius:8px;border:1.5px solid '+(sel?evColor(et.id):'var(--div)')+';background:'+(sel?'white':'var(--raised)')+';text-align:center;cursor:pointer;">'
+        +'<div style="width:8px;height:8px;border-radius:50%;background:'+evColor(et.id)+';margin:0 auto 4px;"></div>'
+        +'<div style="font-size:11px;font-weight:600;color:'+(sel?'var(--ink)':'var(--ink3)')+';">'+et.l.split(' ')[0]+'</div>'
+        +'</div>';
+    }
+    modal='<div style="position:fixed;inset:0;background:rgba(22,27,51,.5);z-index:300;display:flex;flex-direction:column;justify-content:flex-end;max-width:430px;left:50%;transform:translateX(-50%);" onclick="if(event.target===this)closeAddEvent()">'
+      +'<div style="background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px 40px;animation:slideUp .25s ease;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
+      +'<div style="font-family:var(--serif);font-size:20px;font-style:italic;">Add Event</div>'
+      +'<button onclick="closeAddEvent()" style="background:none;border:none;cursor:pointer;color:var(--ink3);"><i data-lucide="x"></i></button>'
+      +'</div>'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:8px;">Type</div>'
+      +'<div style="display:flex;gap:6px;margin-bottom:16px;">'+typeOpts+'</div>'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:6px;">Title</div>'
+      +'<input class="inp mb3" type="text" id="ev-title" placeholder="e.g. Dr. Wilky appointment" value="'+(f.title||'')+'" oninput="S.evForm.title=this.value">'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:6px;">Time (optional)</div>'
+      +'<input class="inp mb4" type="time" id="ev-time" value="'+(f.time||'')+'" oninput="S.evForm.time=this.value" style="height:48px;">'
+      +'<button class="btn btn-ink" onclick="saveEvent()"><i data-lucide="check"></i> Save event</button>'
+      +'</div></div>';
+  }
+
+  return '<div class="fi"><div class="ph">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<div>'
+    +'<div style="font-family:var(--serif);font-size:20px;font-style:italic;">'+monthName+'</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:1px;">Cycle day '+cycle().day+' of '+cycle().tot+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;">'
+    +'<button onclick="prevMonth()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);"><i data-lucide="chevron-left" style="width:16px;height:16px;"></i></button>'
+    +'<button onclick="nextMonth()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></button>'
+    +'<button onclick="exportICS()" style="width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink2);" title="Export to Calendar"><i data-lucide="download" style="width:16px;height:16px;"></i></button>'
+    +'</div></div></div>'
+    +'<div class="px" style="padding-top:12px;">'
+    // Day-of-week headers
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">'
+    +['Su','Mo','Tu','We','Th','Fr','Sa'].map(function(d){return '<div style="text-align:center;font-size:10px;font-weight:700;color:var(--ink3);padding:4px 0;">'+d+'</div>';}).join('')
+    +'</div>'
+    // Month grid
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">'
+    +gridRows
+    +'</div>'
+    // Legend
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap;padding:10px 0 0;font-size:11px;font-weight:600;color:var(--ink3);">'
+    +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--m4);display:inline-block;"></span>Great</span>'
+    +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--m3);display:inline-block;"></span>Good</span>'
+    +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--m1);display:inline-block;"></span>Rough</span>'
+    +'<span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--ro);display:inline-block;"></span>Chemo day</span>'
+    +'</div>'
+    +selDetail
+    +'<div style="height:24px;"></div>'
+    +'</div>'
+    +modal
+    +'</div>';
+}
+function prevMonth(){if(!S.calMonth){var n=new Date();S.calMonth={y:n.getFullYear(),m:n.getMonth()};}S.calMonth.m--;if(S.calMonth.m<0){S.calMonth.m=11;S.calMonth.y--;}R();}
+function nextMonth(){if(!S.calMonth){var n=new Date();S.calMonth={y:n.getFullYear(),m:n.getMonth()};}S.calMonth.m++;if(S.calMonth.m>11){S.calMonth.m=0;S.calMonth.y++;}R();}
+
+
+function vSquad
 function vSquad(){
   var d=S.day||empty(),p=S.priv||DEFP,moods=d.moods||[],lm=latestMood(d);
   var cheersHtml='';
@@ -877,7 +1156,7 @@ function vSquad(){
   }
   badgesHtml+='</div>';
   return '<div class="fi">'
-    +'<div class="ph" style="background:var(--tel);">'
+    +'<div class="ph" style="background:var(--aml);">'
     +'<div style="display:flex;align-items:center;gap:12px;">'
     +'<div style="width:40px;height:40px;">'+SQ+'</div>'
     +'<div><div style="font-family:var(--serif);font-size:20px;font-style:italic;">Peepsqueak\'s Corner</div>'
@@ -894,19 +1173,19 @@ function vSquad(){
     +(!d.demon&&!d.food&&!lm?'<div style="font-size:14px;color:var(--ink2);font-style:italic;">Nothing logged yet today</div>':'')
     +'</div></div>'
     +'<div class="sec"><div class="lbl mb2">Leave a cheer</div>'
-    +'<div class="card"><input class="inp mb3" type="text" id="cn" placeholder="Your name"><textarea class="inp mb3" id="cm" rows="3" placeholder="Tell Kendra something amazing..." style="height:80px;"></textarea><button class="btn btn-te" onclick="sendCheer()"><i class="fa-regular fa-heart"></i> Send cheer</button></div></div>'
+    +'<div class="card"><input class="inp mb3" type="text" id="cn" placeholder="Your name"><textarea class="inp mb3" id="cm" rows="3" placeholder="Tell Kendra something amazing..." style="height:80px;"></textarea><button class="btn btn-te" onclick="sendCheer()"><i data-lucide="regular" ></i> Send cheer</button></div></div>'
     +'<div class="sec"><div class="lbl mb2">The cheer wall</div>'
-    +(cheersHtml||'<div class="empty-s"><i class="fa-regular fa-heart"></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">No cheers yet</div><div style="font-size:13px;color:var(--ink3);">Be the first</div></div>')
+    +(cheersHtml||'<div class="empty-s"><i data-lucide="regular" ></i><div style="font-family:var(--serif);font-size:18px;color:var(--ink2);margin-bottom:8px;">No cheers yet</div><div style="font-size:13px;color:var(--ink3);">Be the first</div></div>')
     +'</div>'
     +'<div class="sec"><div class="lbl mb2">Badges earned</div>'+badgesHtml+'</div>'
     +'<div style="height:24px;"></div></div></div>';
 }
 
 // ── EVENT HANDLERS ─────────────────────────────────────
-function togMed(p){S.day=S.day||empty();S.day.meds[p]=!S.day.meds[p];saveDay();R();if(S.day.meds[p])toast(p==='am'?'Morning meds done.':'Evening meds done.');}
+function togMed(p){S.day=S.day||empty();S.day.meds[p]=!S.day.meds[p];saveDay();R();if(S.day.meds.am&&S.day.meds.pm){confetti('big');toast('Both meds done!');}else if(S.day.meds[p])toast(p==='am'?'Morning meds done.':'Evening meds done.');}
 function addFood(item){S.day=S.day||empty();(S.day.food=S.day.food||[]).push({item:item,kd:undefined});saveDay();R();}
 function addCustomFood(){var e=document.getElementById('fc');if(!e||!e.value.trim())return;addFood(e.value.trim());}
-function keptDown(i,v){if(!S.day||!S.day.food)return;S.day.food[i].kd=v;saveDay();R();toast(v?'Kept it down!':'Rinse and wait 30 min.');}
+function keptDown(i,v){if(!S.day||!S.day.food)return;S.day.food[i].kd=v;saveDay();R();if(v){confetti();toast('Kept it down!');}else toast('Rinse and wait 30 min.');}
 function rmFood(i){if(!S.day||!S.day.food)return;S.day.food.splice(i,1);saveDay();R();}
 function selBris(n){selB=n;var bs=document.querySelectorAll('.bb');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');var el=document.getElementById('b'+n);if(el)el.classList.add('on');}
 function togTag(id){var idx=selT.indexOf(id);if(idx>=0)selT.splice(idx,1);else selT.push(id);var els=document.querySelectorAll('[id^=dt]');for(var i=0;i<els.length;i++)els[i].classList.toggle('on',selT.indexOf(els[i].id.replace('dt',''))>=0);}
@@ -919,16 +1198,16 @@ function logDemon(){
   if(st.indexOf('spicy')>=0||sb>=6) msg='Lava mode. Vaseline barrier cream, Pedialyte, avoid acidic foods.';
   else if(st.indexOf('grumbles')>=0) msg='Warning system on. Stay close, keep loperamide handy.';
   else if(st.indexOf('shart')>=0) msg='Textbook GemTax. Vaseline undies routine is your friend.';
-  else if(st.indexOf('winner')>=0||sb===4) msg='Solid W. A normal demon is a genuine victory.';
+  else if(st.indexOf('winner')>=0||sb===4){msg='Solid W. A normal demon is a genuine victory.';confetti();}
   R();
   if(msg){var te=document.getElementById('demon-tip');if(te)te.innerHTML='<div class="card mt3" style="background:var(--pul);border-color:var(--pum);"><div style="font-size:14px;line-height:1.6;">'+msg+'</div></div>';}
   toast('Demon logged.');
 }
 function rmDemon(i){if(!S.day||!S.day.demon)return;S.day.demon.splice(i,1);saveDay();R();}
 function setHyd(v){S.day=S.day||empty();S.day.hyd=v;saveDay();R();}
-function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0)+d);saveDay();R();if(S.day.hyd>=8)toast('Hydration hero!');}
-function addLaps(d){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.laps=Math.max(0,(S.day.move.laps||0)+d);saveDay();R();if(S.day.move.laps>=2)toast('2 laps done!');}
-function togOut(v){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.out=v;saveDay();R();if(v)toast('Outside achieved.');}
+function addHyd(d){S.day=S.day||empty();S.day.hyd=Math.max(0,(S.day.hyd||0)+d);saveDay();R();if(S.day.hyd===8){confetti('big');toast('Hydration hero — 8 glasses!');}}
+function addLaps(d){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.laps=Math.max(0,(S.day.move.laps||0)+d);saveDay();R();if(S.day.move.laps===2){confetti();toast('2 laps — Hall of Fame!');}}
+function togOut(v){S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.out=v;saveDay();R();if(v){confetti();toast('Outside achieved!');}}
 function saveDist(){var e=document.getElementById('dst');if(!e)return;S.day=S.day||empty();S.day.move=S.day.move||{laps:0,dist:'',out:false};S.day.move.dist=e.value.trim();saveDay();toast('Distance saved.');}
 function sendCheer(){
   var n=(document.getElementById('cn')||{}).value||'';
@@ -955,17 +1234,239 @@ function doExport(){
   if(el){
     el.style.display='block';
     el.innerHTML='<div style="background:var(--raised);border-radius:10px;padding:16px;border:1.5px dashed var(--div);font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:monospace;color:var(--ink);margin-bottom:12px;">'+txt+'</div>'
-      +'<button class="btn btn-ink btn-sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(function(){toast(\'Copied!\');})"><i class="fa-regular fa-copy"></i> Copy to clipboard</button>';
+      +'<button class="btn btn-ink btn-sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(function(){toast(\'Copied!\');})"><i data-lucide="regular" ></i> Copy to clipboard</button>';
   }
 }
 
 function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.remove('show');void t.offsetWidth;t.classList.add('show');}
 
 // ── INIT ───────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════
+// CARE TEAM PORTAL
+// ══════════════════════════════════════════════════════
+function vCarePortal(){
+  var c=cycle(),d=S.day||empty(),moods=d.moods||[],lm=latestMood(d);
+  var summaries=S.labSummaries||[];
+  var latest=summaries.length?summaries[summaries.length-1]:null;
+
+  // Mood trend last 7 days
+  var moodRows='';
+  var last7=[TODAY];
+  for(var i=1;i<7;i++){var d2=new Date();d2.setDate(d2.getDate()-i);last7.push(d2.toISOString().split('T')[0]);}
+  last7.reverse();
+  var trendDots='';
+  for(var i=0;i<last7.length;i++){
+    var dt=last7[i],dm=dt===TODAY?d:(S.calD[dt]||null);
+    if(dm===undefined) loadCalDay(dt);
+    var ms=dm&&Array.isArray(dm.moods)?dm.moods:(dm&&dm.feel&&dm.feel.mood!=null?[{mood:dm.feel.mood}]:[]);
+    var avg=ms.length?Math.round(ms.reduce(function(s,m){return s+(m.mood||0);},0)/ms.length):null;
+    var dayLabel=new Date(dt+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
+    trendDots+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">'
+      +'<div style="width:12px;height:12px;border-radius:50%;background:'+(avg!=null?MC[avg]:'var(--div)')+';">'
+      +'</div><div style="font-size:9px;color:var(--ink3);">'+dayLabel+'</div></div>';
+  }
+
+  // Today symptom snapshot
+  var snap='';
+  if(lm){
+    var rows=[['Mood',lm.mood],['Nausea',lm.nausea],['Pain',lm.pain],['Energy',lm.energy]];
+    var labels=[['Rough','Low','Okay','Good','Great'],['Bad','Medium','Mild','None'],['A lot','Some','A little','None'],['Empty','Low','Okay','Going']];
+    for(var ri=0;ri<rows.length;ri++){
+      var label=rows[ri][0],val=rows[ri][1];
+      if(val==null) continue;
+      var lset=labels[ri],lval=lset[val]||'';
+      var color=ri===0?MC_color(val):ri===1?(val<=1?'var(--ro)':val===2?'var(--am)':'var(--sg)'):ri===2?(val<=1?'var(--ro)':val===2?'var(--am)':'var(--sg)'):(val<=1?'var(--ro)':val===2?'var(--am)':'var(--sg)');
+      snap+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--div);">'
+        +'<div style="font-size:13px;color:var(--ink2);">'+label+'</div>'
+        +'<div style="font-size:13px;font-weight:700;color:'+color+';">'+lval+'</div>'
+        +'</div>';
+    }
+  }
+
+  return '<div class="fi" style="background:var(--bg);min-height:100vh;">'
+    // Header
+    +'<div style="padding:16px;background:var(--card);border-bottom:1px solid var(--div);display:flex;align-items:center;justify-content:space-between;">'
+    +'<div>'
+    +'<div style="font-family:var(--serif);font-size:20px;font-style:italic;color:var(--ink);">Care Team</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:1px;">Welcome, '+((S.user&&S.user.name)||'')+'</div>'
+    +'</div>'
+    +'<button onclick="logOut()" style="background:none;border:1.5px solid var(--div);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;">Sign out</button>'
+    +'</div>'
+    +'<div style="padding:16px;">'
+
+    // Cycle banner
+    +'<div style="background:'+c.bg+';border-radius:10px;padding:12px 16px;margin-bottom:12px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+    +'<div style="width:8px;height:8px;border-radius:50%;background:'+c.zc+';"></div>'
+    +'<div style="font-size:13px;font-weight:700;color:'+c.zc+';">Day '+c.day+' of '+c.tot+' — '+c.z+'</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-left:auto;">'+c.dtn+'d to next chemo</div>'
+    +'</div>'
+    +'<div style="font-size:12px;color:var(--ink2);line-height:1.5;">'+c.msg+'</div>'
+    +'</div>'
+
+    // 7-day mood trend
+    +'<div style="background:var(--card);border-radius:12px;border:1px solid var(--div);padding:14px 16px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:12px;">7-day mood trend</div>'
+    +'<div style="display:flex;gap:4px;">'+trendDots+'</div>'
+    +'<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">'
+    +ML.map(function(l,i){return '<span style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--ink3);"><span style="width:7px;height:7px;border-radius:50%;background:'+MC[i]+';display:inline-block;"></span>'+l+'</span>';}).join('')
+    +'</div></div>'
+
+    // Today snapshot
+    +(snap?'<div style="background:var(--card);border-radius:12px;border:1px solid var(--div);padding:14px 16px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:4px;">Today&#39;s snapshot</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:10px;">'+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+(lm&&lm.ts?' · last check-in '+fmtT(lm.ts):'')+'</div>'
+    +snap+'</div>':'')
+
+    // Stats row
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">'
+    +[['Meds',(d.meds&&d.meds.am&&d.meds.pm)?'Both done':((d.meds&&(d.meds.am||d.meds.pm))?'Partial':'None'),(d.meds&&d.meds.am&&d.meds.pm)?'var(--sg)':'var(--am)'],
+      ['Hydration',(d.hyd||0)+' / 8 glasses',(d.hyd||0)>=8?'var(--sg)':(d.hyd||0)>=4?'var(--am)':'var(--ink3)'],
+      ['Movement',(d.move&&d.move.laps?d.move.laps+' lap'+(d.move.laps!==1?'s':''):'')+(d.move&&d.move.out?' · outside':'') || 'None logged',(d.move&&(d.move.laps>=2||d.move.out))?'var(--sg)':'var(--ink3)']
+    ].map(function(row){return '<div style="background:var(--card);border-radius:10px;border:1px solid var(--div);padding:10px 12px;">'
+      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:4px;">'+row[0]+'</div>'
+      +'<div style="font-size:13px;font-weight:700;color:'+row[2]+';line-height:1.3;">'+row[1]+'</div></div>';}).join('')
+    +'</div>'
+
+    // Lab summaries
+    +'<div style="background:var(--card);border-radius:12px;border:1px solid var(--div);overflow:hidden;margin-bottom:12px;">'
+    +'<div style="padding:14px 16px;border-bottom:1px solid var(--div);display:flex;align-items:center;justify-content:space-between;">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);">Lab Summary</div>'
+    +'<button onclick="S.addingLab=!S.addingLab;R()" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--pu);">'+(S.addingLab?'Cancel':'+ Add update')+'</button>'
+    +'</div>'
+
+    // Add form
+    +(S.addingLab?'<div style="padding:14px 16px;border-bottom:1px solid var(--div);background:var(--raised);">'
+    +'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.5;">Paste your Claude summary below. Use this prompt with Kendra&#39;s lab screenshot:<br><br>'
+    +'<span style="font-family:monospace;font-size:11px;color:var(--ink3);background:var(--bg);padding:6px 8px;border-radius:6px;display:block;line-height:1.7;">'
+    +'I'm uploading lab results for Kendra, a 34-year-old woman with peritoneal EHE on Gemcitabine + Docetaxel. She has a PICC-associated DVT, low albumin, and is on methadone for pain. Summarize in 3 sections: (1) What's flagged — plain English, her context not generic; (2) What this week will likely feel like physically; (3) How to support her right now — 3-5 specific actionable things. Warm, direct, no jargon without explanation.'
+    +'</span></div>'
+    +'<textarea class="inp" id="lab-text" rows="6" placeholder="Paste Claude&#39;s summary here..." style="height:120px;font-size:13px;"></textarea>'
+    +'<button class="btn btn-ink mt3" onclick="saveLabSummary()"><i data-lucide="check"></i> Save</button>'
+    +'</div>':'')
+
+    // Summaries list
+    +(summaries.length===0&&!S.addingLab?'<div style="padding:24px 16px;text-align:center;"><div style="font-size:13px;color:var(--ink3);">No lab summaries yet. Add one above.</div></div>':'')
+    +[].concat(summaries).reverse().slice(0,5).map(function(s,i){
+      return '<div style="padding:14px 16px;'+(i>0?'border-top:1px solid var(--div);':'')+'">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--ink2);">'+new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'</div>'
+        +'<button onclick="deleteLabSummary(''+s.id+'')" style="background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;"><i data-lucide="x" style="width:13px;height:13px;"></i></button>'
+        +'</div>'
+        +'<div style="font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;">'+s.text+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>'
+
+    +'<div style="height:24px;"></div></div></div>';
+}
+
+function saveLabSummary(){
+  var el=document.getElementById('lab-text');
+  if(!el||!el.value.trim()){toast('Nothing to save');return;}
+  var entry={id:Date.now(),ts:new Date().toISOString(),text:el.value.trim()};
+  S.labSummaries=(S.labSummaries||[]).concat(entry);
+  lsSet('lab-summaries',S.labSummaries);
+  S.addingLab=false;
+  R();
+  toast('Lab summary saved');
+}
+function deleteLabSummary(id){
+  S.labSummaries=(S.labSummaries||[]).filter(function(s){return String(s.id)!==String(id);});
+  lsSet('lab-summaries',S.labSummaries);
+  R();
+}
+
+// ══════════════════════════════════════════════════════
+// FRIENDS / SUPPORT PORTAL
+// ══════════════════════════════════════════════════════
+function vFriendsPortal(){
+  var d=S.day||empty(),p=S.priv||DEFP,lm=latestMood(d),moods=d.moods||[];
+  var c=cycle();
+
+  // Only what Kendra chose to share
+  var shareItems=[];
+  if(p.mood&&lm&&lm.mood!=null) shareItems.push({label:'Vibe today',val:ML[lm.mood],color:MC_color(lm.mood)});
+  if(p.food&&d.food&&d.food.length) shareItems.push({label:'Eating',val:d.food.length+' nibble'+(d.food.length!==1?'s':'')+' today',color:'var(--sg)'});
+  if(p.wo&&d.wos&&d.wos.length) shareItems.push({label:'Movement',val:'Did a '+d.wos[0].type+' circuit',color:'var(--sg)'});
+  if(d.move&&d.move.out) shareItems.push({label:'Outside',val:'Got some fresh air today',color:'var(--sg)'});
+
+  return '<div class="fi" style="background:var(--bg);min-height:100vh;">'
+    // Warm header
+    +'<div style="padding:24px 16px 20px;background:var(--card);border-bottom:1px solid var(--div);text-align:center;">'
+    +'<div style="width:56px;height:56px;margin:0 auto 12px;">'+SL+'</div>'
+    +'<div style="font-family:var(--serif);font-size:26px;font-style:italic;color:var(--pu);margin-bottom:4px;">Kenny&#39;s Korner</div>'
+    +'<div style="font-size:13px;color:var(--ink3);">Love from '+(S.user&&S.user.name?S.user.name:'you')+'</div>'
+    +'</div>'
+    +'<div style="padding:16px;">'
+
+    // Cycle zone — soft language, no numbers
+    +'<div style="background:'+c.bg+';border-radius:10px;padding:14px 16px;margin-bottom:12px;text-align:center;">'
+    +'<div style="font-size:13px;font-weight:700;color:'+c.zc+';margin-bottom:4px;">'+friendlyCycleMsg(c)+'</div>'
+    +'<div style="font-size:12px;color:var(--ink2);line-height:1.5;">'+c.dtn+' days until her next infusion</div>'
+    +'</div>'
+
+    // What she's sharing
+    +(shareItems.length?'<div style="background:var(--card);border-radius:12px;border:1px solid var(--div);padding:14px 16px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:10px;">How Kendra&#39;s doing today</div>'
+    +shareItems.map(function(item){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--div);">'
+        +'<div style="font-size:13px;color:var(--ink2);">'+item.label+'</div>'
+        +'<div style="font-size:13px;font-weight:700;color:'+item.color+';">'+item.val+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>':'')
+
+    // Wishlist CTA
+    +(WISHLIST_URL?'<div style="background:var(--pul);border-radius:12px;border:1px solid var(--pum);padding:16px;margin-bottom:12px;text-align:center;">'
+    +'<div style="font-family:var(--serif);font-size:17px;color:var(--pud);margin-bottom:6px;">Send her something</div>'
+    +'<div style="font-size:13px;color:var(--ink2);margin-bottom:14px;">Kendra&#39;s Amazon wish list — things that actually help.</div>'
+    +'<a href="'+WISHLIST_URL+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:var(--pu);color:#fff;border-radius:999px;padding:12px 24px;font-size:15px;font-weight:600;text-decoration:none;"><i data-lucide="gift"></i> View wish list</a>'
+    +'</div>':'')
+
+    // Leave a cheer
+    +'<div style="background:var(--card);border-radius:12px;border:1px solid var(--div);padding:14px 16px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin-bottom:12px;">Leave a cheer for Kendra</div>'
+    +'<input class="inp mb3" type="text" id="cn" placeholder="Your name">'
+    +'<textarea class="inp mb3" id="cm" rows="3" placeholder="Tell her something amazing..." style="height:80px;"></textarea>'
+    +'<button class="btn btn-te" onclick="sendCheer()"><i data-lucide="heart"></i> Send</button>'
+    +'</div>'
+
+    // Recent cheers
+    +(S.cheers&&S.cheers.length?'<div style="background:var(--card);border-radius:12px;border:1px solid var(--div);overflow:hidden;margin-bottom:12px;">'
+    +'<div style="padding:12px 16px;border-bottom:1px solid var(--div);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);">Recent cheers</div>'
+    +S.cheers.slice(0,5).map(function(c){
+      return '<div style="padding:12px 16px;border-bottom:1px solid var(--div);">'
+        +'<div style="font-size:13px;font-weight:700;color:var(--pu);margin-bottom:4px;">'+c.name+'</div>'
+        +'<div style="font-size:13px;color:var(--ink);line-height:1.5;">'+c.msg+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>':'')
+
+    +'<button onclick="logOut()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--ink3);padding:8px;display:block;margin:0 auto;">Sign out</button>'
+    +'<div style="height:24px;"></div>'
+    +'</div></div>';
+}
+
+function friendlyCycleMsg(c){
+  if(c.day<=3)  return 'She\'s in her rest days — extra love welcome';
+  if(c.day<=7)  return 'Early recovery — things are slowly looking up';
+  if(c.day<=14) return 'She\'s in her quiet week — gentle support matters most';
+  return 'She's building strength — it's a good week';
+}
+
+function logOut(){
+  S.role='patient';S.user=null;
+  localStorage.removeItem('gk-u');
+  S.v='pw';R();
+}
+
+
 function init(){
   try{
     var saved=localStorage.getItem('gk-u');
-    if(saved){try{S.user=JSON.parse(saved);}catch(e){}}
+    if(saved){try{S.user=JSON.parse(saved);if(S.user&&S.user.role)S.role=S.user.role;}catch(e){}}
     R();
     loadAll();
     S.v=S.user?'app':'pw';
@@ -973,7 +1474,7 @@ function init(){
   }catch(e){
     console.error('Init error:',e);
     document.getElementById('app').innerHTML='<div style="padding:40px;font-family:sans-serif;text-align:center;max-width:400px;margin:0 auto;">'
-      +'<div style="font-size:32px;margin-bottom:16px;"><i class="fa-regular fa-triangle-exclamation"></i></div>'
+      +'<div style="font-size:32px;margin-bottom:16px;"><i data-lucide="regular" ></i></div>'
       +'<div style="font-size:18px;font-weight:600;margin-bottom:8px;">Something went wrong</div>'
       +'<div style="font-size:14px;color:#666;">'+e.message+'</div></div>';
   }
@@ -981,6 +1482,5 @@ function init(){
 init();
 </script>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" onerror="console.warn('Firebase CDN failed')"></script>
 </body>
 </html>
