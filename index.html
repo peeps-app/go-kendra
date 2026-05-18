@@ -69,6 +69,15 @@ h1,h2,h3{font-family:var(--serif);font-style:italic;}
 
 /* ── LABELS ── */
 .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);}
+.tinp{border:1.5px solid var(--div);border-radius:10px;background:var(--card);padding:0 12px;font-family:var(--sans);font-size:15px;font-weight:600;color:var(--ink);outline:none;-webkit-appearance:none;appearance:none;}
+.tseg{display:flex;align-items:center;gap:6px;}
+.tnum{width:54px;height:48px;border:1.5px solid var(--div);border-radius:10px;background:var(--card);text-align:center;font-family:var(--sans);font-size:18px;font-weight:700;color:var(--ink);outline:none;-webkit-appearance:none;appearance:none;}
+.tnum:focus{border-color:var(--pu);}
+.tcol{font-size:18px;font-weight:700;color:var(--ink3);}
+.tap{flex:1;height:48px;border:1.5px solid var(--div);border-radius:10px;background:var(--card);font-family:var(--sans);font-size:14px;font-weight:700;color:var(--ink3);cursor:pointer;outline:none;}
+.tap.on{background:var(--pu);border-color:var(--pu);color:#fff;}
+.tinp:focus{border-color:var(--pu);}
+.tinp::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;}
 .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600;}
 .chip-pu{background:var(--pul);color:var(--pud);}
 .chip-te{background:var(--tel);color:var(--tes);}
@@ -346,10 +355,10 @@ function bootLoad(){
   try{var cfg=lsRead('cfg');S.priv=(cfg&&cfg.priv)||DEFP;S.bdgs=(cfg&&cfg.bdgs)||BDGS;}catch(e){S.priv=DEFP;S.bdgs=BDGS;}
   try{S.events=lsRead('events')||[];}catch(e){S.events=[];}
   try{
-    if(!lsRead('seed-appts-2')){
+    if(!lsRead('seed-appts-3')){
       var _exist={}; (S.events||[]).forEach(function(e){_exist[e.id]=1;});
       SEED_APPTS.forEach(function(a){ if(!_exist[a.id]) S.events.push({id:a.id,date:a.date,time:a.time,type:a.type,title:a.title,notes:a.notes}); });
-      lsSet('events',S.events); lsSet('seed-appts-2',1);
+      lsSet('events',S.events); lsSet('seed-appts-3',1);
     }
   }catch(e){}
   try{S.labSummaries=lsRead('lab-summaries')||[];}catch(e){S.labSummaries=[];}
@@ -390,6 +399,13 @@ function migrateMoods(d){
 function latestMood(d){var m=d&&d.moods&&Array.isArray(d.moods)?d.moods:[];return m.length?m[m.length-1]:null;}
 function MC_color(i){return(i!=null&&i>=0&&i<=4)?MC[i]:'#8b7fa0';}
 function MC_bg(i){return(i!=null&&i>=0&&i<=4)?MCL[i]:'#f3f0f9';}
+function fmt12(hhmm){
+  if(!hhmm||hhmm.indexOf(':')<0) return hhmm||'';
+  var p=hhmm.split(':'),h=parseInt(p[0],10),m=p[1]||'00';
+  if(isNaN(h)) return hhmm;
+  var ap=h>=12?'PM':'AM'; h=h%12||12;
+  return h+':'+m+' '+ap;
+}
 function fmtT(ts){
   if(!ts) return '';
   var d=new Date(ts),h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';
@@ -864,100 +880,124 @@ function renderLog() {
 
 // ── FOOD TAB ──────────────────────────────────────────────────
 function renderFood() {
-  var d = S.day||empty(); var food = d.food||[];
+  var d = S.day||empty();
+  if(!Array.isArray(d.food)) d.food=[];
+  var food = d.food;
   var wrap = mk('div');
-  // Search
-  var srch = mk('div',{css:'position:relative;margin-bottom:14px;'});
-  var ico  = mk('span',{css:'position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink4);pointer-events:none;',html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'});
-  var inp  = mk('input',{type:'text',cls:'inp',placeholder:'Search or type a food...',css:'padding-left:36px;height:46px;',value:S.foodQ||''});
-  inp.addEventListener('input', function(){ S.foodQ=this.value; R(); });
+  var MEALS = [{id:'breakfast',l:'Breakfast'},{id:'lunch',l:'Lunch'},{id:'dinner',l:'Dinner'},{id:'snack',l:'Snacks'}];
+
+  // ── popular foods, ranked by logged frequency ──
+  function popularFoods(){
+    var fc=lsGet('food-freq')||{};
+    var arr=Object.keys(fc).map(function(k){return {name:k,n:fc[k]};});
+    arr.sort(function(a,b){return b.n-a.n;});
+    if(arr.length<6){
+      FOOD.forEach(function(f){ if(!fc[f] && arr.length<10) arr.push({name:f,n:0}); });
+    }
+    return arr.slice(0,10).map(function(x){return x.name;});
+  }
+
+  // ── search / type-to-add ──
+  var srch = mk('div',{css:'position:relative;margin-bottom:6px;'});
+  var ico = mk('span',{css:'position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink4);pointer-events:none;display:flex;',html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'});
+  var inp = mk('input',{type:'text',cls:'inp',placeholder:'Search or type a food\u2026',css:'padding-left:36px;height:46px;',value:S.foodQ||''});
+  var _foodDeb=null;
+  inp.addEventListener('input', function(){
+    S.foodQ=this.value;
+    if(_foodDeb) clearTimeout(_foodDeb);
+    _foodDeb=setTimeout(function(){
+      var el=document.getElementById('app');
+      if(!el) return;
+      var active=document.activeElement;
+      var atEnd=active&&active.tagName==='INPUT';
+      var pos=atEnd?active.selectionStart:null;
+      R();
+      if(atEnd){
+        var ni=el.querySelector('input.inp');
+        if(ni){ ni.focus(); try{ni.setSelectionRange(pos,pos);}catch(e){} }
+      }
+    },220);
+  });
   srch.appendChild(ico); srch.appendChild(inp);
   wrap.appendChild(srch);
-  // Category pills
-  var q = (S.foodQ||'').toLowerCase();
-  var pillsWrap = mk('div');
-  if (q) {
-    var filtered = FOOD.filter(function(f){ return f.toLowerCase().indexOf(q)>=0; });
-    if (filtered.length) {
-      var row = mk('div',{cls:'fpills'});
-      filtered.forEach(function(f){
-        var b = mk('button',{cls:'fp',txt:f});
-        b.addEventListener('click',(function(fi){ return function(){ addFood(fi); }; })(f));
-        row.appendChild(b);
-      });
-      pillsWrap.appendChild(row);
-    } else {
-      pillsWrap.appendChild(mk('div',{css:'font-size:13px;color:var(--ink3);padding:8px 0 16px;',txt:'No matches for "'+q+'"'}));
-    }
-  } else {
-    catList().forEach(function(cat){
-      pillsWrap.appendChild(mk('div',{cls:'food-cat',txt:cat.cat}));
-      var row2 = mk('div',{cls:'fpills',css:'margin-bottom:4px;'});
-      cat.items.forEach(function(f){
-        var b2 = mk('button',{cls:'fp',txt:f});
-        b2.addEventListener('click',(function(fi){ return function(){ addFood(fi); }; })(f));
-        row2.appendChild(b2);
-      });
-      pillsWrap.appendChild(row2);
-    });
-  }
-  wrap.appendChild(pillsWrap);
-  // Custom add
-  wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:16px 0 6px;',txt:'Add your own'}));
-  var custInp = mk('input',{type:'text',cls:'inp',id:'fc',placeholder:'Food name',css:'width:100%;height:46px;margin-bottom:8px;box-sizing:border-box;',value:S.foodCustom||''});
-  custInp.addEventListener('input', function(){ S.foodCustom=this.value; });
-  wrap.appendChild(custInp);
-  var custRow = mk('div',{css:'display:flex;gap:8px;'});
-  var catWrap = mk('div',{css:'position:relative;flex:1;'});
-  var catSel = mk('select',{cls:'inp',css:'width:100%;height:46px;font-family:var(--sans);font-size:14px;-webkit-appearance:none;-moz-appearance:none;appearance:none;padding-right:34px;box-sizing:border-box;'});
-  catSel.appendChild(mk('option',{value:'',txt:'Category\u2026'}));
-  FOOD_CATS.forEach(function(c){
-    var op=mk('option',{value:c.cat,txt:c.cat});
-    if(S.foodCustomCat===c.cat) op.setAttribute('selected','selected');
-    catSel.appendChild(op);
+
+  // meal selector for what you're adding
+  var curMeal = S.foodMeal||'breakfast';
+  var mealPick = mk('div',{css:'display:flex;gap:5px;margin-bottom:12px;'});
+  MEALS.forEach(function(m){
+    var on=curMeal===m.id;
+    var b=mk('button',{css:'flex:1;padding:7px 4px;border-radius:var(--r-sm);border:1.5px solid '+(on?'var(--pu)':'var(--div)')+';background:'+(on?'var(--pul)':'var(--card)')+';font-size:11.5px;font-weight:700;color:'+(on?'var(--pud)':'var(--ink3)')+';cursor:pointer;font-family:var(--sans);',txt:m.l});
+    b.addEventListener('click',(function(id){return function(){S.foodMeal=id;R();};})(m.id));
+    mealPick.appendChild(b);
   });
-  catSel.addEventListener('change', function(){ S.foodCustomCat=this.value; });
-  var custBtn = mk('button',{cls:'btn btn-pu btn-auto',css:'height:46px;padding:0 22px;font-size:14px;flex-shrink:0;',txt:'Add'});
-  custBtn.addEventListener('click', addCustomFood);
-  var caret = mk('span',{css:'position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink3);display:flex;',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'});
-  catWrap.appendChild(catSel); catWrap.appendChild(caret);
-  custRow.appendChild(catWrap); custRow.appendChild(custBtn);
-  wrap.appendChild(custRow);
-  wrap.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink4);margin-top:5px;',txt:'Pick a category and it is saved there for next time. No category = logged just for today.'}));
-  // Logged items
-  if (food.length) {
-    var logHdr = mk('div',{css:'display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px;'});
-    logHdr.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);',txt:'Logged today'}));
-    logHdr.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);',txt:food.length+' item'+(food.length!==1?'s':'')}));
-    wrap.appendChild(logHdr);
-    var list = mk('div',{css:'background:var(--card);border-radius:var(--r-md);border:1px solid var(--div);overflow:hidden;'});
-    food.forEach(function(f,i){
-      var row = mk('div',{css:'display:flex;align-items:center;gap:10px;padding:10px 14px;'+(i<food.length-1?'border-bottom:1px solid var(--div);':'')});
-      var info = mk('div',{css:'flex:1;min-width:0;'});
-      info.appendChild(mk('div',{css:'font-size:14px;font-weight:600;color:var(--ink);',txt:f.item}));
-      if(f.kd===true)  info.appendChild(mk('div',{css:'font-size:11px;font-weight:700;color:var(--sg);margin-top:1px;',txt:'\u2713 Kept down'}));
-      if(f.kd===false) info.appendChild(mk('div',{css:'font-size:11px;font-weight:700;color:var(--ro);margin-top:1px;',txt:'\u2713 Logged'}));
-      row.appendChild(info);
-      if(f.kd===undefined){
-        var acts = mk('div',{css:'display:flex;gap:6px;'});
-        var kb = mk('button',{css:'background:var(--sgl);color:var(--sg);border:1.5px solid rgba(34,197,94,.25);border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Kept \u2713'});
-        kb.addEventListener('click',(function(idx){ return function(){ setKd(idx,true); }; })(i));
-        var nb = mk('button',{css:'background:var(--raised);color:var(--ink3);border:1.5px solid var(--div);border-radius:99px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);',txt:'Nope'});
-        nb.addEventListener('click',(function(idx){ return function(){ setKd(idx,false); }; })(i));
-        acts.appendChild(kb); acts.appendChild(nb); row.appendChild(acts);
-      }
-      var del = mk('button',{css:'background:none;border:none;cursor:pointer;padding:6px;color:var(--ink4);flex-shrink:0;',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'});
-      del.addEventListener('click',(function(idx){ return function(){ rmFood(idx); }; })(i));
-      row.appendChild(del);
-      list.appendChild(row);
+  wrap.appendChild(mealPick);
+
+  var q=(S.foodQ||'').toLowerCase().trim();
+
+  // ── search results / quick-tap chips ──
+  if(q){
+    var matches=[];
+    var fc=lsGet('food-freq')||{};
+    Object.keys(fc).forEach(function(k){ if(k.toLowerCase().indexOf(q)>=0) matches.push(k); });
+    FOOD.forEach(function(f){ if(f.toLowerCase().indexOf(q)>=0 && matches.indexOf(f)<0) matches.push(f); });
+    var chips=mk('div',{css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;'});
+    matches.slice(0,12).forEach(function(f){
+      var b=mk('button',{css:'padding:7px 12px;border-radius:99px;border:1.5px solid var(--div);background:var(--card);font-size:12.5px;color:var(--ink2);cursor:pointer;font-family:var(--sans);',txt:f});
+      b.addEventListener('click',(function(fi){return function(){ addFood(fi,S.foodMeal||'breakfast'); S.foodQ=''; };})(f));
+      chips.appendChild(b);
     });
-    wrap.appendChild(list);
+    wrap.appendChild(chips);
+    // add exactly what was typed
+    var addNew=mk('button',{css:'width:100%;height:44px;border-radius:var(--r-md);border:none;background:var(--pu);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-bottom:18px;',txt:'Add \u201C'+(S.foodQ.trim())+'\u201D to '+(MEALS.filter(function(m){return m.id===curMeal;})[0].l)});
+    addNew.addEventListener('click',function(){ var v=(S.foodQ||'').trim(); if(v){ addFood(v,S.foodMeal||'breakfast'); S.foodQ=''; } });
+    wrap.appendChild(addNew);
+  } else {
+    var pop=popularFoods();
+    if(pop.length){
+      wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:7px;',txt:'Quick add'}));
+      var pchips=mk('div',{css:'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;'});
+      pop.forEach(function(f){
+        var b=mk('button',{css:'padding:7px 12px;border-radius:99px;border:1.5px solid var(--div);background:var(--card);font-size:12.5px;color:var(--ink2);cursor:pointer;font-family:var(--sans);',txt:f});
+        b.addEventListener('click',(function(fi){return function(){ addFood(fi,S.foodMeal||'breakfast'); };})(f));
+        pchips.appendChild(b);
+      });
+      wrap.appendChild(pchips);
+    }
   }
+
+  // ── meal sections with logged entries ──
+  MEALS.forEach(function(m){
+    var items=food.map(function(x,i){return {x:x,i:i};}).filter(function(o){return (o.x.meal||'snack')===m.id;});
+    var sec=mk('div',{css:'margin-bottom:14px;'});
+    var hd=mk('div',{css:'display:flex;align-items:baseline;gap:7px;margin-bottom:7px;'});
+    hd.appendChild(mk('div',{css:'font-size:13px;font-weight:800;color:var(--ink);',txt:m.l}));
+    hd.appendChild(mk('div',{css:'flex:1;height:1px;background:var(--div);'}));
+    if(items.length) hd.appendChild(mk('div',{css:'font-size:11px;font-weight:700;color:var(--ink3);',txt:items.length+(items.length===1?' item':' items')}));
+    sec.appendChild(hd);
+    if(items.length){
+      var list=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);overflow:hidden;'});
+      items.forEach(function(o,idx){
+        var row=mk('div',{css:'display:flex;align-items:center;gap:10px;padding:9px 12px;'+(idx<items.length-1?'border-bottom:1px solid var(--div);':'')});
+        var inf=mk('div',{css:'flex:1;min-width:0;'});
+        inf.appendChild(mk('div',{css:'font-size:13.5px;color:var(--ink);',txt:o.x.item}));
+        if(o.x.ts) inf.appendChild(mk('div',{css:'font-size:10px;color:var(--ink4);margin-top:1px;',txt:new Date(o.x.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}));
+        row.appendChild(inf);
+        var del=mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink4);padding:4px;font-size:18px;line-height:1;',txt:'\u00D7'});
+        del.addEventListener('click',(function(realIdx){return function(){ rmFood(realIdx); };})(o.i));
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+      sec.appendChild(list);
+    } else {
+      sec.appendChild(mk('div',{css:'font-size:12px;color:var(--ink4);padding:8px 2px;',txt:'Nothing logged yet'}));
+    }
+    wrap.appendChild(sec);
+  });
+
   wrap.appendChild(mk('div',{css:'height:24px;'}));
   return wrap;
 }
 
-// ── TRAIN SCREEN ──────────────────────────────────────────────
 function renderTrain() {
   var wrap = mk('div',{cls:'fi'});
   var ph = mk('div',{cls:'ph',css:'padding:16px;'});
@@ -1070,14 +1110,14 @@ function renderCal() {
     var cycDay=Math.round((new Date(dtStr+'T12:00:00')-LC)/86400000)+1;
     var showCycDay=cycDay>=1&&cycDay<=21;
 
-    var cellBg=isSelected?'var(--pul)':isChemo?'rgba(124,92,252,.10)':avgMood!=null?MC_bg(avgMood):'var(--card)';
-    var cellBorder=isSelected||isToday?'var(--pu)':'var(--div)';
+    var cellBg=isSelected?'var(--pul)':avgMood!=null?MC_bg(avgMood):'var(--card)';
+    var cellBorder=isSelected||isToday?'var(--pu)':isChemo?'#F2871E':'var(--div)';
 
-    var cell=mk('div',{css:'min-height:56px;border:1.5px solid '+cellBorder+';border-radius:10px;padding:5px;cursor:pointer;background:'+cellBg+';display:flex;flex-direction:column;overflow:hidden;'});
+    var cell=mk('div',{css:'min-height:56px;border:'+(isChemo&&!isSelected&&!isToday?'2px':'1.5px')+' solid '+cellBorder+';border-radius:10px;padding:5px;cursor:pointer;background:'+cellBg+';display:flex;flex-direction:column;overflow:hidden;'});
     cell.addEventListener('click',(function(dt){ return function(){ selDay(dt); }; })(dtStr));
 
     var topRow=mk('div',{css:'display:flex;align-items:flex-start;justify-content:space-between;'});
-    var dayNum=mk('div',{css:'font-size:12px;font-weight:'+(isToday?'700':'500')+';color:'+(isToday?'var(--pu)':isChemo?'var(--pu)':'var(--ink)')+';line-height:1;',txt:day});
+    var dayNum=mk('div',{css:'font-size:12px;font-weight:'+(isToday?'700':'500')+';color:'+(isToday?'var(--pu)':isChemo?'#F2871E':'var(--ink)')+';line-height:1;',txt:day});
     topRow.appendChild(dayNum);
     if(showCycDay&&!isToday) topRow.appendChild(mk('div',{css:'font-size:8px;font-weight:700;color:var(--ink4);',txt:'d'+cycDay}));
     if(isToday) { var td=mk('div',{css:'width:5px;height:5px;border-radius:50%;background:var(--pu);'}); topRow.appendChild(td); }
@@ -1094,8 +1134,8 @@ function renderCal() {
       dayEvs.slice(0,4).forEach(function(ev){
         if((ev.type==='infusion'||ev.type==='para'||ev.type==='chemo') && !iconShown[ev.type]){
           iconShown[ev.type]=1;
-          var ic=mk('div',{css:'width:11px;height:11px;color:'+evColor(ev.type)+';flex-shrink:0;display:flex;',html:evIcon(ev.type)});
-          var sv=ic.querySelector&&ic.querySelector('svg'); if(sv){sv.setAttribute('width','11');sv.setAttribute('height','11');}
+          var ic=mk('div',{css:'width:14px;height:14px;color:'+evColor(ev.type)+';flex-shrink:0;display:flex;',html:evIcon(ev.type)});
+          var sv=ic.querySelector&&ic.querySelector('svg'); if(sv){sv.setAttribute('width','14');sv.setAttribute('height','14');}
           dots.appendChild(ic);
         } else if(ev.type!=='infusion'&&ev.type!=='para'&&ev.type!=='chemo'){
           dots.appendChild(mk('div',{css:'width:5px;height:5px;border-radius:50%;background:'+evColor(ev.type)+';flex-shrink:0;'}));
@@ -1162,22 +1202,53 @@ function renderCal() {
       detail.appendChild(moodSec);
     }
 
-    // Events
+    // Events — time-led agenda
     if(sdEvs.length){
-      sdEvs.forEach(function(ev){
-        var evRow=mk('div',{css:'display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--div);'});
-        var evIcon2=mk('div',{css:'width:32px;height:32px;border-radius:8px;background:'+evColor(ev.type)+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:'+evColor(ev.type)+';',html:evIcon(ev.type)});
-        var evInfo=mk('div',{css:'flex:1;'});
-        evInfo.appendChild(mk('div',{css:'font-size:14px;font-weight:600;color:var(--ink);',txt:ev.title}));
-        var evMeta=mk('div',{css:'display:flex;gap:8px;margin-top:2px;'});
-        if(ev.time) evMeta.appendChild(mk('span',{css:'font-size:12px;color:var(--pu);font-weight:600;',txt:ev.time}));
-        evMeta.appendChild(mk('span',{css:'font-size:12px;color:var(--ink3);',txt:evLabel(ev.type)}));
-        evInfo.appendChild(evMeta);
-        var editBtn=mk('button',{css:'background:none;border:none;cursor:pointer;padding:6px;color:var(--ink4);',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'});
-        editBtn.addEventListener('click',(function(d,id){ return function(){ openAddEvent(d,id); }; })(S.cd,ev.id));
-        var delBtn=mk('button',{css:'background:none;border:none;cursor:pointer;padding:6px;color:var(--ink4);',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'});
-        delBtn.addEventListener('click',(function(id){ return function(){ deleteEvent(id); }; })(ev.id));
-        evRow.appendChild(evIcon2); evRow.appendChild(evInfo); evRow.appendChild(editBtn); evRow.appendChild(delBtn);
+      var sortedEvs=sdEvs.slice().sort(function(a,b){
+        var at=a.time||'99:99', bt=b.time||'99:99';
+        return at<bt?-1:at>bt?1:0;
+      });
+      sortedEvs.forEach(function(ev){
+        var evRow=mk('div',{css:'display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--div);cursor:pointer;'});
+        evRow.addEventListener('click',(function(d,id){return function(e){ if(e.target.closest('button'))return; openAddEvent(d,id); };})(S.cd,ev.id));
+
+        // time column — fixed width, the scan anchor
+        var timeCol=mk('div',{css:'width:62px;flex-shrink:0;text-align:right;'});
+        if(ev.time){
+          var t12=fmt12(ev.time);
+          var tparts=t12.split(' ');
+          timeCol.appendChild(mk('div',{css:'font-size:13px;font-weight:700;color:var(--ink);line-height:1.2;',txt:tparts[0]}));
+          timeCol.appendChild(mk('div',{css:'font-size:10px;font-weight:700;color:var(--ink3);letter-spacing:.04em;',txt:tparts[1]||''}));
+        } else {
+          timeCol.appendChild(mk('div',{css:'font-size:11px;font-weight:600;color:var(--ink4);',txt:'All day'}));
+        }
+        if(ev.arriveBy) timeCol.appendChild(mk('div',{css:'font-size:10px;font-weight:700;color:#8A6D00;background:var(--aml);border-radius:5px;padding:2px 5px;margin-top:5px;display:inline-block;',txt:'Arrive '+fmt12(ev.arriveBy)}));
+
+        // type rail — thin colored spine
+        var rail=mk('div',{css:'width:3px;flex-shrink:0;border-radius:2px;background:'+evColor(ev.type)+';'});
+
+        // body
+        var body=mk('div',{css:'flex:1;min-width:0;'});
+        var titleRow=mk('div',{css:'display:flex;align-items:center;gap:6px;'});
+        var tIc=mk('div',{css:'width:14px;height:14px;flex-shrink:0;color:'+evColor(ev.type)+';display:flex;',html:evIcon(ev.type)});
+        titleRow.appendChild(tIc);
+        titleRow.appendChild(mk('div',{css:'font-size:14px;font-weight:700;color:var(--ink);line-height:1.25;',txt:ev.title}));
+        body.appendChild(titleRow);
+        body.appendChild(mk('div',{css:'font-size:11px;font-weight:600;color:var(--ink3);margin-top:1px;margin-left:20px;',txt:evLabel(ev.type)}));
+        if(ev.provider) body.appendChild(mk('div',{css:'font-size:12px;color:var(--ink2);margin-top:5px;margin-left:20px;line-height:1.45;',txt:ev.provider}));
+        if(ev.location){
+          var locRow=mk('div',{css:'display:flex;gap:5px;margin-top:5px;margin-left:20px;align-items:flex-start;'});
+          locRow.appendChild(mk('div',{css:'flex-shrink:0;color:var(--ink4);margin-top:1px;display:flex;',html:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'}));
+          locRow.appendChild(mk('div',{css:'font-size:12px;color:var(--ink2);line-height:1.45;',txt:ev.location}));
+          body.appendChild(locRow);
+        }
+        if(ev.notes) body.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);margin-top:5px;margin-left:20px;line-height:1.45;',txt:ev.notes}));
+        if(ev.vol) body.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);margin-top:5px;margin-left:20px;',txt:ev.vol+'L drained'}));
+
+        // single chevron affordance — row is tap-to-edit, no dual buttons
+        var chev=mk('div',{css:'flex-shrink:0;color:var(--ink4);align-self:center;display:flex;',html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'});
+
+        evRow.appendChild(timeCol); evRow.appendChild(rail); evRow.appendChild(body); evRow.appendChild(chev);
         detail.appendChild(evRow);
       });
     } else {
@@ -1563,7 +1634,7 @@ function renderProcs() {
       var dot = mk('div',{css:'width:8px;height:8px;border-radius:50%;background:'+evColor(ev.type)+';flex-shrink:0;'});
       var inf = mk('div',{css:'flex:1;'});
       inf.appendChild(mk('div',{css:'font-size:14px;font-weight:600;',txt:ev.title}));
-      if(ev.time) inf.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);',txt:ev.time}));
+      if(ev.time) inf.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);',txt:fmt12(ev.time)}));
       row.appendChild(dot); row.appendChild(inf);
       var del = mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink4);padding:6px;font-size:16px;',txt:'\u00D7'});
       del.addEventListener('click',(function(id){return function(){deleteEvent(id);};})(ev.id));
@@ -1967,11 +2038,11 @@ function doLogin(){
   var v=pw.value.trim();
   console.log('entered value length:', v.length, 'matches patient:', v===PW_PATIENT, 'care:', v===PW_CARE, 'friends:', v===PW_FRIENDS);
   var uEl=document.getElementById('pw-user');
-  var u=uEl?uEl.value.trim().toLowerCase():'';
+  var uname=uEl?uEl.value.trim():'';
   var matched = false;
-  if(u===USER_PATIENT && v===PW_PATIENT){ S.user={role:'patient',name:'Kendra'}; S.role='patient'; S.v='app'; S.tab='home'; matched=true; }
-  else if(u===USER_CARE && v===PW_CARE){ S.user={role:'care'}; S.role='care'; S.v='app'; S.tab='home'; matched=true; }
-  else if(u===USER_FRIENDS && v===PW_FRIENDS){ S.user={role:'friends'}; S.role='friends'; S.v='app'; S.tab='home'; matched=true; }
+  if(v===PW_PATIENT){ S.user={role:'patient',name:uname||'Kendra'}; S.role='patient'; S.v='app'; S.tab='home'; matched=true; }
+  else if(v===PW_CARE){ S.user={role:'care',name:uname||''}; S.role='care'; S.v='app'; S.tab='home'; matched=true; }
+  else if(v===PW_FRIENDS){ S.user={role:'friends',name:uname||''}; S.role='friends'; S.v='app'; S.tab='home'; matched=true; }
   if(matched){
     lsSet('u',JSON.stringify(S.user));
     console.log('login success, S.v=',S.v,'S.role=',S.role,'calling R()');
@@ -2002,8 +2073,15 @@ function finOb(){localStorage.setItem('gk-ob','1');S.priv=S.priv||DEFP;try{saveC
 
 function getCycleSuggestions(){
   var c=cycle(),d=S.day||empty(),evs=eventsForDay(TODAY);
-  var hadPara=evs.some(function(e){return e.type==='para';});
-  var hadChemo=evs.some(function(e){return e.type==='chemo';});
+  function isPast(e){
+    if(!e.time) return true;
+    var p=e.time.split(':'); if(p.length<2) return true;
+    var now=new Date();
+    var evMin=parseInt(p[0],10)*60+parseInt(p[1],10);
+    return (now.getHours()*60+now.getMinutes())>=evMin;
+  }
+  var hadPara=evs.some(function(e){return e.type==='para'&&isPast(e);});
+  var hadChemo=evs.some(function(e){return e.type==='chemo'&&isPast(e);});
   var tips=[];
   // Override: paracentesis today
   if(hadPara){
@@ -2064,7 +2142,12 @@ function getCycleSuggestions(){
 
 
 
-function addFood(item){S.day=S.day||empty();(S.day.food=S.day.food||[]).push({item:item,kd:undefined});saveDay();R();}
+function addFood(item,meal){
+  S.day=S.day||empty();
+  (S.day.food=S.day.food||[]).push({item:item,meal:meal||'snack',ts:Date.now()});
+  var fc=lsGet('food-freq')||{}; fc[item]=(fc[item]||0)+1; lsSet('food-freq',fc);
+  saveDay();R();
+}
 function rmFood(i){if(!S.day||!S.day.food)return;S.day.food.splice(i,1);saveDay();R();}
 function selBris(n){selB=n;var bs=document.querySelectorAll('.bb');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');var el=document.getElementById('b'+n);if(el)el.classList.add('on');}
 function togTag(id){var idx=selT.indexOf(id);if(idx>=0)selT.splice(idx,1);else selT.push(id);var els=document.querySelectorAll('[id^=dt]');for(var i=0;i<els.length;i++)els[i].classList.toggle('on',selT.indexOf(els[i].id.replace('dt',''))>=0);}
@@ -2249,8 +2332,8 @@ function evLabel(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===ty
 function evIco(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].ico||'calendar';}return 'calendar';}
 function evIcon(type){
   var icons={
-    chemo:'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 3h6a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H9a4 4 0 0 1-4-4V7a4 4 0 0 1 3-3.87Z"/><path d="M5 9a2.5 2.5 0 0 0 0 5h1.5V9Z"/><rect x="8" y="16" width="8" height="5" rx="1.6"/></svg>',
-    infusion:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>',
+    chemo:'<svg width="14" height="14" viewBox="54.8 67.3 190.4 190.4" fill="currentColor" stroke="currentColor" stroke-width="6" stroke-linejoin="round"><path d="M117.54,245.7l-51.35-51.34c-1.35-1.35-1.21-3.12.06-4.38l21.76-21.76c2.82-15.31,6.9-29.92,11.47-44.79l5.42-17.62c1.8-6.9,5.7-12.79,11.42-16.99,10.6-7.78,24.82-7.02,34.56,1.61,14.23-10.22,28.81-16.13,45.45-8.3,6.2,2.94,11.33,6.94,16.35,11.65,22.59,21.22,30.2,54.32,11.65,80.57-5.36,7.58-11.85,13.6-19.45,19.02-18.52,13.21-39.08,25.92-61.65,30.14l-21.98,21.98c-1.01,1.01-2.5,1.12-3.71.23ZM145.85,93.49c-8.72-6.71-20.2-5.74-28.07,1.24-3.62,3.21-6.01,7.34-7.43,11.95-1.71,6.2-3.42,11.96-5.5,18.09-4.81,14.27-8.44,28.63-11.32,43.74l49.41,49.41c9.95-1.91,18.85-5.44,27.74-9.88,10.72-5.43,20.46-11.71,30.23-18.67,6.93-4.87,12.91-10.26,17.98-16.98,17.97-23.83,11.13-54.51-9.62-74.24-18.42-17.5-33.54-18.66-54.49-3.74,11.42,15.98,7.93,33.92-7.93,45.04,1.42,12.34,7.61,28.02,20.86,25.61,1.58-.29,3.19.86,3.38,2.09.3,1.92-.8,3.07-2.53,3.35-16.48,2.68-24.5-13.15-26.93-28.09-6.45,2.93-16.6,5.35-16.29.3.11-1.79,1.32-2.42,3.41-2.58,11.32-.85,22.2-8.25,26-19.31,3.4-9.9-.64-20.97-8.89-27.33ZM119.3,239.65l18.8-18.83-47.41-47.4-18.8,18.86,47.41,47.37Z"/></svg>',
+    infusion:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg>',
     tpn:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>',
     nurse:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
     appt:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
@@ -2465,22 +2548,16 @@ function hideWoOverlay(){
 
 function renderAeTypes(){
   var f=S.evForm||{};
-  var con=document.getElementById('ae-types');
-  if(!con) return;
-  con.replaceChildren();
-  for(var i=0;i<EV_TYPES.length;i++){
-    var et=EV_TYPES[i];
-    var sel=(f.type||'appt')===et.id;
-    var btn=document.createElement('div');
-    btn.setAttribute('onclick','pickAeType("'+et.id+'")');
-    btn.style.cssText='flex:1;min-width:60px;padding:8px 4px;border-radius:8px;border:1.5px solid '+(sel?et.color:'var(--div)')+';background:'+(sel?et.color+'18':'var(--card)')+';cursor:pointer;text-align:center;';
-    var dot=document.createElement('div');
-    dot.style.cssText='width:8px;height:8px;border-radius:50%;background:'+et.color+';margin:0 auto 4px;';
-    var lbl=document.createElement('div');
-    lbl.style.cssText='font-size:11px;font-weight:600;color:'+(sel?'var(--ink)':'var(--ink3)')+';';
-    lbl.textContent=et.l.split(' ')[0];
-    btn.appendChild(dot);btn.appendChild(lbl);
-    con.appendChild(btn);
+  var sel=document.getElementById('ev-type');
+  if(sel){
+    sel.innerHTML='';
+    for(var i=0;i<EV_TYPES.length;i++){
+      var et=EV_TYPES[i];
+      var op=document.createElement('option');
+      op.value=et.id; op.textContent=et.l;
+      if((f.type||'appt')===et.id) op.selected=true;
+      sel.appendChild(op);
+    }
   }
   var volRow=document.getElementById('ae-vol-row');
   if(volRow) volRow.style.display=(f.type==='para')?'block':'none';
@@ -2497,11 +2574,11 @@ function saveEvent(){
   var f=S.evForm||{};
   if(!f.title||!f.title.trim()){toast('Add a title');return;}
   var volEl=document.getElementById('ev-vol');var evVol=volEl&&parseFloat(volEl.value)>0?parseFloat(volEl.value):null;
-  var ev={id:Date.now(),date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',notes:f.notes||'',vol:evVol||undefined};
+  var ev={id:Date.now(),date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:evVol||undefined};
   if(S.editEventId){
     S.events=(S.events||[]).map(function(e){
       if(e.id!==S.editEventId) return e;
-      return {id:e.id,date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',notes:f.notes||'',vol:evVol||undefined};
+      return {id:e.id,date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:evVol||undefined};
     });
     if(f.type==='chemo'){localStorage.setItem('gk-lc',S.evDate);recomputeCycleDates();}
     saveEvents();S.addingEvent=false;S.editEventId=null;
@@ -2525,16 +2602,72 @@ function saveEvent(){
     toast('Event added');
   }
   saveEvents();S.addingEvent=false;R();
+  S.aeTpl=null; if(typeof renderAeQuick==='function') renderAeQuick();
 }
 
 function saveEvents(){lsSet('events',S.events);}
 function deleteEvent(id){S.events=(S.events||[]).filter(function(e){return e.id!==id;});saveEvents();R();}
+function _segIds(which){
+  return which==='appt'
+    ? {h:'ev-h',m:'ev-m',am:'ev-ap-am',pm:'ev-ap-pm'}
+    : {h:'ev-ah',m:'ev-am',am:'ev-aap-am',pm:'ev-aap-pm'};
+}
+function _segGet(which){
+  var id=_segIds(which);
+  var hEl=document.getElementById(id.h), mEl=document.getElementById(id.m);
+  if(!hEl||!mEl) return '';
+  var amOn=document.getElementById(id.am).classList.contains('on');
+  var pmOn=document.getElementById(id.pm).classList.contains('on');
+  var h=parseInt(hEl.value,10), m=parseInt(mEl.value,10);
+  if(isNaN(h)||(!amOn&&!pmOn)) return '';
+  if(isNaN(m)) m=0;
+  if(h<1) h=1; if(h>12) h=12; if(m>59) m=59;
+  var h24=h%12; if(pmOn) h24+=12;
+  return String(h24).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function _segSet(which,hhmm){
+  var id=_segIds(which);
+  var hEl=document.getElementById(id.h), mEl=document.getElementById(id.m);
+  var amB=document.getElementById(id.am), pmB=document.getElementById(id.pm);
+  if(!hEl) return;
+  if(!hhmm||hhmm.indexOf(':')<0){ hEl.value='';mEl.value='';amB.classList.remove('on');pmB.classList.remove('on'); return; }
+  var p=hhmm.split(':'), h=parseInt(p[0],10), m=parseInt(p[1],10);
+  var ap=h>=12?'PM':'AM', h12=h%12||12;
+  hEl.value=String(h12); mEl.value=String(m).padStart(2,'0');
+  amB.classList.toggle('on',ap==='AM'); pmB.classList.toggle('on',ap==='PM');
+}
+function setAP(which,ap){
+  var id=_segIds(which);
+  document.getElementById(id.am).classList.toggle('on',ap==='AM');
+  document.getElementById(id.pm).classList.toggle('on',ap==='PM');
+  onTimeSeg(which);
+}
+function onTimeSeg(which){
+  S.evForm=S.evForm||{};
+  var v=_segGet(which);
+  if(which==='appt'){
+    S.evForm.time=v;
+    if(v){
+      var p=v.split(':'), mins=parseInt(p[0],10)*60+parseInt(p[1],10)-15;
+      if(mins<0) mins+=1440;
+      var ab=String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');
+      S.evForm.arriveBy=ab; _segSet('arr',ab);
+    }
+  } else {
+    S.evForm.arriveBy=v;
+  }
+}
 function applyApptTemplate(idx){
   var t=APPT_TEMPLATES[idx]; if(!t) return;
   S.evForm=S.evForm||{};
-  S.evForm.type=t.type; S.evForm.title=t.title; S.evForm.notes=t.notes;
+  S.evForm.type=t.type; S.evForm.title=t.title;
+  S.evForm.location=t.location||''; S.evForm.provider=t.provider||'';
+  S.evForm.notes='';
+  S.aeTpl=idx;
   var ti=document.getElementById('ev-title'); if(ti) ti.value=t.title;
-  var tn=document.getElementById('ev-notes'); if(tn) tn.value=t.notes;
+  var lc2=document.getElementById('ev-loc'); if(lc2) lc2.value=t.location||'';
+  var pv=document.getElementById('ev-prov'); if(pv) pv.value=t.provider||'';
+  var tn=document.getElementById('ev-notes'); if(tn) tn.value='';
   renderAeTypes();
   if(typeof renderAeQuick==='function') renderAeQuick();
 }
@@ -2542,7 +2675,12 @@ function renderAeQuick(){
   var box=document.getElementById('ae-quick'); if(!box) return;
   box.innerHTML='';
   APPT_TEMPLATES.forEach(function(t,i){
-    var b=mk('button',{css:'padding:6px 11px;border-radius:99px;border:1.5px solid var(--div);background:var(--card);font-size:11.5px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:var(--sans);',txt:t.l});
+    var on=(S.aeTpl===i);
+    var b=mk('button',{css:'display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:99px;border:1.5px solid '+(on?'var(--pu)':'var(--div)')+';background:'+(on?'var(--pu)':'var(--card)')+';font-size:11.5px;font-weight:700;color:'+(on?'#fff':'var(--ink2)')+';cursor:pointer;font-family:var(--sans);transition:background .12s;',txt:t.l});
+    if(on){
+      var ck=mk('span',{css:'display:flex;',html:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'});
+      b.insertBefore(ck,b.firstChild);
+    }
     b.addEventListener('click',(function(ix){return function(){applyApptTemplate(ix);};})(i));
     box.appendChild(b);
   });
@@ -2551,16 +2689,20 @@ function openAddEvent(dt, editId){
   S.addingEvent=true;S.evDate=dt;
   var existing=editId?(S.events||[]).filter(function(e){return e.id===editId;})[0]:null;
   S.editEventId=existing?editId:null;
+  S.aeTpl=null;
   if(existing){
-    S.evForm={title:existing.title||'',type:existing.type||'appt',time:existing.time||'',notes:existing.notes||'',vol:existing.vol||0};
+    S.evForm={title:existing.title||'',type:existing.type||'appt',time:existing.time||'',arriveBy:existing.arriveBy||'',location:existing.location||'',provider:existing.provider||'',notes:existing.notes||'',vol:existing.vol||0};
   } else {
-    S.evForm={title:'',type:'appt',time:'',notes:'',vol:0};
+    S.evForm={title:'',type:'appt',time:'',arriveBy:'',location:'',provider:'',notes:'',vol:0};
   }
   var modal=document.getElementById('add-event-modal');
   if(!modal) return;
   modal.style.display='flex';
   var ti=document.getElementById('ev-title');if(ti){ti.value=S.evForm.title;}
-  var tm=document.getElementById('ev-time');if(tm){tm.value=S.evForm.time;}
+  _segSet('appt',S.evForm.time||'');
+  _segSet('arr',S.evForm.arriveBy||'');
+  var lc2=document.getElementById('ev-loc');if(lc2){lc2.value=S.evForm.location||'';}
+  var pv=document.getElementById('ev-prov');if(pv){pv.value=S.evForm.provider||'';}
   var tn=document.getElementById('ev-notes');if(tn){tn.value=S.evForm.notes;}
   var vl=document.getElementById('ev-vol');if(vl){vl.value=S.evForm.vol||'';}
   var hd=document.getElementById('ae-heading');if(hd){hd.textContent=existing?'Edit Event':'Add Event';}
@@ -2660,43 +2802,43 @@ function confetti(intensity){
 // -- EVENTS ----------------------------------------------
 
 var APPT_TEMPLATES = [
-  {l:'Infusion (Cherry Creek)',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {l:'Infusion (Anschutz)',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Anschutz Cancer Pavilion.'},
-  {l:'Lab / Blood draw',type:'lab',title:'Lab / Blood draw',notes:'UCHealth Laboratory, University of Colorado Hospital.'},
-  {l:'Video appointment',type:'appt',title:'Video appointment',notes:'Join 15 min early.'},
-  {l:'Telephone appointment',type:'appt',title:'Telephone appointment',notes:'UCHealth Cancer Care, University of Colorado Hospital.'},
-  {l:'Procedure',type:'para',title:'Procedure',notes:'UCHealth Cancer Survivorship Clinic, Anschutz Outpatient Pavilion.'},
-  {l:'Return patient visit',type:'appt',title:'Return patient visit',notes:'UCHealth Cancer Survivorship Clinic, Anschutz Outpatient Pavilion.'}
+  {l:'Infusion \u00b7 Cherry Creek',type:'infusion',title:'Infusion',location:'UCHealth Infusion Center, Cherry Creek',provider:''},
+  {l:'Infusion \u00b7 Anschutz',type:'infusion',title:'Infusion',location:'UCHealth Infusion Center, Anschutz Cancer Pavilion',provider:''},
+  {l:'Lab / Blood Draw',type:'lab',title:'Lab / Blood Draw',location:'UCHealth Laboratory, University of Colorado Hospital',provider:''},
+  {l:'Video Appointment',type:'appt',title:'Video Appointment',location:'',provider:''},
+  {l:'Telephone Appointment',type:'appt',title:'Telephone Appointment',location:'',provider:'UCHealth Cancer Care \u00b7 add provider name'},
+  {l:'Procedure',type:'para',title:'Procedure',location:'UCHealth Cancer Survivorship Clinic, Anschutz Outpatient Pavilion',provider:''},
+  {l:'Return Patient Visit',type:'appt',title:'Return Patient Visit',location:'UCHealth Cancer Survivorship Clinic, Anschutz Outpatient Pavilion',provider:''}
 ];
 var SEED_APPTS = [
-  {id:1779000000900,date:'2026-05-07',time:'',type:'chemo',title:'Chemo',notes:'Most recent chemo.'},
-  {id:1779000000901,date:'2026-05-13',time:'',type:'para',title:'Paracentesis',notes:'Most recent paracentesis. Attending only.'},
-  {id:1779000000000,date:'2026-05-18',time:'11:00',type:'infusion',title:'Infusion',notes:'Arrive by 10:45. 1635 Aurora, Fl 2, Anschutz Outpatient Pavilion, Aurora CO 80045'},
-  {id:1779000000001,date:'2026-05-18',time:'11:00',type:'appt',title:'Return patient visit',notes:'Arrive by 10:45. UCHealth Cancer Survivorship Clinic, Anschutz Outpatient Pavilion, 1635 Aurora Fl 2'},
-  {id:1779000000002,date:'2026-05-18',time:'11:30',type:'para',title:'Procedure',notes:'Arrive by 11:15. UCHealth Cancer Survivorship Clinic, Anschutz Outpatient Pavilion, 1635 Aurora Fl 2'},
-  {id:1779000000003,date:'2026-05-18',time:'13:00',type:'appt',title:'Telephone appointment',notes:'UCHealth Cancer Care, University of Colorado Hospital. With Mackenzie P.'},
-  {id:1779000000004,date:'2026-05-21',time:'10:30',type:'appt',title:'Visit with Elizabeth Mappus, PA-C',notes:'Join by 10:15.'},
-  {id:1779000000005,date:'2026-05-25',time:'10:50',type:'lab',title:'Lab / Blood draw',notes:'Arrive by 10:35. UCHealth Laboratory, University of Colorado Hospital.'},
-  {id:1779000000006,date:'2026-05-25',time:'11:50',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Anschutz Cancer Pavilion.'},
-  {id:1779000000007,date:'2026-06-01',time:'07:10',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000008,date:'2026-06-01',time:'08:10',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000009,date:'2026-06-02',time:'10:50',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000010,date:'2026-06-09',time:'09:50',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000011,date:'2026-06-11',time:'13:00',type:'appt',title:'New patient video appointment',notes:'Join by 12:45.'},
-  {id:1779000000012,date:'2026-06-15',time:'09:00',type:'appt',title:'Video appointment with Elizabeth Mappus, PA-C',notes:'Join by 8:45.'},
-  {id:1779000000013,date:'2026-06-15',time:'11:10',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000014,date:'2026-06-15',time:'12:30',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000015,date:'2026-06-22',time:'09:30',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000016,date:'2026-06-22',time:'10:40',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000017,date:'2026-06-23',time:'14:50',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000018,date:'2026-07-06',time:'11:10',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000019,date:'2026-07-06',time:'12:30',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000020,date:'2026-07-13',time:'09:30',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000021,date:'2026-07-13',time:'10:40',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'},
-  {id:1779000000022,date:'2026-07-14',time:'14:50',type:'infusion',title:'Infusion',notes:'UCHealth Infusion Center, Cherry Creek.'}
+  {id:1779000000000,date:'2026-05-07',time:'',type:'chemo',title:'Chemo',arriveBy:'',location:'',provider:'',notes:''},
+  {id:1779000000001,date:'2026-05-13',time:'',type:'para',title:'Paracentesis',arriveBy:'',location:'',provider:'',notes:'Most recent. Attending only.'},
+  {id:1779000000002,date:'2026-05-18',time:'11:00',type:'infusion',title:'Infusion',arriveBy:'10:45',location:'1635 Aurora Ct, Fl 2, Anschutz Outpatient Pavilion, Aurora CO 80045',provider:'',notes:''},
+  {id:1779000000003,date:'2026-05-18',time:'11:00',type:'appt',title:'Return Patient Visit',arriveBy:'10:45',location:'Anschutz Outpatient Pavilion, 1635 Aurora Ct, Fl 2',provider:'UCHealth Cancer Survivorship Clinic',notes:''},
+  {id:1779000000004,date:'2026-05-18',time:'11:30',type:'para',title:'Procedure',arriveBy:'11:15',location:'Anschutz Outpatient Pavilion, 1635 Aurora Ct, Fl 2',provider:'UCHealth Cancer Survivorship Clinic',notes:''},
+  {id:1779000000005,date:'2026-05-18',time:'13:00',type:'appt',title:'Telephone Appointment',arriveBy:'',location:'',provider:'Mackenzie P. · UCHealth Cancer Care, Univ. of Colorado Hospital',notes:''},
+  {id:1779000000006,date:'2026-05-21',time:'10:30',type:'appt',title:'Provider Visit',arriveBy:'10:15',location:'',provider:'Elizabeth Mappus, PA-C',notes:'Join by 10:15.'},
+  {id:1779000000007,date:'2026-05-25',time:'10:50',type:'lab',title:'Lab / Blood Draw',arriveBy:'10:35',location:'UCHealth Laboratory, University of Colorado Hospital',provider:'',notes:''},
+  {id:1779000000008,date:'2026-05-25',time:'11:50',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Anschutz Cancer Pavilion',provider:'',notes:''},
+  {id:1779000000009,date:'2026-06-01',time:'07:10',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000010,date:'2026-06-01',time:'08:10',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000011,date:'2026-06-02',time:'10:50',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000012,date:'2026-06-09',time:'09:50',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000013,date:'2026-06-11',time:'13:00',type:'appt',title:'New Patient Video Appointment',arriveBy:'',location:'',provider:'',notes:'Join by 12:45.'},
+  {id:1779000000014,date:'2026-06-15',time:'09:00',type:'appt',title:'Video Appointment',arriveBy:'',location:'',provider:'Elizabeth Mappus, PA-C',notes:'Join by 8:45.'},
+  {id:1779000000015,date:'2026-06-15',time:'11:10',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000016,date:'2026-06-15',time:'12:30',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000017,date:'2026-06-22',time:'09:30',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000018,date:'2026-06-22',time:'10:40',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000019,date:'2026-06-23',time:'14:50',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000020,date:'2026-07-06',time:'11:10',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000021,date:'2026-07-06',time:'12:30',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000022,date:'2026-07-13',time:'09:30',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000023,date:'2026-07-13',time:'10:40',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
+  {id:1779000000024,date:'2026-07-14',time:'14:50',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''}
 ];
 var EV_TYPES = [
-  {id:'chemo',    l:'Chemo',              color:'#7C5CFC', ico:'activity'},
+  {id:'chemo',    l:'Chemo',              color:'#F2871E', ico:'activity'},
   {id:'infusion', l:'Infusion',           color:'#6366F1', ico:'droplet'},
   {id:'tpn',      l:'TPN delivery',       color:'#0EA5E9', ico:'calendar'},
   {id:'nurse',    l:'Nurse visit',        color:'#10B981', ico:'heart'},
@@ -2779,24 +2921,69 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div id="ae-quick-wrap"><div class="lbl mb2">Quick fill</div>
-    <div id="ae-quick" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;"></div></div>
-    <div class="lbl mb2">Type</div>
-    <div id="ae-types" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px;"></div>
-    <div id="ae-vol-row" style="display:none;margin-bottom:12px;">
-      <div class="lbl mb2">Liters drained</div>
-      <input id="ev-vol" type="number" step="0.1" min="0" max="10" placeholder="e.g. 3.5" class="inp" style="height:46px;" oninput="S.evForm.vol=parseFloat(this.value)||0">
+    <!-- QUICK FILL — primary path, most adds finish here -->
+    <div id="ae-quick-wrap" style="margin-bottom:18px;">
+      <div class="lbl" style="margin-bottom:8px;">Quick fill</div>
+      <div id="ae-quick" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
-    <div class="lbl mb2">Title</div>
-    <input id="ev-title" type="text" class="inp mb3" placeholder="e.g. Dr. Wilky appointment" style="height:46px;" oninput="S.evForm.title=this.value">
-    <div class="lbl mb2">Time (optional)</div>
-    <input id="ev-time" type="time" class="inp mb3" style="height:46px;" oninput="S.evForm.time=this.value">
-    <div class="lbl mb2">Notes</div>
-    <textarea id="ev-notes" class="inp mb4" rows="2" style="height:68px;" placeholder="Any details..." oninput="S.evForm.notes=this.value"></textarea>
-    <button onclick="saveEvent()" class="btn btn-ink" style="display:flex;align-items:center;justify-content:center;gap:8px;">
+
+    <!-- WHAT -->
+    <div style="margin-bottom:14px;">
+      <div class="lbl" style="margin-bottom:8px;">Appointment</div>
+      <input id="ev-title" type="text" class="inp" placeholder="Title, e.g. Infusion" style="height:46px;width:100%;box-sizing:border-box;margin-bottom:8px;" oninput="S.evForm.title=this.value">
+      <div style="position:relative;">
+        <select id="ev-type" class="inp" style="height:46px;width:100%;box-sizing:border-box;-webkit-appearance:none;-moz-appearance:none;appearance:none;padding-right:34px;font-family:var(--sans);font-size:14px;" onchange="pickAeType(this.value)"></select>
+        <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink3);display:flex;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </div>
+      <div id="ae-vol-row" style="display:none;margin-top:8px;">
+        <input id="ev-vol" type="number" step="0.1" min="0" max="10" placeholder="Liters drained" class="inp" style="height:46px;width:100%;box-sizing:border-box;" oninput="S.evForm.vol=parseFloat(this.value)||0">
+      </div>
+    </div>
+
+    <!-- WHEN -->
+    <div style="margin-bottom:14px;">
+      <div class="lbl" style="margin-bottom:8px;">When</div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-bottom:5px;">APPOINTMENT</div>
+        <div class="tseg">
+          <input id="ev-h" class="tnum" inputmode="numeric" maxlength="2" placeholder="11" oninput="onTimeSeg('appt')">
+          <span class="tcol">:</span>
+          <input id="ev-m" class="tnum" inputmode="numeric" maxlength="2" placeholder="30" oninput="onTimeSeg('appt')">
+          <button type="button" class="tap" id="ev-ap-am" onclick="setAP('appt','AM')">AM</button>
+          <button type="button" class="tap" id="ev-ap-pm" onclick="setAP('appt','PM')">PM</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);margin-bottom:5px;">ARRIVE BY</div>
+        <div class="tseg">
+          <input id="ev-ah" class="tnum" inputmode="numeric" maxlength="2" placeholder="11" oninput="onTimeSeg('arr')">
+          <span class="tcol">:</span>
+          <input id="ev-am" class="tnum" inputmode="numeric" maxlength="2" placeholder="15" oninput="onTimeSeg('arr')">
+          <button type="button" class="tap" id="ev-aap-am" onclick="setAP('arr','AM')">AM</button>
+          <button type="button" class="tap" id="ev-aap-pm" onclick="setAP('arr','PM')">PM</button>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--ink4);margin-top:6px;">Arrive-by fills 15 min earlier when you set the appointment time \u2014 adjust if needed.</div>
+    </div>
+
+    <!-- WHERE -->
+    <div style="margin-bottom:14px;">
+      <div class="lbl" style="margin-bottom:8px;">Where</div>
+      <input id="ev-loc" type="text" class="inp" placeholder="Clinic or address" style="height:46px;width:100%;box-sizing:border-box;margin-bottom:8px;" oninput="S.evForm.location=this.value">
+      <input id="ev-prov" type="text" class="inp" placeholder="Provider (optional)" style="height:46px;width:100%;box-sizing:border-box;" oninput="S.evForm.provider=this.value">
+    </div>
+
+    <!-- NOTES -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl" style="margin-bottom:8px;">Notes</div>
+      <textarea id="ev-notes" class="inp" rows="2" style="height:60px;width:100%;box-sizing:border-box;resize:none;" placeholder="Anything else" oninput="S.evForm.notes=this.value"></textarea>
+    </div>
+
+    <button onclick="saveEvent()" class="btn btn-ink" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       Save event
-    </button>
   </div>
 </div>
 </body>
