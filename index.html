@@ -382,6 +382,20 @@ function bootLoad(){
     }
   }catch(e){}
   try{
+    if(!lsRead('migrate-para-done-2')){
+      var _pchg=false;
+      (S.events||[]).forEach(function(e){
+        if(e.id===1779000000004){
+          e.date='2026-05-19'; e.time='11:10'; e.arriveBy='10:30';
+          e.title='Paracentesis'; e.vol=2.5; e.notes='';
+          _pchg=true;
+        }
+      });
+      if(_pchg) lsSet('events',S.events);
+      lsSet('migrate-para-done-2',1);
+    }
+  }catch(e){}
+  try{
     if(!lsRead('seed-appts-3')){
       var _exist={}; (S.events||[]).forEach(function(e){_exist[e.id]=1;});
       SEED_APPTS.forEach(function(a){ if(!_exist[a.id]) S.events.push({id:a.id,date:a.date,time:a.time,type:a.type,title:a.title,notes:a.notes}); });
@@ -2894,19 +2908,27 @@ function renderWoOverlay(){
       mainBtn.textContent='Done';
       mainBtn.onclick=completeSet;
       mainBtn.style.background=accentCol;mainBtn.style.color='#fff';
-    } else {
-      mainBtn.textContent='Skip exercise';
-      mainBtn.onclick=skipEx;
-      mainBtn.style.background='var(--raised)';mainBtn.style.color='var(--ink2)';
     }
+    // Timed exercise mid-countdown has no primary action — hide the main button.
+    var timedWork=(w.ph==='work'&&!isReps(ex));
+    mainBtn.style.display=timedWork?'none':'block';
   }
   // Skip rest
   var skipBtn=document.getElementById('wo-skip-btn');
   if(skipBtn){
-    if(w.ph==='rest'){ skipBtn.textContent='Skip rest'; skipBtn.onclick=skipRest; skipBtn.style.display='block'; }
-    else if(w.ph==='work'&&isReps(ex)){ skipBtn.textContent='Skip exercise'; skipBtn.onclick=skipEx; skipBtn.style.display='block'; }
-    else { skipBtn.style.display='none'; }
+    if(w.ph==='work'){
+      skipBtn.replaceChildren();
+      var skLbl=document.createElement('span');skLbl.textContent='Skip exercise';
+      var skArr=document.createElement('span');skArr.style.cssText='display:inline-flex;vertical-align:-2px;margin-left:5px;';
+      skArr.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+      skBtnInner(skipBtn,skLbl,skArr);
+      skipBtn.onclick=skipEx;
+      skipBtn.style.display='flex';
+    } else {
+      skipBtn.style.display='none';
+    }
   }
+  function skBtnInner(el,a,b){ el.appendChild(a); el.appendChild(b); }
   // Up next
   var nxtDiv=document.getElementById('wo-up-next');
   var nxtName=document.getElementById('wo-up-next-name');
@@ -3216,7 +3238,7 @@ var SEED_APPTS = [
   {id:1779000000001,date:'2026-05-13',time:'',type:'para',title:'Paracentesis',arriveBy:'',location:'',provider:'',notes:'Most recent. Attending only.'},
   {id:1779000000002,date:'2026-05-18',time:'11:00',type:'infusion',title:'Infusion',arriveBy:'10:45',location:'1635 Aurora Ct, Fl 2, Anschutz Outpatient Pavilion, Aurora CO 80045',provider:'',notes:''},
   {id:1779000000003,date:'2026-05-18',time:'11:00',type:'appt',title:'Return Patient Visit',arriveBy:'10:45',location:'Anschutz Outpatient Pavilion, 1635 Aurora Ct, Fl 2',provider:'UCHealth Cancer Survivorship Clinic',notes:''},
-  {id:1779000000004,date:'2026-05-19',time:'10:45',type:'para',title:'Procedure',arriveBy:'10:30',location:'Anschutz Outpatient Pavilion, 1635 Aurora Ct, Fl 2',provider:'UCHealth Cancer Survivorship Clinic',notes:'Rescheduled from May 18.'},
+  {id:1779000000004,date:'2026-05-19',time:'11:10',type:'para',title:'Paracentesis',arriveBy:'10:30',location:'Anschutz Outpatient Pavilion, 1635 Aurora Ct, Fl 2',provider:'UCHealth Cancer Survivorship Clinic',vol:2.5,notes:''},
   {id:1779000000005,date:'2026-05-18',time:'13:00',type:'appt',title:'Telephone Appointment',arriveBy:'',location:'',provider:'Mackenzie P. · UCHealth Cancer Care, Univ. of Colorado Hospital',notes:''},
   {id:1779000000006,date:'2026-05-21',time:'10:30',type:'appt',title:'Provider Visit',arriveBy:'10:15',location:'',provider:'Elizabeth Mappus, PA-C',notes:'Join by 10:15.'},
   {id:1779000000007,date:'2026-05-25',time:'10:50',type:'lab',title:'Lab / Blood Draw',arriveBy:'10:35',location:'UCHealth Laboratory, University of Colorado Hospital',provider:'',notes:''},
@@ -3343,7 +3365,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       <span id="wo-up-next-name" style="font-size:13px;font-weight:700;color:var(--ink3);"></span>
     </div>
     <button id="wo-main-btn" style="width:100%;max-width:360px;background:var(--pu);color:#fff;font-size:16px;font-weight:700;border-radius:14px;height:54px;border:none;cursor:pointer;font-family:var(--sans);"></button>
-    <div id="wo-skip-btn" style="margin-top:14px;font-size:13px;font-weight:700;color:var(--ink3);cursor:pointer;font-family:var(--sans);display:none;height:18px;"></div>
+    <div id="wo-skip-btn" style="margin-top:14px;font-size:13px;font-weight:700;color:var(--ink3);cursor:pointer;font-family:var(--sans);display:none;align-items:center;justify-content:center;height:18px;"></div>
   </div>
 
 </div>
