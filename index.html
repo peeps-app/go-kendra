@@ -2631,7 +2631,7 @@ function tickWo(){
     if(w.ph==='work'){
       if(e.s&&w.set<e.s){w.ph='rest';w.t=20;}
       else{w.i++;if(w.i>=w.ex.length){doneWo();return;}w.set=1;w.ph='ready';}
-    } else {w.set++;w.ph='ready';}
+    } else {w.set++;w.ph='work';w.t=0;}
   }
   R();
 }
@@ -2652,7 +2652,7 @@ function deleteSummary(i){if(S.labSummaries)S.labSummaries.splice(i,1);lsSet('la
 
 
 function skipEx(){if(!S.wo)return;S.wo.i++;if(S.wo.i>=S.wo.ex.length){doneWo();return;}S.wo.set=1;S.wo.ph='ready';R();}
-function skipRest(){if(!S.wo||S.wo.ph!=='rest')return;S.wo.set++;S.wo.ph='ready';R();}
+function skipRest(){if(!S.wo||S.wo.ph!=='rest')return;S.wo.set++;S.wo.ph='work';S.wo.t=0;R();}
 function quitWo(){clearInterval(S.woi);S.wo=null;hideWoOverlay();R();}
 
 function vWoAct(){
@@ -2805,7 +2805,17 @@ function renderWoOverlay(){
   if(phLabel) phLabel.textContent=(mob?'Mobility':'Strength')+(adv?' · Advanced':'')+' · '+(w.i+1)+' of '+w.ex.length;
   // Progress bar
   var pf=document.getElementById('wo-progress-fill');
-  if(pf) pf.style.width=Math.round(w.i/w.ex.length*100)+'%';
+  if(pf){
+    // Progress across all sets of all exercises, not just exercise index.
+    var totalSets=0, doneSets=0;
+    for(var _x=0;_x<w.ex.length;_x++){
+      var _s=(w.ex[_x].s||1);
+      totalSets+=_s;
+      if(_x<w.i) doneSets+=_s;
+      else if(_x===w.i) doneSets+=(w.set-1)+((w.ph==='rest')?1:0);
+    }
+    pf.style.width=Math.round(doneSets/totalSets*100)+'%';
+  }
   // Exercise name
   var nameEl=document.getElementById('wo-exercise-name');
   if(nameEl) nameEl.textContent=w.ph==='rest'?'Rest':ex.n;
@@ -2873,15 +2883,15 @@ function renderWoOverlay(){
   var mainBtn=document.getElementById('wo-main-btn');
   if(mainBtn){
     if(w.ph==='ready'){
-      mainBtn.textContent=w.set>1?'Start set '+w.set:'Start';
+      mainBtn.textContent='Start';
       mainBtn.onclick=beginEx;
       mainBtn.style.background=accentCol;mainBtn.style.color='#fff';
     } else if(w.ph==='rest'){
-      mainBtn.textContent='Start set '+(w.set+1);
+      mainBtn.textContent='Skip rest';
       mainBtn.onclick=skipRest;
       mainBtn.style.background=accentCol;mainBtn.style.color='#fff';
     } else if(w.ph==='work'&&isReps(ex)){
-      mainBtn.textContent=(ex.s&&w.set<ex.s)?'Done \u2014 next set':'Done';
+      mainBtn.textContent='Done';
       mainBtn.onclick=completeSet;
       mainBtn.style.background=accentCol;mainBtn.style.color='#fff';
     } else {
@@ -3289,7 +3299,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
   <!-- TOP ZONE — fixed: quit, progress, phase label -->
   <div style="flex-shrink:0;padding:16px 20px 0;">
     <div style="display:flex;align-items:center;gap:12px;">
-      <button id="wo-quit" onclick="quitWo()" style="flex-shrink:0;background:var(--raised);border:1px solid var(--div);color:var(--ink2);padding:8px 16px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Quit</button>
+      <button id="wo-quit" onclick="quitWo()" style="flex-shrink:0;background:transparent;border:1.5px solid var(--div);color:var(--ink3);padding:8px 16px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Quit</button>
       <div id="wo-progress-wrap" style="flex:1;height:6px;background:var(--div);border-radius:99px;overflow:hidden;"><div id="wo-progress-fill" style="height:100%;background:var(--pu);border-radius:99px;width:0%;transition:width .35s;"></div></div>
     </div>
     <div id="wo-phase-label" style="font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:1.6px;text-transform:uppercase;margin-top:12px;text-align:center;"></div>
@@ -3309,7 +3319,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
 
       <!-- card body — the number, the focal point -->
       <div style="padding:28px 20px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <div id="wo-rep-display"></div>
+        <div id="wo-rep-display" style="text-align:center;width:100%;"></div>
         <div id="wo-timer-display" style="display:none;"></div>
         <div id="wo-timer-label" style="display:none;"></div>
       </div>
