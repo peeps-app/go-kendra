@@ -268,7 +268,7 @@ select.inp{appearance:none;}
 </div>
 <script>// ── FIREBASE REALTIME DATABASE ───────────────────────────────────────────────
 // Cross-device live sync — all writes replicate to every connected device
-(function(){
+function initFirebase(){
   try{
     var _fbConfig = {
       apiKey: "AIzaSyAcBpTCS6UwIXHcaq94tRBpDvBRjcMzVwo",
@@ -283,12 +283,12 @@ select.inp{appearance:none;}
     window._fbDb = firebase.database();
     console.log('Firebase connected');
   }catch(_fe){ console.warn('Firebase init failed:',_fe); window._fbDb=null; }
-})();
+}
 
 // ── FIREBASE WRITE HELPER ─────────────────────────────────────────────────────
 function fbSet(k, v){
   if(!window._fbDb) return;
-  try{ window._fbDb.ref('gk/'+k).set(v); }catch(_e){}
+  try{ var _fk=k.replace(/\./g,'_'); window._fbDb.ref('gk/'+_fk).set(v); }catch(_e){}
 }
 
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
@@ -299,7 +299,7 @@ function setupFirebaseSync(){
 
   // Listen to today's day bucket — most important for live care logging
   function _watchDay(dk){
-    window._fbDb.ref('gk/day-'+dk).on('value',function(snap){
+    window._fbDb.ref('gk/day-'+dk.replace(/\./g,'_')).on('value',function(snap){
       var val=snap.val();
       if(val===null||val===undefined) return; // don't overwrite with empty
       try{ localStorage.setItem('gk-day-'+dk, JSON.stringify(val)); }catch(_e){}
@@ -4229,6 +4229,100 @@ function renderMeds() {
   }
   return wrap;
 }
+
+
+// ── DATA DUMP FOR FIREBASE IMPORT ────────────────────────────────────────────
+async function dumpAllDataAsJSON(){
+  var out=document.getElementById('fb-dump-output');
+  if(!out) return;
+  out.style.display='block';
+  out.innerHTML='<div style="padding:8px;color:var(--ink3);font-size:12px;">Reading data...</div>';
+
+  try{
+    var result={'gk':{}};
+    var allKeys=[];
+    // Try window.storage list
+    try{ var listed=await window.storage.list('gk-'); allKeys=(listed&&listed.keys)||[]; }catch(_e){}
+    // Fallback to localStorage
+    if(!allKeys.length){
+      for(var i=0;i<localStorage.length;i++){
+        var k=localStorage.key(i);
+        if(k&&k.startsWith('gk-')) allKeys.push(k);
+      }
+    }
+    for(var ki=0;ki<allKeys.length;ki++){
+      var fullKey=allKeys[ki];
+      var shortKey=fullKey.startsWith('gk-')?fullKey.slice(3):fullKey;
+      var val=null;
+      try{ var r=await window.storage.get(fullKey); val=r&&r.value?JSON.parse(r.value):null; }catch(_e){}
+      if(val===null){ try{ var ls=localStorage.getItem(fullKey); val=ls?JSON.parse(ls):null; }catch(_e){} }
+      if(val!==null){
+        // Firebase keys can't contain . so replace with _
+        var fbKey=shortKey.replace(/[.$#\[\]\/]/g,'_').replace(/^_+|_+$/g,'').replace(/^$/g,'unknown');
+        result['gk'][fbKey]=val;
+      }
+    }
+    var jsonStr=JSON.stringify(result,null,2);
+    out.innerHTML='<div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">Copy everything below → paste into Firebase Import JSON</div>'
+      +'<textarea style="width:100%;height:200px;font-family:monospace;font-size:10px;padding:8px;border:1px solid var(--div);border-radius:8px;background:var(--raised);color:var(--ink);resize:vertical;" readonly>'+jsonStr+'</textarea>'
+      +'<button id="fb-copy-btn" style="margin-top:8px;width:100%;height:36px;background:var(--pu);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Copy to Clipboard</button>';
+    out.querySelector('#fb-copy-btn').addEventListener('click',function(){
+      var ta=out.querySelector('textarea');
+      if(ta){ta.select();try{document.execCommand('copy');}catch(_e){} this.textContent='Copied!';}
+    });
+  }catch(_err){
+    out.innerHTML='<div style="color:#E53E3E;font-size:12px;">Failed: '+_err.message+'</div>';
+  }
+}
+// ── END DATA DUMP ─────────────────────────────────────────────────────────────
+
+// ── FIREBASE DATA EXPORT ──────────────────────────────────────────────────────
+// Reads ALL data from window.storage (Claude artifact storage) and pushes to Firebase
+// Run once from the Claude artifact tab to migrate all data to Firebase
+async function exportAllToFirebase(){
+  if(!window._fbDb){ alert('Firebase not connected'); return; }
+  var btn=document.getElementById('fb-export-btn');
+  if(btn){ btn.textContent='Exporting...'; btn.disabled=true; }
+
+  try{
+    // Get all keys from window.storage
+    var allKeys=[];
+    try{ var listed=await window.storage.list('gk-'); allKeys=(listed&&listed.keys)||[]; }catch(_e){}
+
+    if(!allKeys.length){
+      // Fallback: try common known keys from localStorage
+      for(var i=0;i<localStorage.length;i++){
+        var k=localStorage.key(i);
+        if(k&&k.startsWith('gk-')) allKeys.push(k);
+      }
+    }
+
+    var pushed=0, failed=0;
+    for(var ki=0;ki<allKeys.length;ki++){
+      var fullKey=allKeys[ki];
+      var shortKey=fullKey.startsWith('gk-')?fullKey.slice(3):fullKey;
+      try{
+        // Try window.storage first, fall back to localStorage
+        var val=null;
+        try{ var r=await window.storage.get(fullKey); val=r&&r.value?JSON.parse(r.value):null; }catch(_e){}
+        if(val===null){ var ls=localStorage.getItem(fullKey); val=ls?JSON.parse(ls):null; }
+        if(val!==null){
+          await window._fbDb.ref('gk/'+shortKey).set(val);
+          pushed++;
+        }
+      }catch(_e){ failed++; }
+    }
+
+    var msg='Exported '+pushed+' keys to Firebase'+(failed?' ('+failed+' failed)':'')+'!';
+    if(btn){ btn.textContent='Done! '+pushed+' keys uploaded'; btn.style.background='var(--sg)'; }
+    alert(msg+' Open GitHub Pages on any device to sync.');
+  }catch(_err){
+    alert('Export failed: '+_err.message);
+    if(btn){ btn.textContent='Export failed'; btn.style.background='#E53E3E'; }
+  }
+}
+// ── END FIREBASE EXPORT ───────────────────────────────────────────────────────
+
 function renderMedical(){
   if(S.role==='friends'){var _d=mk('div');_d.appendChild(mk('div',{css:'padding:40px 20px;text-align:center;color:var(--ink3);font-size:13px;',txt:'Ask Kendra or her care team for medical details.'}));return _d;}
 
@@ -4446,6 +4540,23 @@ function renderMedical(){
   });
 
   px.appendChild(mk('div',{css:'font-size:11px;color:var(--ink4);line-height:1.5;text-align:center;margin:16px 0 8px;',txt:'Reference only. Always confirm current details with the care team.'}));
+
+  // ── FIREBASE EXPORT (care team only — run from Claude artifact to migrate data) ──
+  if(S.role==='care'){
+    var fbSection=mk('div',{css:'margin:20px 0;padding:16px;background:var(--raised);border-radius:var(--r-md);border:1px solid var(--div);'});
+    fbSection.appendChild(mk('div',{css:'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'Firebase Sync'}));
+    fbSection.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);margin-bottom:12px;line-height:1.5;',txt:'Run this once from the Claude tab to push all data to Firebase so every device stays in sync.'}));
+    var _expBtn=mk('button',{css:'width:100%;height:44px;background:var(--pu);color:#fff;border:none;border-radius:var(--r-md);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-bottom:8px;',txt:'Export All Data to Firebase',id:'fb-export-btn'});
+    _expBtn.addEventListener('click',exportAllToFirebase);
+    fbSection.appendChild(_expBtn);
+    var _dumpBtn=mk('button',{css:'width:100%;height:44px;background:var(--card);color:var(--ink2);border:1px solid var(--div);border-radius:var(--r-md);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Dump All Data as JSON (for Firebase import)',id:'fb-dump-btn'});
+    _dumpBtn.addEventListener('click',dumpAllDataAsJSON);
+    fbSection.appendChild(_dumpBtn);
+    var _dumpOut=mk('div',{id:'fb-dump-output',css:'display:none;margin-top:12px;'});
+    fbSection.appendChild(_dumpOut);
+    px.appendChild(fbSection);
+  }
+
   px.appendChild(mk('div',{css:'height:24px;'}));
   wrap.appendChild(px);
   return wrap;
@@ -6105,7 +6216,7 @@ function buildMedEditor(medList){
 }
 
 
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",bootLoad);}else{bootLoad();}</script>
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){initFirebase();bootLoad();});}else{initFirebase();bootLoad();}</script>
 <div id="cin" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;justify-content:flex-end;align-items:center;">
   <div id="cin-backdrop" onclick="closeCin()" style="position:absolute;inset:0;background:rgba(15,10,46,.5);backdrop-filter:blur(8px);cursor:pointer;"></div>
   <div id="cin-sheet" onclick="event.stopPropagation()" style="position:relative;width:100%;max-width:430px;background:#fff;border-radius:24px 24px 0 0;padding:16px 20px 32px;min-height:56vh;max-height:88vh;overflow-y:auto;box-shadow:0 -20px 60px rgba(0,0,0,.2);">
