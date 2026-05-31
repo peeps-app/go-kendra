@@ -320,6 +320,32 @@ function setupFirebaseSync(){
     if(S.v==='app'&&!window._fbBooting) R();
   });
 
+  // Listen to milestones
+  window._fbDb.ref('gk/milestones').on('value',function(snap){
+    var val=snap.val();
+    if(!Array.isArray(val)||!val.length) return;
+    try{ localStorage.setItem('gk-milestones', JSON.stringify(val)); }catch(_e){}
+    S.milestones=val;
+    if(S.v==='app'&&!window._fbBooting) R();
+  });
+
+  // Listen to wishlist
+  window._fbDb.ref('gk/wishlist').on('value',function(snap){
+    var val=snap.val();
+    if(!Array.isArray(val)||!val.length) return;
+    try{ localStorage.setItem('gk-wishlist', JSON.stringify(val)); }catch(_e){}
+    if(S.v==='app'&&!window._fbBooting) R();
+  });
+
+  // Listen to cheers — squad notes to Kenny
+  window._fbDb.ref('gk/cheers').on('value',function(snap){
+    var val=snap.val();
+    if(!Array.isArray(val)||!val.length) return;
+    try{ localStorage.setItem('gk-cheers', JSON.stringify(val)); }catch(_e){}
+    S.cheers=val;
+    if(S.v==='app'&&!window._fbBooting) R();
+  });
+
   // Listen to events (calendar)
   window._fbDb.ref('gk/events').on('value',function(snap){
     var val=snap.val();
@@ -349,6 +375,7 @@ function setupFirebaseSync(){
     }
     var _todayFb=all['day-'+TODAY];
     if(_todayFb&&typeof _todayFb==='object') S.day=_todayFb;
+    if(Array.isArray(all['cheers'])&&all['cheers'].length) S.cheers=all['cheers'];
     window._fbBooting=false;
     if(S.v==='app') R(); // re-render with fresh Firebase data
   });
@@ -4564,9 +4591,61 @@ function renderMedical(){
   }
 
   px.appendChild(mk('div',{css:'height:24px;'}));
+  // ── Add Win button (Kenny + care team only) ─────────────────────────────
+  if(S.role!=='friends'){
+    var _addWinBtn=mk('button',{css:'position:fixed;bottom:80px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--pu);color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(107,70,193,.4);z-index:100;display:flex;align-items:center;justify-content:center;',html:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'});
+    _addWinBtn.addEventListener('click', function(){ openAddWin(); });
+    wrap.appendChild(_addWinBtn);
+  }
+
   wrap.appendChild(px);
   return wrap;
 }
+
+// ── ADD WIN MODAL ─────────────────────────────────────────────────────────────
+function openAddWin(){
+  var _existing=document.getElementById('add-win-modal');
+  if(_existing) _existing.remove();
+  var modal=mk('div',{id:'add-win-modal',css:'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;'});
+  var sheet=mk('div',{css:'background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;'});
+  sheet.appendChild(mk('div',{css:'font-family:var(--serif);font-size:20px;font-style:italic;color:var(--pud);margin-bottom:16px;',txt:'Add a Win'}));
+
+  var _titleInp=mk('input',{css:'width:100%;padding:12px;border:1.5px solid var(--div);border-radius:var(--r-md);font-size:15px;font-family:var(--sans);background:var(--card);color:var(--ink);margin-bottom:10px;box-sizing:border-box;'});
+  _titleInp.placeholder='What happened?';
+  var _bodyInp=mk('textarea',{css:'width:100%;padding:12px;border:1.5px solid var(--div);border-radius:var(--r-md);font-size:14px;font-family:var(--sans);background:var(--card);color:var(--ink);margin-bottom:10px;box-sizing:border-box;resize:none;height:80px;'});
+  _bodyInp.placeholder='Tell the story...';
+  var _dateInp=mk('input',{css:'width:100%;padding:12px;border:1.5px solid var(--div);border-radius:var(--r-md);font-size:14px;font-family:var(--sans);background:var(--card);color:var(--ink);margin-bottom:16px;box-sizing:border-box;'});
+  _dateInp.type='date'; _dateInp.value=TODAY;
+
+  var _pubRow=mk('div',{css:'display:flex;align-items:center;gap:8px;margin-bottom:16px;'});
+  var _pubChk=mk('input'); _pubChk.type='checkbox'; _pubChk.checked=true; _pubChk.id='win-pub-chk';
+  var _pubLbl=mk('label',{css:'font-size:13px;color:var(--ink2);',txt:'Show to cheer squad'}); _pubLbl.htmlFor='win-pub-chk';
+  _pubRow.appendChild(_pubChk); _pubRow.appendChild(_pubLbl);
+
+  var _saveBtn=mk('button',{css:'width:100%;height:48px;background:var(--pu);color:#fff;border:none;border-radius:var(--r-md);font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-bottom:8px;',txt:'Save Win'});
+  var _cancelBtn=mk('button',{css:'width:100%;height:40px;background:transparent;color:var(--ink3);border:none;font-size:14px;cursor:pointer;font-family:var(--sans);',txt:'Cancel'});
+
+  _saveBtn.addEventListener('click',function(){
+    var title=_titleInp.value.trim();
+    if(!title){ toast('Add a title'); return; }
+    var ms=lsGet('milestones')||[];
+    ms.push({id:'ms'+Date.now(),date:_dateInp.value||TODAY,title:title,body:_bodyInp.value.trim(),public:_pubChk.checked});
+    lsSet('milestones',ms);
+    S.milestones=ms;
+    modal.remove();
+    toast('Win logged!');
+    R();
+  });
+  _cancelBtn.addEventListener('click',function(){ modal.remove(); });
+
+  sheet.appendChild(_titleInp); sheet.appendChild(_bodyInp); sheet.appendChild(_dateInp);
+  sheet.appendChild(_pubRow); sheet.appendChild(_saveBtn); sheet.appendChild(_cancelBtn);
+  modal.appendChild(sheet);
+  modal.addEventListener('click',function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  setTimeout(function(){ _titleInp.focus(); },100);
+}
+// ── END ADD WIN ───────────────────────────────────────────────────────────────
 
 function renderOb()     { return mk('div',{txt:'Onboarding'}); }
 function renderCarePortal()    { return mk('div',{txt:'Care team portal'}); }
