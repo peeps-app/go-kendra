@@ -288,6 +288,8 @@ function initFirebase(){
 // ── FIREBASE WRITE HELPER ─────────────────────────────────────────────────────
 function fbSet(k, v){
   if(!window._fbDb) return;
+  // Never write to Firebase during boot — prevents stale local data overwriting real Firebase data
+  if(window._bootPhase) return;
   var _isDay=k.startsWith('day-');
   var _isPrn=k==='prn-doses';
   var _role=S&&S.role;
@@ -303,6 +305,13 @@ function fbSet(k, v){
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
 // Set up after boot — critical keys get real-time push updates from Firebase
 function setupFirebaseSync(){
+  // Track when user is actively typing — prevents Firebase listener from stealing focus
+  document.addEventListener('focusin', function(e){
+    if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) window._userTyping=true;
+  });
+  document.addEventListener('focusout', function(e){
+    if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) window._userTyping=false;
+  });
   if(!window._fbDb) return;
   var _CRITICAL=['prn-doses','events','milestones','cheers','wishlist'];
 
@@ -313,7 +322,7 @@ function setupFirebaseSync(){
       if(val===null||val===undefined) return; // don't overwrite with empty
       try{ localStorage.setItem('gk-day-'+dk, JSON.stringify(val)); }catch(_e){}
       if(dk===TODAY){ S.day=val; }
-      if(S.v==='app'&&!window._fbBooting) R();
+      if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
     });
   }
   _watchDay(TODAY);
@@ -326,7 +335,7 @@ function setupFirebaseSync(){
     var val=snap.val();
     if(val===null||val===undefined) return;
     try{ localStorage.setItem('gk-prn-doses', JSON.stringify(val)); }catch(_e){}
-    if(S.v==='app'&&!window._fbBooting) R();
+    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
   // Listen to milestones
@@ -335,7 +344,7 @@ function setupFirebaseSync(){
     if(!Array.isArray(val)||!val.length) return;
     try{ localStorage.setItem('gk-milestones', JSON.stringify(val)); }catch(_e){}
     S.milestones=val;
-    if(S.v==='app'&&!window._fbBooting) R();
+    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
   // Listen to wishlist
@@ -343,7 +352,7 @@ function setupFirebaseSync(){
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
     try{ localStorage.setItem('gk-wishlist', JSON.stringify(val)); }catch(_e){}
-    if(S.v==='app'&&!window._fbBooting) R();
+    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
   // Listen to cheers — squad notes to Kenny
@@ -361,7 +370,7 @@ function setupFirebaseSync(){
     if(!Array.isArray(val)||!val.length) return;
     try{ localStorage.setItem('gk-events', JSON.stringify(val)); }catch(_e){}
     S.events=val; recomputeCycleDates();
-    if(S.v==='app'&&!window._fbBooting) R();
+    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
   // Pull latest from Firebase on boot (one-time read to hydrate fresh devices)
@@ -490,6 +499,32 @@ var MED_PRN_RARE = [
   {id:'miralax-prn',drug:'miralax',unit:'packet',perDose:1,name:'Miralax',generic:'polyethylene glycol',dose:'17g powder packet',interval:24,note:'Gentle stool softener. Mix with water or juice. No cramping. Once daily.',reason:'constipation'},
   {id:'dulcolax-prn',drug:'dulcolax',unit:'supp',perDose:1,name:'Dulcolax',generic:'bisacodyl suppository',dose:'10mg rectally',interval:24,note:'Suppository for when oral options are not working fast enough. OTC.',reason:'constipation'},
 ];
+
+var MED_PURPOSE = {
+  methadone:   'Pain management (long-acting opioid)',
+  haldol:      'Nausea + anti-anxiety',
+  protonix:    'Stomach acid / GI protection',
+  pepcid:      'Stomach acid / GI protection',
+  bactrim:     'Antibiotic — prevents PCP pneumonia (steroid side effect)',
+  decadron:    'Anti-inflammatory steroid',
+  cymbalta:    'Nerve pain + mood support',
+  tylenol:     'Pain + fever',
+  lovenox:     'Blood thinner — prevents clots (DVT)',
+  zyprexa:     'Nausea + sleep',
+  vitamind:    'Vitamin D deficiency (chemo-related)',
+  dilaudid:    'Breakthrough pain (short-acting opioid)',
+  flexeril:    'Muscle relaxant — cramps + spasms',
+  gummyday:    'Appetite, nausea + pain relief (cannabis)',
+  gummysleep:  'Sleep support (cannabis)',
+  sancuso:     'Nausea prevention (chemo patch)',
+  senna:       'Constipation (stimulant laxative)',
+  lidoderm:    'Local nerve pain (lidocaine patch)',
+  mylicon:     'Gas + bloating relief',
+  enulose:     'Constipation (osmotic laxative)',
+  miralax:     'Constipation',
+  dulcolax:    'Constipation (suppository)',
+};
+
 var MED_STOPPED = ['Morphine extended release','Celebrex (celecoxib)','Robaxin (methocarbamol)'];
 var MED_UNITS = {tablet:'tablets',mL:'mL',patch:'patches',capsule:'capsules',packet:'packets',supp:'suppositories',gummy:'gummies'};
 var PILL_IMGS = {};
@@ -1348,7 +1383,7 @@ function R() {
   if (S.v === 'loading') { nav.style.display='none'; app.appendChild(renderLoading()); return; }
   if (S.v === 'pw')      { nav.style.display='none'; app.innerHTML=''; renderPw(); return; }
   if (S.v === 'ob')      { nav.style.display='none'; app.appendChild(renderOb());      return; }
-  if (S.role === 'friends' && !['squad','wins','wishlist','cal'].includes(S.tab)) S.tab='squad';
+  if (S.role === 'friends' && !['squad','wins','wishlist'].includes(S.tab)) S.tab='squad';
 
   nav.style.display = 'flex';
   var nbs = document.querySelectorAll('.nb');
@@ -1366,6 +1401,8 @@ function R() {
   });
   var _medsNavBtn=document.querySelector('.nb[data-t="meds"]');
   if(_medsNavBtn) _medsNavBtn.style.display = _fr ? 'none' : 'flex';
+  var _calBtn=document.querySelector('.nb[data-t="cal"]');
+  if(_calBtn) _calBtn.style.display = _fr ? 'none' : 'flex';
   var homeBtn=document.querySelector('.nb[data-t="home"]');
   if(homeBtn) homeBtn.style.display = _fr ? 'none' : 'flex';
   var sqBtn=document.querySelector('.nb[data-t="squad"]');
@@ -3622,8 +3659,11 @@ function renderNotes() {
   ta.placeholder = isPt() ? 'How am I feeling overall? Anything notable today...' : 'How is Kendra feeling overall? Anything notable today...';
   ta.style.cssText = 'height:160px;resize:none;';
   ta.value = notes;
-  ta.addEventListener('input', function(){ S.day=S.day||empty(); S.day.notes=this.value; saveDay(); });
+  ta.addEventListener('input', function(){ S.day=S.day||empty(); S.day.notes=this.value; });
   wrap.appendChild(ta);
+  var _saveBtn=mk('button',{css:'width:100%;height:44px;background:var(--pu);color:#fff;border:none;border-radius:var(--r-md);font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-top:10px;',txt:'Save Note'});
+  _saveBtn.addEventListener('click',function(){ saveDay(); toast('Note saved'); });
+  wrap.appendChild(_saveBtn);
   wrap.appendChild(mk('div',{css:'height:24px;'}));
   return wrap;
 }
@@ -4021,6 +4061,8 @@ function renderMeds() {
   function detailPanel(m, dose, note, isPrn){
     var panel = mk('div',{css:'grid-column:1/-1;background:var(--pus);border:1.5px solid var(--pum);border-radius:var(--r-md);padding:12px;margin-top:8px;margin-bottom:2px;'});
     panel.appendChild(mk('div',{css:'font-size:12px;font-weight:700;color:var(--ink);margin-bottom:2px;',txt:m.name}));
+    var _purp=MED_PURPOSE[(m.drug||'').toLowerCase()];
+    if(_purp) panel.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-bottom:8px;line-height:1.4;',txt:_purp}));
     panel.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-bottom:8px;',txt:m.generic+(isPrn?' \u00b7 '+m.reason:'')}));
     panel.appendChild(mk('div',{css:'font-size:12px;color:var(--ink2);line-height:1.55;margin-bottom:10px;',txt:note}));
     if(isPrn){
