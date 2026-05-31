@@ -394,7 +394,8 @@ var USER_PATIENT = "kendra";   var USER_CARE = "careteam";   var USER_FRIENDS = 
 var AUTH_PASSWORDS = {
   kendra:  'Kenny!',    // Kendra view
   care:    'Peeps!',    // Caretaker view
-  cheer:   'gokenny'   // Cheer squad view
+  cheer:   'gokenny',  // Cheer squad (friends)
+  fam:     'Fam!'       // Family — read-only detailed view
 };
 
 // ── RESTORED CONSTANTS ──────────────────────────────────────────────────────
@@ -521,6 +522,7 @@ var PEEP_TEETH_OVERDUE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEs
 var PW_PATIENT = AUTH_PASSWORDS.kendra;
 var PW_CARE    = AUTH_PASSWORDS.care;
 var PW_FRIENDS = AUTH_PASSWORDS.cheer;
+var PW_FAM     = AUTH_PASSWORDS.fam;
 var WISHLIST_URL = "";         // Paste Amazon wishlist URL here
 var LC_DATE  = null; // derived only by recomputeCycleDates() from S.events
 var NC_DATE  = null;
@@ -1324,24 +1326,29 @@ function R() {
   var nbs = document.querySelectorAll('.nb');
   for (var i=0; i<nbs.length; i++) nbs[i].classList.toggle('on', nbs[i].dataset.t === S.tab);
   var medBtn = document.getElementById('nb-medical');
-  if (medBtn) medBtn.style.display = S.role === 'care' ? 'flex' : 'none';
+  if (medBtn) medBtn.style.display = (S.role==='care'||S.role==='fam') ? 'flex' : 'none';
   var medsBtn = document.getElementById('nb-meds');
-  if (medsBtn) medsBtn.style.display = (S.role==='patient'||S.role==='care') ? 'flex' : 'none';
+  if (medsBtn) medsBtn.style.display = (S.role==='patient'||S.role==='care'||S.role==='fam') ? 'flex' : 'none';
   var _fr = S.role==='friends';
-  ['home','log','train','meds'].forEach(function(t){
+  var _fam = S.role==='fam';
+  // log+train: hidden for friends only — fam sees same 8 tabs as care team (frozen)
+  ['log','train'].forEach(function(t){
     var b=document.querySelector('.nb[data-t="'+t+'"]');
     if(b) b.style.display = _fr ? 'none' : 'flex';
   });
+  var _medsNavBtn=document.querySelector('.nb[data-t="meds"]');
+  if(_medsNavBtn) _medsNavBtn.style.display = _fr ? 'none' : 'flex';
+  var homeBtn=document.querySelector('.nb[data-t="home"]');
+  if(homeBtn) homeBtn.style.display = _fr ? 'none' : 'flex';
   var sqBtn=document.querySelector('.nb[data-t="squad"]');
   if(sqBtn) sqBtn.style.display='flex';
   var sqLabel=document.getElementById('nb-squad-label');
-  if(sqLabel) sqLabel.textContent=S.role==='friends'?'Home':'Cheers';
+  if(sqLabel) sqLabel.textContent=(_fr)?'Home':'Cheers';
   var winsBtn=document.getElementById('nb-wins');
-  if(winsBtn) winsBtn.style.display=(_fr||S.role==='patient'||S.role==='care')?'flex':'none';
+  if(winsBtn) winsBtn.style.display=(_fr||S.role==='patient'||S.role==='care'||_fam)?'flex':'none';
   var wlBtn=document.getElementById('nb-wishlist');
   if(wlBtn) wlBtn.style.display=_fr?'flex':'none';
-  var medicalBtn=document.getElementById('nb-medical');
-  if(medicalBtn) medicalBtn.style.display = (S.role==='patient'||S.role==='care') ? 'flex' : 'none';
+  // medicalBtn already set above (L1061) — fam included
 
   var screens = { home:renderHome, log:renderLog, train:renderTrain, cal:renderCal,
                   squad:renderSquad, notes:renderNotes, meds:renderMeds, medical:renderMedical, wishlist:renderWishlistMgmt, wins:renderWins };
@@ -1349,6 +1356,29 @@ function R() {
   var fn = S.wo ? null : (screens[_tab] || renderHome);
   try {
     app.appendChild(fn ? fn() : renderHome());
+    // Fam role: transparent blocking overlay — covers all content, lifted only on cheers tab
+    var _famOv=document.getElementById('fam-block-overlay');
+    if(S.role==='fam'){
+      if(!_famOv){
+        _famOv=document.createElement('div');
+        _famOv.id='fam-block-overlay';
+        _famOv.style.cssText='position:fixed;top:0;left:0;right:0;bottom:56px;z-index:50;background:transparent;pointer-events:all;';
+        document.body.appendChild(_famOv);
+      }
+      // Cheers tab: lift overlay so send form is usable
+      _famOv.style.display=(S.tab==='squad')?'none':'block';
+    // Darken buttons/inputs so they look disabled
+      var _famCss=document.getElementById('fam-disabled-style');
+      if(!_famCss){
+        _famCss=document.createElement('style');
+        _famCss.id='fam-disabled-style';
+        _famCss.textContent='#app button:not(.nb):not(.fam-allow),#app input:not(.fam-allow),#app textarea:not(.fam-allow),#app select:not(.fam-allow){opacity:0.35!important;filter:grayscale(0.4);}';
+        document.head.appendChild(_famCss);
+      }
+    } else {
+      if(_famOv) _famOv.remove();
+      var _fc=document.getElementById('fam-disabled-style'); if(_fc) _fc.remove();
+    }
   } catch(e) {
     console.error('RENDER CRASH ['+S.tab+'/'+S.lt+']:', e);
     app.innerHTML = '<div style="padding:32px;font-family:monospace;font-size:12px;color:#c00;white-space:pre-wrap;">RENDER ERROR: '+e.message+'<br><br>'+(e.stack||'').replace(/</g,'&lt;')+'</div>';
@@ -1668,6 +1698,15 @@ function renderWaddlesCard(){
 
 function renderHome() {
   var d = S.day || empty();
+  if(S.role==='fam'){
+    var _fw=mk('div',{cls:'fi'});
+    var _fb=mk('div',{css:'background:#EBF8FF;border-bottom:1px solid #BEE3F8;padding:10px 16px;display:flex;align-items:center;gap:6px;font-size:12px;color:#2B6CB0;font-weight:600;'});
+    _fb.appendChild(mk('span',{txt:'Read-only view — all data is live'}));
+    var _fso=mk('button',{css:'margin-left:auto;background:transparent;border:none;font-size:11px;color:#2B6CB0;cursor:pointer;font-family:var(--sans);font-weight:600;',txt:'Sign out'});
+    _fso.addEventListener('click',doLogout);
+    _fb.appendChild(_fso);
+    _fw.appendChild(_fb);
+  }
   var c = cycle();
   var lm = latestMood(d);
   var wrap = mk('div',{cls:'fi'});
@@ -1830,7 +1869,7 @@ function renderLog() {
   // Sticky header — landing shows minimal; sub-screens show back button + title
   var ph = mk('div',{cls:'ph',css:'padding:16px 16px 12px;display:flex;align-items:center;gap:10px;'});
   if(lt!=='home'){
-    var back = mk('button',{css:'background:transparent;border:1.5px solid var(--div);color:var(--ink2);padding:6px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'← Back'});
+    var back = mk('button',{cls:'fam-allow',css:'background:transparent;border:1.5px solid var(--div);color:var(--ink2);padding:6px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'← Back'});
     back.addEventListener('click',function(){ S.lt='home'; R(); });
     ph.appendChild(back);
   }
@@ -2114,9 +2153,9 @@ function renderCal() {
   phLeft.appendChild(mk('div',{css:'font-family:var(--serif);font-size:20px;font-style:italic;',txt:monthName}));
   phLeft.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);',txt:'Cycle day '+cycle().day+' of '+cycle().tot}));
   var navBtns=mk('div',{css:'display:flex;gap:8px;align-items:center;'});
-  var prev=mk('button',{css:'width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>'});
+  var prev=mk('button',{cls:'fam-allow',css:'width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>'});
   prev.addEventListener('click',prevMonth);
-  var next=mk('button',{css:'width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'});
+  var next=mk('button',{cls:'fam-allow',css:'width:36px;height:36px;border:1.5px solid var(--div);border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;',html:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'});
   next.addEventListener('click',nextMonth);
   navBtns.appendChild(prev); navBtns.appendChild(next);
   phRow.appendChild(phLeft); phRow.appendChild(navBtns);
@@ -2340,7 +2379,7 @@ function renderWishlistMgmt(){
   if(S.role==='friends') return renderSquadWishlist();
   var wrap=mk('div',{cls:'fi'});
   var ph=mk('div',{cls:'ph',css:'padding:16px;display:flex;align-items:center;gap:10px;'});
-  var back=mk('button',{css:'background:transparent;border:1.5px solid var(--div);color:var(--ink2);padding:6px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'← Back'});
+  var back=mk('button',{cls:'fam-allow',css:'background:transparent;border:1.5px solid var(--div);color:var(--ink2);padding:6px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'← Back'});
   back.addEventListener('click',function(){R();});
   ph.appendChild(back);
   ph.appendChild(mk('div',{css:'font-family:var(--serif);font-size:18px;font-style:italic;',txt:"Kendra’s Wishlist"}));
@@ -2408,7 +2447,7 @@ function renderWins() {
   wrap.appendChild(ph);
 
   var px=mk('div',{cls:'px',css:'padding-top:20px;padding-bottom:32px;'});
-  var _msList=lsGet('milestones')||[];
+  var _msList=lsGet('milestones')||(S.milestones||[]);
   var _pubMs=_msList.filter(function(m){return m.public!==false;}).slice().reverse();
 
   if(_pubMs.length){
@@ -2593,8 +2632,10 @@ function renderSquadPatientView(){
 }
 
 function renderSquad() {
-  // Role dispatch — three distinct experiences
-  if(S.role!=='friends') return renderSquadPatientView();
+  // Role dispatch:
+  // patient/care → see Kendra's cheer inbox (her view)
+  // friends/fam  → see the send-a-note form (their view)
+  if(S.role==='patient'||S.role==='care') return renderSquadPatientView();
   
   if(!S.sqTab) S.sqTab='home';
   var wrap=mk('div',{cls:'fi'});
@@ -2663,52 +2704,62 @@ function renderSquad() {
     px.appendChild(roughNote);
   }
 
-  // ── DAILY SNAPSHOT ──────────────────────────────────────────────────────
+  // ── DAILY STATS (live numbers) ─────────────────────────────────────────
   (function(){
     var CS=getCareState();
     var d2=S.day||empty();
     var _food=(d2.food||[]).length;
-    var _moved=CS.mobility.hasMobility;
+    var _hyd=d2.hyd||0;
+    var _moods=(d2.moods||[]).filter(function(m){return isSameDay(m.ts);}).length;
     var _evts=(S.events||[]).filter(function(e){
       return e.date===TODAY&&!e.cancelled&&
         ['chemo','para','infusion','infusion_pre','infusion_other','nurse'].indexOf(e.type)>=0;
     });
 
-    // Only render if there's anything to show
-    if(!_food && !_moved && !_evts.length) return;
-
-    var card=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;'});
-    card.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink4);margin-bottom:12px;',txt:'Today'}));
-
-    var grid=mk('div',{css:'display:flex;gap:20px;flex-wrap:wrap;'});
-
-    function snapItem(icon, label, active){
-      if(!active) return;
-      var item=mk('div',{css:'display:flex;align-items:center;gap:7px;'});
-      var ic=lc(icon,15,'var(--pu)'); if(ic) item.appendChild(ic);
-      item.appendChild(mk('div',{css:'font-size:13px;font-weight:600;color:var(--ink);',txt:label}));
-      grid.appendChild(item);
+    // Steps — lifetime total
+    var _steps=lsGet('move-hospital-ft')||0;
+    for(var _di=0;_di<180;_di++){
+      var _dd=new Date(Date.now()-_di*86400000);
+      var _dk=localDayKey(_dd.getTime());
+      var _dv=(_dk===TODAY)?S.day:lsGet('day-'+_dk);
+      if(_dv&&Array.isArray(_dv.move)){
+        _dv.move.forEach(function(e){_steps+=(e.distance||0);});
+      }
     }
 
-    // Food
-    if(_food) snapItem('utensils', _food===1?'Ate today':'Ate '+_food+'x today', true);
+    var statsCard=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:14px 16px;margin-bottom:16px;'});
+    statsCard.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;',txt:"Today's Stats"}));
+    var _grid=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;'});
 
-    // Movement
-    if(_moved) snapItem('footprints', 'Moved today', true);
+    function statTile(val, unit, color){
+      var tile=mk('div',{css:'background:var(--raised);border-radius:var(--r-md);padding:10px 12px;'});
+      tile.appendChild(mk('div',{css:'font-size:22px;font-weight:800;color:'+color+';line-height:1;',txt:String(val)}));
+      tile.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-top:2px;',txt:unit}));
+      return tile;
+    }
 
-    // Procedures — each one gets its own item
-    _evts.forEach(function(e){
-      var lbl = e.type==='chemo'?'Chemo'
-               :e.type==='para'?'Paracentesis'
-               :e.type==='infusion_pre'?'Pre-chemo meds'
-               :e.type==='nurse'?'Nurse visit'
-               :'Infusion';
-      snapItem(e.type==='chemo'?'zap':e.type==='nurse'?'user':e.type==='para'?'droplets':'activity', lbl, true);
-    });
+    _grid.appendChild(statTile(_steps,'est. feet walked','var(--te)'));
+    _grid.appendChild(statTile(_hyd+'/8','glasses today','var(--blue)'));
+    _grid.appendChild(statTile(_food,'nibbles today','var(--sg)'));
+    _grid.appendChild(statTile(_moods,'check-ins today','var(--pu)'));
+    statsCard.appendChild(_grid);
+    px.appendChild(statsCard);
 
-    if(grid.children.length){
-      card.appendChild(grid);
-      px.appendChild(card);
+    // Procedures strip
+    if(_evts.length){
+      var evCard=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px;'});
+      evCard.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;',txt:"Today's Appointments"}));
+      var evGrid=mk('div',{css:'display:flex;gap:16px;flex-wrap:wrap;'});
+      _evts.forEach(function(e){
+        var lbl=e.type==='chemo'?'Chemo':e.type==='para'?'Paracentesis':e.type==='infusion_pre'?'Pre-chemo meds':e.type==='nurse'?'Nurse visit':'Infusion';
+        var item=mk('div',{css:'display:flex;align-items:center;gap:6px;'});
+        var ic=lc(e.type==='chemo'?'zap':e.type==='nurse'?'user':e.type==='para'?'droplets':'activity',14,'var(--pu)');
+        if(ic) item.appendChild(ic);
+        item.appendChild(mk('div',{css:'font-size:13px;font-weight:600;color:var(--ink);',txt:lbl}));
+        evGrid.appendChild(item);
+      });
+      evCard.appendChild(evGrid);
+      px.appendChild(evCard);
     }
   })();
 
@@ -2726,9 +2777,9 @@ function renderSquad() {
       px.appendChild(conf);
     } else {
       var form=mk('div',{css:'padding-top:4px;'});
-      var ni=mk('input',{type:'text',cls:'inp',id:'cn',placeholder:'Your name',css:'margin-bottom:8px;height:44px;width:100%;box-sizing:border-box;'});
-      var mi=mk('textarea',{cls:'inp',id:'cm',placeholder:'Write something for Kendra…',css:'height:80px;resize:none;width:100%;box-sizing:border-box;margin-bottom:8px;'});
-      var sb=mk('button',{cls:'btn btn-ink',css:'width:100%;',txt:'Send note'});
+      var ni=mk('input',{type:'text',cls:'inp fam-allow',id:'cn',placeholder:'Your name',css:'margin-bottom:8px;height:44px;width:100%;box-sizing:border-box;'});
+      var mi=mk('textarea',{cls:'inp fam-allow',id:'cm',placeholder:'Write something for Kendra…',css:'height:80px;resize:none;width:100%;box-sizing:border-box;margin-bottom:8px;'});
+      var sb=mk('button',{cls:'btn btn-ink fam-allow',css:'width:100%;',txt:'Send note'});
       sb.addEventListener('click',sendCheer);
       form.appendChild(ni); form.appendChild(mi); form.appendChild(sb);
       px.appendChild(form);
@@ -3905,13 +3956,6 @@ function renderMeds() {
         badge.appendChild(mk('span',{txt:urgTxt}));
         top.appendChild(badge);
         rw.appendChild(top);
-        // Rx number — primary supporting info
-        if(_rxInfo){
-          var rxRow=mk('div',{css:'display:flex;align-items:center;gap:5px;'});
-          rxRow.appendChild(mk('span',{css:'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink4);',txt:'Rx'}));
-          rxRow.appendChild(mk('span',{css:'font-size:11.5px;font-weight:600;color:var(--ink3);letter-spacing:.03em;',txt:_rxInfo.rx}));
-          rw.appendChild(rxRow);
-        }
         // Refills remaining — ambient info
         if(rf.refills===0) rw.appendChild(mk('div',{css:'font-size:10px;font-weight:700;color:var(--ro);margin-top:2px;',txt:'No refills \u2014 needs new Rx'}));
         else if(typeof rf.refills==='number'&&rf.refills>0) rw.appendChild(mk('div',{css:'font-size:10px;color:var(--ink4);margin-top:2px;',txt:rf.refills+' refill'+(rf.refills===1?'':'s')+' remaining'}));
@@ -4551,7 +4595,7 @@ function renderMedical(){
   ];
   GUIDE.forEach(function(g,gi){
     var sec=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);margin-bottom:8px;overflow:hidden;'});
-    var head=mk('button',{css:'width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 14px;background:transparent;border:none;cursor:pointer;text-align:left;'});
+    var head=mk('button',{cls:'fam-allow',css:'width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 14px;background:transparent;border:none;cursor:pointer;text-align:left;'});
     head.appendChild(mk('div',{css:'font-size:13.5px;font-weight:700;color:var(--ink);',txt:g.t}));
     var open=(S.guideOpen===gi);
     var chev=lc('chevron-right',16,'var(--ink3)');
@@ -4671,6 +4715,7 @@ function doLogin(){
   if(v===PW_PATIENT){ S.user={role:'patient',name:uname}; S.role='patient'; S.v='app'; S.tab='home'; matched=true; }
   else if(v===PW_CARE){ S.user={role:'care',name:uname}; S.role='care'; S.v='app'; S.tab='home'; matched=true; }
   else if(v===PW_FRIENDS){ S.user={role:'friends',name:uname}; S.role='friends'; S.v='app'; S.tab='home'; matched=true; }
+    else if(v===PW_FAM){ S.user={role:'fam',name:uname}; S.role='fam'; S.v='app'; S.tab='home'; matched=true; }
   if(matched){
     lsSet('u',JSON.stringify(S.user));
     try{ R(); }catch(e){}
