@@ -337,6 +337,12 @@ function setupFirebaseSync(){
       if(all[k]===null||all[k]===undefined) return;
       try{ localStorage.setItem('gk-'+k, JSON.stringify(all[k])); }catch(_e){}
     });
+    // CRITICAL: Firebase is source of truth for move-hospital-ft
+    // Explicitly overwrite localStorage to prevent double-counting on devices
+    // that have stale data from before Firebase was set up
+    if(all['move-hospital-ft']!==undefined){
+      try{ localStorage.setItem('gk-move-hospital-ft', JSON.stringify(all['move-hospital-ft'])); }catch(_e){}
+    }
     // Re-hydrate S from Firebase data
     if(all['events']&&Array.isArray(all['events'])&&all['events'].length){
       S.events=all['events']; recomputeCycleDates();
