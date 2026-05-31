@@ -288,6 +288,15 @@ function initFirebase(){
 // ── FIREBASE WRITE HELPER ─────────────────────────────────────────────────────
 function fbSet(k, v){
   if(!window._fbDb) return;
+  var _isDay=k.startsWith('day-');
+  var _isPrn=k==='prn-doses';
+  var _role=S&&S.role;
+  // Day bucket writes: ONLY patient (Kenny) — no other role can corrupt her logs
+  if(_isDay && _role!=='patient') return;
+  // PRN dose writes: patient + care team only
+  if(_isPrn && _role!=='patient' && _role!=='care') return;
+  // fam + friends: can only write cheers
+  if((_role==='fam'||_role==='friends') && k!=='cheers') return;
   try{ var _fk=k.replace(/\./g,'_'); window._fbDb.ref('gk/'+_fk).set(v); }catch(_e){}
 }
 
@@ -369,13 +378,30 @@ function setupFirebaseSync(){
     if(all['move-hospital-ft']!==undefined){
       try{ localStorage.setItem('gk-move-hospital-ft', JSON.stringify(all['move-hospital-ft'])); }catch(_e){}
     }
-    // Re-hydrate S from Firebase data
+    // Re-hydrate S from Firebase data — merge don't replace to avoid wiping local logs
     if(all['events']&&Array.isArray(all['events'])&&all['events'].length){
       S.events=all['events']; recomputeCycleDates();
     }
     var _todayFb=all['day-'+TODAY];
-    if(_todayFb&&typeof _todayFb==='object') S.day=_todayFb;
+    if(_todayFb&&typeof _todayFb==='object'){
+      // Merge Firebase day into local S.day — Firebase wins for each field ONLY if local is empty/missing
+      var _localDay=S.day||empty();
+      Object.keys(_todayFb).forEach(function(k){
+        var _fbVal=_todayFb[k], _locVal=_localDay[k];
+        // Arrays: use whichever is longer (more data)
+        if(Array.isArray(_fbVal)&&Array.isArray(_locVal)){
+          if(_fbVal.length>_locVal.length) _localDay[k]=_fbVal;
+        } else if(Array.isArray(_fbVal)){
+          if(!_locVal||_locVal.length===0) _localDay[k]=_fbVal;
+        } else {
+          // Scalar: Firebase wins only if local is null/undefined/0/empty
+          if(_locVal===null||_locVal===undefined||_locVal===''||_locVal===0) _localDay[k]=_fbVal;
+        }
+      });
+      S.day=_localDay;
+    }
     if(Array.isArray(all['cheers'])&&all['cheers'].length) S.cheers=all['cheers'];
+    if(all['milestones']&&Array.isArray(all['milestones'])&&all['milestones'].length) S.milestones=all['milestones'];
     window._fbBooting=false;
     if(S.v==='app') R(); // re-render with fresh Firebase data
   });
@@ -623,6 +649,7 @@ function lsRead(k){
   catch(e){return null;}
 }
 function bootLoad(){
+  window._bootPhase=true; // prevent Firebase writes during init
   TODAY=localDayKey(); // ensure fresh local date at boot
   try{S.day=lsRead('day-'+TODAY)||empty();}catch(e){S.day=empty();}
   // Purge cross-day lastShowerTs — saveDay handles it on next write
@@ -997,6 +1024,7 @@ function bootLoad(){
 
   S.v = S.user ? 'app' : 'pw';
   setupFirebaseSync(); // wire real-time listeners + initial Firebase pull
+  window._bootPhase=false; // Firebase writes now safe
   R();
 }
 
@@ -1044,7 +1072,7 @@ function bootstrapCanonicalData(){
     _storedEvents.forEach(function(e){ _existIds[e.id]=1; });
     _canonicalEvents.forEach(function(e){ if(!_existIds[e.id]) _storedEvents.push(e); });
     S.events = _storedEvents;
-    lsSet('events', S.events);
+    lsSetLocal('events', S.events);
 
     // ── 2. WISHLIST ──────────────────────────────────────────────────────────
     // Canonical wishlist — always ensure these items exist with correct data
@@ -1062,7 +1090,7 @@ function bootstrapCanonicalData(){
       if(!_wlIds[item.id]) _wl.push(item);
       else Object.assign(_wlIds[item.id], item); // update in place with canonical data
     });
-    lsSet('wishlist', _wl);
+    lsSetLocal('wishlist', _wl);
 
     // ── 3. MILESTONES — handled by seed-milestones-v2 if(true) block below ──
 
@@ -1071,7 +1099,7 @@ function bootstrapCanonicalData(){
     var _d25 = lsGet('day-2026-05-25')||{};
     if(!_d25.lastShowerTs || _d25.lastShowerTs===0){
       _d25.lastShowerTs = 1779732000000;
-      lsSet('day-2026-05-25',_d25);
+      lsSetLocal('day-2026-05-25',_d25);
     }
 
     // May 28: frew event + 800ft walk
@@ -1082,7 +1110,7 @@ function bootstrapCanonicalData(){
     if(!_has28frew) _d28.frew.push({ts:1780005720000,time:'16:02',note:''});
     var _has28move = _d28.move.some(function(e){return e.distance===800&&e.ts===1780032600000;});
     if(!_has28move) _d28.move.push({type:'dist',ts:1780032600000,laps:0,distance:800});
-    lsSet('day-2026-05-28',_d28);
+    lsSetLocal('day-2026-05-28',_d28);
 
     // ── 5. PRN DOSES — seed known historical doses idempotently ─────────────
     var _prn = lsGet('prn-doses')||{};
@@ -1091,7 +1119,7 @@ function bootstrapCanonicalData(){
     _prnEnsure('gummy-sleep-prn', new Date('2026-05-19T22:32:00').getTime());
     _prnEnsure('flexeril-prn', 1779989460000);
     _prnEnsure('dilaudid-prn', 1780003200000);
-    lsSet('prn-doses',_prn);
+    lsSetLocal('prn-doses',_prn);
 
   }catch(e){ console.error('Bootstrap error:',e); }
 }
@@ -6222,6 +6250,9 @@ function saveDay(){
   if(S.day.lastShowerTs && localDayKey(S.day.lastShowerTs)!==TODAY){
     S.day.lastShowerTs=null;
   }
+  // During boot phase, write locally only — Firebase has the source of truth
+  // After setupFirebaseSync() completes, full writes resume
+  if(window._bootPhase) return lsSetLocal('day-'+TODAY, S.day);
   lsSet('day-'+TODAY, S.day);
   // Update last-saved heartbeat
   try{
@@ -6241,6 +6272,13 @@ function saveCfg(){
 }
 
 function lsGet(k){try{var v=localStorage.getItem('gk-'+k);return v?JSON.parse(v):null;}catch(e){return null;}}
+// lsSetLocal — boot/seed writes that must NOT go to Firebase
+function lsSetLocal(k,v){
+  try{if(window.storage){var _p=window.storage.set('gk-'+k,JSON.stringify(v),false);if(_p&&_p.catch)_p.catch(function(){});}}catch(e){}
+  try{localStorage.setItem('gk-'+k,JSON.stringify(v));}catch(e){}
+  return {catch:function(){return this;},then:function(){return this;}};
+}
+
 function lsSet(k,v){try{if(window.storage){var _p=window.storage.set('gk-'+k,JSON.stringify(v),false);if(_p&&_p.catch)_p.catch(function(){});}}catch(e){}try{localStorage.setItem('gk-'+k,JSON.stringify(v));}catch(e){} fbSet(k,v); return {catch:function(){return this;},then:function(){return this;}};}
 
 // lsGetA/loadAll replaced by synchronous bootLoad — see init()
