@@ -368,6 +368,10 @@ function setupFirebaseSync(){
   window._fbDb.ref('gk/events').on('value',function(snap){
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
+    // Merge canonical seed into Firebase events before storing
+    var _ids={}; val.forEach(function(e){ _ids[e.id]=1; });
+    var _canonical=window._CANONICAL_EVENTS||[];
+    _canonical.forEach(function(e){ if(!_ids[e.id]) val.push(e); });
     try{ localStorage.setItem('gk-events', JSON.stringify(val)); }catch(_e){}
     S.events=val; recomputeCycleDates();
     if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
@@ -389,7 +393,21 @@ function setupFirebaseSync(){
     }
     // Re-hydrate S from Firebase data — merge don't replace to avoid wiping local logs
     if(all['events']&&Array.isArray(all['events'])&&all['events'].length){
-      S.events=all['events']; recomputeCycleDates();
+      // Firebase is source of truth — merge canonical seed INTO Firebase events
+      // (only add events that Firebase doesn't have yet, never remove)
+      var _fbEvts=all['events'];
+      var _fbIds={}; _fbEvts.forEach(function(e){ _fbIds[e.id]=1; });
+      var _canonical=window._CANONICAL_EVENTS||[];
+      _canonical.forEach(function(e){ if(!_fbIds[e.id]) _fbEvts.push(e); });
+      S.events=_fbEvts;
+      // Write merged result back so localStorage stays in sync
+      try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
+      recomputeCycleDates();
+    } else if(window._CANONICAL_EVENTS&&window._CANONICAL_EVENTS.length){
+      // Firebase has no events yet — use canonical seed as starting point
+      S.events=window._CANONICAL_EVENTS.slice();
+      try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
+      recomputeCycleDates();
     }
     var _todayFb=all['day-'+TODAY];
     if(_todayFb&&typeof _todayFb==='object'){
@@ -1109,15 +1127,18 @@ function bootstrapCanonicalData(){
     var _existIds = {};
     _storedEvents.forEach(function(e){ _existIds[e.id]=1; });
     _canonicalEvents.forEach(function(e){ if(!_existIds[e.id]) _storedEvents.push(e); });
-    S.events = _storedEvents;
-    lsSetLocal('events', S.events);
+    // Store canonical events for use by Firebase once() pull
+    // Don't write to S.events yet - Firebase data takes precedence
+    window._CANONICAL_EVENTS = _storedEvents;
+    // Only set S.events now if Firebase hasn't loaded yet
+    if(!S.events||!S.events.length) S.events = _storedEvents;
 
     // ── 2. WISHLIST ──────────────────────────────────────────────────────────
     // Canonical wishlist — always ensure these items exist with correct data
     var _wl = lsGet('wishlist')||[];
     var _wlIds = {}; _wl.forEach(function(w){ _wlIds[w.id]=w; });
     var _canonicalWl = [
-      {id:'wl001',cat:'note',title:'A note about flowers',body:'Please don’t send flowers — they carry bacteria that can be harmful. If you want to brighten her space, a small green plant works.'},
+      {id:'wl001',cat:'note',title:'A note about flowers',body:'We know you mean well — but please no flowers. They carry bacteria that can be harmful to Kendra’s immune system right now.'},
       {id:'wl003',cat:'giving',title:'Venmo Kendra',body:'Send directly to Kendra.',venmo:'kendra-szymarek',link:'https://amzlink-staging.to/az0iYnARrWSuY'},
       {id:'wl004',cat:'covered',title:'Food gift cards',body:'Chemo has really affected her tastebuds, so food GCs are tricky right now. We’re good here — thank you!'},
       {id:'wl010',cat:'covered',title:'Comfy socks',body:'We’ve been so showered with love on this one. Kendra is fully stocked — thank you!'},
@@ -1157,6 +1178,8 @@ function bootstrapCanonicalData(){
     _prnEnsure('gummy-sleep-prn', new Date('2026-05-19T22:32:00').getTime());
     _prnEnsure('flexeril-prn', 1779989460000);
     _prnEnsure('dilaudid-prn', 1780003200000);
+    // Seed scopolamine: applied ~2pm May 29 (1780063200000), 72hr interval
+    if(!_prn['scopolamine-prn']||!_prn['scopolamine-prn'].length) _prn['scopolamine-prn']=[1780063200000];
     lsSetLocal('prn-doses',_prn);
 
   }catch(e){ console.error('Bootstrap error:',e); }
@@ -4474,7 +4497,103 @@ async function exportAllToFirebase(){
 }
 // ── END FIREBASE EXPORT ───────────────────────────────────────────────────────
 
+
+// ── IN-APP FIREBASE DIAGNOSTIC ───────────────────────────────────────────────
+function runFirebaseDiagnostic(){
+  var modal=document.getElementById('fb-diag-modal');
+  if(modal) modal.remove();
+  modal=mk('div',{id:'fb-diag-modal',css:'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;overflow:auto;padding:20px;box-sizing:border-box;'});
+  var box=mk('div',{css:'background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:12px;padding:16px;border-radius:8px;max-width:600px;margin:0 auto;white-space:pre-wrap;border:1px solid #30363d;'});
+  var closeBtn=mk('button',{css:'position:fixed;top:12px;right:12px;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;z-index:301;',txt:'Close'});
+  closeBtn.addEventListener('click',function(){ modal.remove(); });
+  document.body.appendChild(closeBtn);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  function log(s){ box.textContent+=s+'\n'; }
+  function hr(){ log('─'.repeat(50)); }
+
+  log('GO KENDRA — FIREBASE DIAGNOSTIC');
+  log(new Date().toLocaleString());
+  hr();
+
+  // LOCAL STATE (synchronous — immediate)
+  log('LOCAL STATE (S.events, S.day, S.cheers):');
+  log('  S.events count: '+(S.events||[]).length);
+  log('  S.day.food count: '+((S.day&&S.day.food)||[]).length);
+  log('  S.day.moods count: '+((S.day&&S.day.moods)||[]).length);
+  log('  S.day.hyd: '+((S.day&&S.day.hyd)||0));
+  log('  S.cheers count: '+(S.cheers||[]).length);
+  log('  S.milestones count: '+(S.milestones||[]).length);
+  var _lsEvts=lsGet('events')||[]; log('  localStorage events: '+_lsEvts.length);
+  var _prnRaw=lsGet('prn-doses')||{};
+  Object.keys(_prnRaw).forEach(function(k){
+    var doses=Array.isArray(_prnRaw[k])?_prnRaw[k]:[];
+    if(doses.length) log('  PRN '+k+': '+doses.length+' doses');
+  });
+  hr();
+
+  if(!window._fbDb){ log('Firebase: NOT CONNECTED'); return; }
+
+  log('Firebase: CONNECTED');
+  log('Querying gk/...');
+
+  window._fbDb.ref('gk').once('value',function(snap){
+    var fb=snap.val()||{};
+    hr();
+    log('FIREBASE ACTUAL CONTENTS:');
+    log('  Firebase connected: TRUE');
+    log('  Firebase path queried: gk/');
+    log('  gk/events count: '+(Array.isArray(fb.events)?fb.events.length:0));
+    log('  gk/milestones count: '+(Array.isArray(fb.milestones)?fb.milestones.length:0));
+    log('  gk/cheers count: '+(Array.isArray(fb.cheers)?fb.cheers.length:0));
+    log('  gk/prn-doses keys: '+Object.keys(fb['prn-doses']||{}).join(', '));
+    Object.keys(fb['prn-doses']||{}).forEach(function(k){
+      var doses=Array.isArray(fb['prn-doses'][k])?fb['prn-doses'][k]:[];
+      if(doses.length) log('    '+k+': '+doses.length+' doses, last='+new Date(doses[doses.length-1]).toLocaleString());
+    });
+    log('  gk/move-hospital-ft: '+(fb['move-hospital-ft']||'not set'));
+    log('  Day buckets in Firebase:');
+    Object.keys(fb).filter(function(k){return k.startsWith('day-');}).sort().forEach(function(k){
+      var d=fb[k]; var s=[];
+      if(d.moods&&d.moods.length) s.push('moods:'+d.moods.length);
+      if(d.food&&d.food.length) s.push('food:'+d.food.length);
+      if(d.hyd) s.push('hyd:'+d.hyd);
+      if(d.move&&Array.isArray(d.move)&&d.move.length) s.push('move:'+d.move.length);
+      log('    '+k+': '+(s.join(', ')||'(empty)'));
+    });
+    hr();
+    log('DIFF: S.events vs Firebase events');
+    var fbEvts=Array.isArray(fb.events)?fb.events:[];
+    var localEvts=S.events||[];
+    var fbIds={}; fbEvts.forEach(function(e){fbIds[e.id]=1;});
+    var lcIds={}; localEvts.forEach(function(e){lcIds[e.id]=1;});
+    var onlyFb=fbEvts.filter(function(e){return !lcIds[e.id];});
+    var onlyLc=localEvts.filter(function(e){return !fbIds[e.id];});
+    log('  In Firebase NOT in S.events: '+onlyFb.length);
+    onlyFb.forEach(function(e){log('    FB_ONLY: '+e.date+' '+e.type+' "'+e.title+'"');});
+    log('  In S.events NOT in Firebase: '+onlyLc.length);
+    onlyLc.forEach(function(e){log('    LC_ONLY: '+e.date+' '+e.type+' "'+e.title+'"');});
+    hr();
+    log('WRITE STRATEGY AUDIT:');
+    log('  saveDay() -> set(whole day bucket)');
+    log('  Single writer: patient only -> NO concurrent risk');
+    log('  saveEvents() -> set(whole events array)');
+    log('  Writers: patient + care -> concurrent risk if <100ms apart');
+    log('  logPrn() -> set(whole prn-doses object)');
+    log('  Writers: patient + care -> low concurrent risk');
+    hr();
+    log('DIAGNOSTIC COMPLETE — '+new Date().toLocaleString());
+  },function(err){ log('Firebase query FAILED: '+err.message); });
+}
+// ── END DIAGNOSTIC ────────────────────────────────────────────────────────────
+
 function renderMedical(){
+  if(S.role==='care'||S.role==='fam'){
+    var _diagBtn=mk('button',{css:'position:fixed;bottom:80px;left:16px;height:32px;padding:0 12px;background:#21262d;color:#58a6ff;border:1px solid #30363d;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);z-index:99;',txt:'DB Diagnostic'});
+    _diagBtn.addEventListener('click',runFirebaseDiagnostic);
+    document.body.appendChild(_diagBtn);
+  }
   if(S.role==='friends'){var _d=mk('div');_d.appendChild(mk('div',{css:'padding:40px 20px;text-align:center;color:var(--ink3);font-size:13px;',txt:'Ask Kendra or her care team for medical details.'}));return _d;}
 
   var wrap=mk('div',{cls:'fi'});
