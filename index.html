@@ -299,12 +299,23 @@ function fbSet(k, v){
   if(_isPrn && _role!=='patient' && _role!=='care') return;
   // fam + friends: can only write cheers
   if((_role==='fam'||_role==='friends') && k!=='cheers') return;
-  try{ var _fk=k.replace(/\./g,'_'); window._fbDb.ref('gk/'+_fk).set(v); }catch(_e){}
+  var _fk=k.replace(/\./g,'_');
+  try{
+    window._fbDb.ref('gk/'+_fk).set(v).then(function(){
+      console.log('[Firebase WRITE OK] gk/'+_fk, Array.isArray(v)?'('+v.length+' items)':typeof v);
+    }).catch(function(err){
+      console.error('[Firebase WRITE FAILED] gk/'+_fk, err.message);
+    });
+  }catch(_e){ console.error('[Firebase WRITE ERROR] gk/'+_fk, _e.message); }
 }
 
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
 // Set up after boot — critical keys get real-time push updates from Firebase
 function setupFirebaseSync(){
+  console.log('[setupFirebaseSync START] role='+((S&&S.role)||'none'));
+  // Guard against duplicate listener registration (would stack onValue handlers)
+  if(window._syncWired){ console.warn('[Firebase] setupFirebaseSync called twice — skipping'); return; }
+  window._syncWired=true;
   // Track when user is actively typing — prevents Firebase listener from stealing focus
   document.addEventListener('focusin', function(e){
     if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) window._userTyping=true;
@@ -317,11 +328,14 @@ function setupFirebaseSync(){
 
   // Listen to today's day bucket — most important for live care logging
   function _watchDay(dk){
+    window._listenerCount=(window._listenerCount||0)+1;
+    console.log('[Firebase Listener Registered] day-'+dk+' total='+window._listenerCount);
     window._fbDb.ref('gk/day-'+dk.replace(/\./g,'_')).on('value',function(snap){
       var val=snap.val();
       if(val===null||val===undefined) return; // don't overwrite with empty
       try{ localStorage.setItem('gk-day-'+dk, JSON.stringify(val)); }catch(_e){}
       if(dk===TODAY){ S.day=val; }
+      console.log('[S.day SET] source=firebase-onValue-day food='+((val&&val.food)||[]).length+' moods='+((val&&val.moods)||[]).length+' hyd='+((val&&val.hyd)||0));
       if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
     });
   }
@@ -331,14 +345,19 @@ function setupFirebaseSync(){
   _watchDay(_yest);
 
   // Listen to PRN doses — medication safety critical
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] prn-doses total='+window._listenerCount);
   window._fbDb.ref('gk/prn-doses').on('value',function(snap){
     var val=snap.val();
     if(val===null||val===undefined) return;
+    console.log('[PRN-DOSES SET] source=firebase-onValue keys='+Object.keys(val).join(','));
     try{ localStorage.setItem('gk-prn-doses', JSON.stringify(val)); }catch(_e){}
     if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
   // Listen to milestones
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] milestones total='+window._listenerCount);
   window._fbDb.ref('gk/milestones').on('value',function(snap){
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
@@ -348,14 +367,31 @@ function setupFirebaseSync(){
   });
 
   // Listen to wishlist
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] wishlist total='+window._listenerCount);
   window._fbDb.ref('gk/wishlist').on('value',function(snap){
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
+    console.log('[WISHLIST SET] source=firebase-onValue count='+val.length);
     try{ localStorage.setItem('gk-wishlist', JSON.stringify(val)); }catch(_e){}
     if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
+  // Listen to med-fills — fillDate/fillQty per drug (Firebase-backed, survives deploys)
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] med-fills total='+window._listenerCount);
+  window._fbDb.ref('gk/med-fills').on('value',function(snap){
+    var val=snap.val();
+    if(!val||typeof val!=='object') return;
+    console.log('[MED FILLS SET] source=firebase-onValue drugs='+Object.keys(val).join(','));
+    S.medFills=val;
+    try{ localStorage.setItem('gk-med-fills', JSON.stringify(val)); }catch(_e){}
+    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+  });
+
   // Listen to cheers — squad notes to Kenny
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] cheers total='+window._listenerCount);
   window._fbDb.ref('gk/cheers').on('value',function(snap){
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
@@ -365,6 +401,8 @@ function setupFirebaseSync(){
   });
 
   // Listen to events (calendar)
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] events total='+window._listenerCount);
   window._fbDb.ref('gk/events').on('value',function(snap){
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
@@ -373,11 +411,21 @@ function setupFirebaseSync(){
     var _canonical=window._CANONICAL_EVENTS||[];
     _canonical.forEach(function(e){ if(!_ids[e.id]) val.push(e); });
     try{ localStorage.setItem('gk-events', JSON.stringify(val)); }catch(_e){}
+    var _ts=new Date().toLocaleTimeString();
+    var _before=(S.events||[]).length;
+    var _label=(_before>0&&val.length<_before)?'[S.events REPLACE]':'[S.events SET]';
+    console.log(_ts+' '+_label+' source=firebase-onValue before='+_before+' after='+val.length+(val.length<=28&&_before>val.length?' *** COUNT DROPPED — possible data loss ***':''));
     S.events=val; recomputeCycleDates();
     if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
   });
 
   // Pull latest from Firebase on boot (one-time read to hydrate fresh devices)
+  // All listeners registered — log final count
+  // All 8 listeners are unconditional (no role/tab conditions)
+  // Expected: 2 day-buckets + prn-doses + milestones + wishlist + med-fills + cheers + events = 8
+  var _lc=window._listenerCount||0;
+  console.log('[Firebase Sync Ready] listeners='+_lc+(_lc!==8?' *** EXPECTED 8 — investigate ***':''));
+
   window._fbBooting=true;
   window._fbDb.ref('gk').once('value',function(snap){
     var all=snap.val()||{};
@@ -399,12 +447,14 @@ function setupFirebaseSync(){
       var _fbIds={}; _fbEvts.forEach(function(e){ _fbIds[e.id]=1; });
       var _canonical=window._CANONICAL_EVENTS||[];
       _canonical.forEach(function(e){ if(!_fbIds[e.id]) _fbEvts.push(e); });
+      console.log(new Date().toLocaleTimeString()+' [S.events SET] source=firebase-once count='+_fbEvts.length);
       S.events=_fbEvts;
       // Write merged result back so localStorage stays in sync
       try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
       recomputeCycleDates();
     } else if(window._CANONICAL_EVENTS&&window._CANONICAL_EVENTS.length){
       // Firebase has no events yet — use canonical seed as starting point
+      console.log('[S.events SET] source=canonical-seed-fallback count='+window._CANONICAL_EVENTS.length);
       S.events=window._CANONICAL_EVENTS.slice();
       try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
       recomputeCycleDates();
@@ -428,6 +478,11 @@ function setupFirebaseSync(){
       S.day=_localDay;
     }
     if(Array.isArray(all['cheers'])&&all['cheers'].length) S.cheers=all['cheers'];
+    if(all['med-fills']&&typeof all['med-fills']==='object'){
+      S.medFills=all['med-fills'];
+      console.log('[MED FILLS SET] source=firebase-once drugs='+Object.keys(all['med-fills']).join(','));
+      try{ localStorage.setItem('gk-med-fills', JSON.stringify(all['med-fills'])); }catch(_e){}
+    }
     if(all['milestones']&&Array.isArray(all['milestones'])&&all['milestones'].length) S.milestones=all['milestones'];
     window._fbBooting=false;
     if(S.v==='app') R(); // re-render with fresh Firebase data
@@ -503,10 +558,10 @@ var MED_SLOTS = {
   ]}
 };
 var MED_PRN = [
-  {id:'dilaudid-prn',drug:'dilaudid',unit:'tablet',perDose:1,name:'Dilaudid',generic:'hydromorphone',dose:'4mg tablet',interval:4,note:'Fast-acting strong painkiller for breakthrough pain. Works in 15\u201330 min. Track how many doses per day \u2014 rising use is worth telling the team.',reason:'breakthrough pain'},
-  {id:'flexeril-prn',drug:'flexeril',unit:'tablet',perDose:1,name:'Flexeril',generic:'cyclobenzaprine',dose:'5mg tablet',interval:8,note:'Muscle relaxant for cramping and spasms. Up to 3\u00d7 daily.',reason:'muscle spasm'},
-  {id:'gummy-day-prn',drug:'gummyday',unit:'gummy',perDose:1,name:'Day Gummy',generic:'20mg CBD / 10mg THC edible',dose:'1 gummy',interval:6,note:'Daytime CBD/THC edible \u2014 helps nausea, appetite and anxiety. Effects start in 30\u201390 min and last several hours, so wait it out \u2014 do not re-dose just because it has not kicked in yet.',reason:'nausea / appetite / anxiety'},
-  {id:'gummy-sleep-prn',drug:'gummysleep',unit:'gummy',perDose:1,name:'Sleep Gummy',generic:'5mg CBD / 5mg CBN / 5mg THC (1:1:1)',dose:'1 gummy',interval:24,note:'Nighttime sleep edible \u2014 5mg each CBD / CBN / THC. Take ~30\u201360 min before bed, once nightly.',reason:'sleep'},
+  {id:'dilaudid-prn',drug:'dilaudid',unit:'tablet',perDose:1,name:'Dilaudid',generic:'hydromorphone',dose:'4mg tablet',interval:4,maxDaily:6,note:'Fast-acting strong painkiller for breakthrough pain. Works in 15\u201330 min. Track how many doses per day \u2014 rising use is worth telling the team.',reason:'breakthrough pain'},
+  {id:'flexeril-prn',drug:'flexeril',unit:'tablet',perDose:1,name:'Flexeril',generic:'cyclobenzaprine',dose:'5mg tablet',interval:8,maxDaily:3,note:'Muscle relaxant for cramping and spasms. Up to 3\u00d7 daily.',reason:'muscle spasm'},
+  {id:'gummy-day-prn',drug:'gummyday',unit:'gummy',perDose:1,name:'Day Gummy',generic:'20mg CBD / 10mg THC edible',dose:'1 gummy',interval:6,maxDaily:4,note:'Daytime CBD/THC edible \u2014 helps nausea, appetite and anxiety. Effects start in 30\u201390 min and last several hours, so wait it out \u2014 do not re-dose just because it has not kicked in yet.',reason:'nausea / appetite / anxiety'},
+  {id:'gummy-sleep-prn',drug:'gummysleep',unit:'gummy',perDose:1,name:'Sleep Gummy',generic:'5mg CBD / 5mg CBN / 5mg THC (1:1:1)',maxDaily:1,dose:'1 gummy',interval:24,note:'Nighttime sleep edible \u2014 5mg each CBD / CBN / THC. Take ~30\u201360 min before bed, once nightly.',reason:'sleep'},
   {id:'sancuso-prn',drug:'sancuso',unit:'patch',perDose:1,name:'Sancuso patch',generic:'granisetron',dose:'3.1mg/24hr patch',interval:168,note:'Long-acting anti-nausea patch \u2014 changed once a week. Can shower with it. If it falls off, replace with a new one.',reason:'weekly nausea patch'},
   {id:'scopolamine-prn',drug:'scopolamine',unit:'patch',perDose:1,name:'Scopolamine patch',generic:'scopolamine transdermal',dose:'1.5mg/72hr patch',interval:72,note:'Anti-nausea / motion sickness patch — change every 3 days'},
 ];
@@ -677,7 +732,7 @@ var BDGS = [
   {ico:"sparkles", color:"#8956FF", n:"Home Sweet Home",      d:"Discharged — week 1 done",         e:false}
 ];
 var DEFP = {poop:true,detail:false,mood:true,sym:true,food:true,wo:true};
-var S = {v:'loading',tab:'home',obs:0,user:null,role:'patient',day:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false,foodQ:'',calQ:'',editingMeds:false,_evOpen:null,_frewHistOpen:false};
+var S = {v:'loading',tab:'home',obs:0,user:null,role:'patient',day:null,medFills:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false,foodQ:'',calQ:'',editingMeds:false,_evOpen:null,_frewHistOpen:false};
 var selB=null,selT=[];
 function isPt(){ return S.role==='patient'; }
 function pron(s){
@@ -843,7 +898,7 @@ function bootLoad(){
   if(!Array.isArray(S.day.moods))S.day.moods=migrateMoods(S.day);
   try{S.cheers=lsRead('cheers')||[];}catch(e){S.cheers=[];}
   try{var cfg=lsRead('cfg');S.priv=(cfg&&cfg.priv)||DEFP;S.bdgs=(cfg&&cfg.bdgs)||BDGS;}catch(e){S.priv=DEFP;S.bdgs=BDGS;}
-  try{S.events=lsRead('events')||[];}catch(e){S.events=[];}
+  try{var _lsEvts=lsRead('events')||[];console.log(new Date().toLocaleTimeString()+' [S.events SET] source=localStorage-boot count='+_lsEvts.length);S.events=_lsEvts;}catch(e){S.events=[];}
   try{
     if(!lsRead('migrate-para-resched-1')){
       var _changed=false;
@@ -1072,7 +1127,7 @@ function bootLoad(){
           var _dk=_k.slice(4);
           if(_dk===TODAY && e.newValue) S.day=JSON.parse(e.newValue)||empty();
         }
-        if(_k==='events' && e.newValue){ S.events=JSON.parse(e.newValue)||[]; recomputeCycleDates(); }
+        if(_k==='events' && e.newValue){ var _ctEvts=JSON.parse(e.newValue)||[];console.log(new Date().toLocaleTimeString()+' [S.events SET] source=cross-tab-storage count='+_ctEvts.length);S.events=_ctEvts; recomputeCycleDates(); }
       }catch(_se){}
       if(S.v==='app') R();
     });
@@ -1174,7 +1229,7 @@ function bootstrapCanonicalData(){
     // ── 5. PRN DOSES — seed known historical doses idempotently ─────────────
     var _prn = lsGet('prn-doses')||{};
     function _prnEnsure(key,ts){ (_prn[key]=_prn[key]||[]); if(_prn[key].indexOf(ts)<0){ _prn[key].push(ts); _prn[key].sort(function(a,b){return a-b;}); } }
-    _prnEnsure('sancuso-patch', new Date('2026-05-14T09:00:00').getTime());
+    _prnEnsure('sancuso-prn', new Date('2026-05-14T09:00:00').getTime());
     _prnEnsure('gummy-sleep-prn', new Date('2026-05-19T22:32:00').getTime());
     _prnEnsure('flexeril-prn', 1779989460000);
     _prnEnsure('dilaudid-prn', 1780003200000);
@@ -3915,17 +3970,42 @@ function renderProcs() {
 }
 
 // ── MEDS SCREEN ───────────────────────────────────────────────
+// ── REFILL_DEFAULTS — global scope ──────────────────────────────────────────
+var REFILL_DEFAULTS = {
+  decadron:{fillDate:'2026-06-01',qty:29,refills:5},
+  protonix:{fillDate:'2026-06-01',qty:23,refills:4},
+  cymbalta:{fillDate:'2026-06-01',qty:13,refills:4},
+  methadone:{fillDate:'2026-06-01',qty:109,refills:0},
+  lovenox:{fillDate:'2026-05-20',qty:60,refills:0},
+  haldol:{fillDate:'2026-06-01',qty:13,refills:1},
+  zyprexa:{fillDate:'2026-06-01',qty:10,refills:4},
+  flexeril:{fillDate:'2026-06-01',qty:20,refills:4},
+  dilaudid:{fillDate:'2026-06-01',qty:45,refills:0},
+  bactrim:{fillDate:'2026-06-01',qty:93,refills:5},
+  vitamind:{fillDate:'2026-06-01',qty:2,refills:0},
+  pepcid:{fillDate:'2026-06-01',qty:100},
+  gummyday:{fillDate:'2026-06-01',qty:7},
+  gummysleep:{fillDate:'2026-06-01',qty:9}
+};
+
 function renderMeds() {
+  // Enable refill source logging on first render so getRefills() logs sources
+  if(!window._refillSourceLogged){ window._logRefillSource=true; window._refillSourceLogged=true; }
+  else { window._logRefillSource=false; }
   var wrap = mk('div',{cls:'fi'});
   var now = new Date();
   var nowDec = now.getHours() + now.getMinutes()/60;
   // med-taken lives on S.day.taken (same saveDay path)
 
   function getTaken(){ return (S.day&&S.day.taken)||{}; }
-  function toggleTaken(id){ var t=getTaken(); var wasOn=!!t[id]; t[id]=wasOn?false:Date.now(); S.day=S.day||empty(); S.day.taken=t; saveDay(); toast(wasOn?'Unmarked':'Medication marked taken'); R(); }
+  function toggleTaken(id){ var t=getTaken(); var wasOn=!!t[id]; t[id]=wasOn?false:Date.now(); console.log('[MED TOGGLE EVENT] medId='+id+' dose=individual stateChange='+(wasOn?'taken->untaken':'untaken->taken')+' connectedToInventory=false(refill calc ignores this)'); S.day=S.day||empty(); S.day.taken=t; saveDay(); toast(wasOn?'Unmarked':'Medication marked taken'); R(); }
   function getOverride(id){ var o=lsGet('med-overrides')||{}; return o[id]||null; }
   var DOSE_DEFAULTS = {};  // no live-merged phantom doses — seeded once into storage at init
-  function getPrnRaw(){ return lsGet('prn-doses')||{}; }
+  function getPrnRaw(){
+  var _raw=lsGet('prn-doses')||{};
+  console.log('[PRN LOG READ] source=localStorage keys='+Object.keys(_raw).join(','));
+  return _raw;
+}
   function getPrnLog(){ var saved=getPrnRaw(), out={}, k; for(k in DOSE_DEFAULTS) out[k]=DOSE_DEFAULTS[k].slice(); for(k in saved) out[k]=(out[k]||[]).concat(saved[k]); for(k in out) out[k].sort(function(a,b){return a-b;}); return out; }
   function logPrn(id,name){ var l=getPrnRaw(); (l[id]=l[id]||[]).push(Date.now()); if(l[id].length>60)l[id]=l[id].slice(-60); lsSet('prn-doses',l); if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(Date.now())); R(); }
   function undoPrn(id){ var l=getPrnRaw(); if(l[id]&&l[id].length){ l[id].pop(); lsSet('prn-doses',l); R(); } }
@@ -3978,23 +4058,25 @@ function renderMeds() {
   var px = mk('div',{cls:'px',css:'padding-top:16px;'});
 
   // ── CALCULATED REFILL TRACKING ──────────────────────────
-  var REFILL_DEFAULTS = {
-    decadron:{fillDate:'2026-06-01',qty:29,refills:5},
-    protonix:{fillDate:'2026-06-01',qty:23,refills:4},
-    cymbalta:{fillDate:'2026-06-01',qty:13,refills:4},
-    methadone:{fillDate:'2026-06-01',qty:109,refills:0},
-    lovenox:{fillDate:'2026-05-20',qty:60,refills:0},
-    haldol:{fillDate:'2026-06-01',qty:13,refills:1},
-    zyprexa:{fillDate:'2026-06-01',qty:10,refills:4},
-    flexeril:{fillDate:'2026-06-01',qty:20,refills:4},
-    dilaudid:{fillDate:'2026-06-01',qty:45,refills:0},
-    bactrim:{fillDate:'2026-06-01',qty:93,refills:5},
-    vitamind:{fillDate:'2026-06-01',qty:2,refills:0},
-    pepcid:{fillDate:'2026-06-01',qty:100},
-    gummyday:{fillDate:'2026-06-01',qty:7},
-    gummysleep:{fillDate:'2026-06-01',qty:9}
-  };
-  function getRefills(){ var saved=lsGet('med-refills')||{}; var out={}; for(var k in REFILL_DEFAULTS) out[k]=REFILL_DEFAULTS[k]; for(var k2 in saved) out[k2]=saved[k2]; return out; }
+  function getRefills(){
+  // Priority: 1) S.medFills (Firebase-backed) 2) med-refills (local override) 3) REFILL_DEFAULTS (fallback)
+  var firebase_fills = S.medFills || lsGet('med-fills') || {};
+  var saved=lsGet('med-refills')||{};
+  var hasSaved=Object.keys(saved).length>0;
+  var hasFirebase=Object.keys(firebase_fills).length>0;
+  console.log('[REFILL DEFAULT LOAD] source='+(hasFirebase?'firebase-med-fills':hasSaved?'localStorage-override':'hardcoded-REFILL_DEFAULTS')+' overrideKeys='+Object.keys(saved).join(','));
+  var out={};
+  for(var k in REFILL_DEFAULTS) out[k]=REFILL_DEFAULTS[k];
+  for(var k3 in firebase_fills) out[k3]=firebase_fills[k3];
+  for(var k2 in saved) out[k2]=saved[k2];
+  // Log source per drug for observability
+  if(typeof window!=='undefined'&&window._logRefillSource){
+    Object.keys(out).forEach(function(drug){
+      var src=saved[drug]?'local-override':firebase_fills[drug]?'firebase':'default';
+      console.log('[REFILL SOURCE] drug='+drug+' source='+src+' fillDate='+(out[drug].fillDate||'none')+' qty='+(out[drug].qty||'none'));
+    });
+  }
+  return out; }
   function schedDosesPerDay(drug){
     var n=0;
     Object.keys(MED_SLOTS).forEach(function(k){ MED_SLOTS[k].meds.forEach(function(m){ if(m.drug===drug) n++; }); });
@@ -4012,10 +4094,12 @@ function renderMeds() {
       var used=doses.length*perDose, left=qty-used;
       var span=Math.max(3,daysSince), perDay=used/span;
       var daysLeft=perDay>0?left/perDay:null;
+      console.log('[PRN SUPPLY CALC] id='+m.id+' fillDate='+rf.fillDate+' loggedDoses='+doses.length+' used='+used+' remaining='+left.toFixed(1)+' source=prn-log-ledger');
       return {left:left,daysLeft:daysLeft,unit:m.unit,isPrn:true};
     }
     var dailyUnits=schedDosesPerDay(m.drug)*perDose;
     var left=qty-dailyUnits*daysSince;
+    console.log('[MED SCHEDULE CALC] drug='+m.drug+' fillDate='+rf.fillDate+' daysSince='+daysSince.toFixed(1)+' dosesPerDay='+dailyUnits+' calcRemaining='+left.toFixed(1)+' usedTaken=false(S.day.taken not used)');
     return {left:left,daysLeft:dailyUnits>0?left/dailyUnits:null,unit:m.unit,isPrn:false};
   }
   (function(){
@@ -4023,7 +4107,7 @@ function renderMeds() {
     Object.keys(MED_SLOTS).forEach(function(k){ MED_SLOTS[k].meds.forEach(function(m){ if(!seen[m.drug]){seen[m.drug]=1;drugs.push(m);} }); });
     MED_PRN.concat(MED_PRN_RARE).forEach(function(m){ if(!seen[m.drug]){seen[m.drug]=1;drugs.push(m);} });
     var due=[];
-    drugs.forEach(function(m){ var s=drugSupply(m); if(s && s.daysLeft!=null && s.daysLeft<=10) due.push({m:m,s:s}); });
+    drugs.forEach(function(m){ var s=drugSupply(m); if(s && s.daysLeft!=null && s.daysLeft<=14) due.push({m:m,s:s}); });
     due.sort(function(a,b){ return a.s.daysLeft-b.s.daysLeft; });
     if(due.length){
       var overdue=due.some(function(x){return x.s.left<=0;});
@@ -4140,7 +4224,24 @@ function renderMeds() {
     }
     var br=mk('div',{css:'display:flex;gap:6px;'});
     var sv=mk('button',{css:'flex:1;height:36px;background:var(--pu);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Save'});
-    sv.addEventListener('click',function(){ var o=lsGet('med-overrides')||{}; o[m.id]={dose:di.value.trim(),note:ni.value.trim()}; lsSet('med-overrides',o); var rfs=lsGet('med-refills')||{}; if(fdi.value||qti.value||rli.value){ rfs[m.drug]={fillDate:fdi.value||'',qty:qti.value||'',refills:(rli.value!==''?parseInt(rli.value,10):null)}; } else { delete rfs[m.drug]; } lsSet('med-refills',rfs); S_medsEdit=null; R(); });
+    sv.addEventListener('click',function(){ var o=lsGet('med-overrides')||{}; o[m.id]={dose:di.value.trim(),note:ni.value.trim()}; lsSet('med-overrides',o); var rfs=lsGet('med-refills')||{}; if(fdi.value||qti.value||rli.value){ rfs[m.drug]={fillDate:fdi.value||'',qty:qti.value||'',refills:(rli.value!==''?parseInt(rli.value,10):null)}; } else { delete rfs[m.drug]; } lsSet('med-refills',rfs);
+          // Also write to Firebase med-fills so it survives deploys
+          if(window._fbDb&&(fdi.value||qti.value)){
+            var _fbFill={fillDate:fdi.value||'',qty:parseFloat(qti.value)||0,refills:parseInt(rli.value)||0};
+            if(!S.medFills) S.medFills={};
+            S.medFills[m.drug]=_fbFill;
+            window._fbDb.ref('gk/med-fills/'+m.drug).set(_fbFill)
+              .then(function(){
+                console.log('[MED FILL SAVE] drug='+m.drug+' fillDate='+_fbFill.fillDate+' qty='+_fbFill.qty+' localStorage=OK firebase=OK');
+                toast(m.drug+' fill data saved');
+              })
+              .catch(function(e){
+                console.error('[MED FILL SAVE FAILED] drug='+m.drug+' localStorage=OK firebase=FAILED error='+e.message);
+                toast('Local save OK — Firebase failed: '+e.message, 'warn');
+              });
+          } else {
+            console.log('[MED FILL SAVE] drug='+m.drug+' localStorage=OK firebase=SKIPPED(no connection)');
+          } S_medsEdit=null; R(); });
     var cn=mk('button',{css:'height:36px;padding:0 14px;background:var(--card);border:1.5px solid var(--div);border-radius:9px;font-size:13px;cursor:pointer;color:var(--ink2);font-family:var(--sans);',txt:'Cancel'});
     cn.addEventListener('click',function(){ S_medsEdit=null; R(); });
     var rs=mk('button',{css:'height:36px;padding:0 12px;background:var(--card);border:1.5px solid var(--div);border-radius:9px;font-size:11px;cursor:pointer;color:var(--ink3);font-family:var(--sans);',txt:'Reset'});
@@ -4583,6 +4684,30 @@ function runFirebaseDiagnostic(){
     log('  logPrn() -> set(whole prn-doses object)');
     log('  Writers: patient + care -> low concurrent risk');
     hr();
+    log('SLOT LOG COMPLETENESS (for ledger authority decision):');
+    var _fills=S.medFills||{};
+    var _drugs=Object.keys(REFILL_DEFAULTS);
+    _drugs.forEach(function(drug){
+      var fill=_fills[drug]||REFILL_DEFAULTS[drug];
+      if(!fill||!fill.fillDate) return;
+      var _fillTs=new Date(fill.fillDate+'T00:00:00').getTime();
+      var _today=new Date(); _today.setHours(0,0,0,0);
+      var _daysExpected=Math.max(0,Math.floor((_today.getTime()-_fillTs)/86400000));
+      if(_daysExpected===0){ log('  '+drug+': fillDate is today or future — no coverage needed'); return; }
+      var _daysPresent=0;
+      var _missing=[];
+      for(var _di=0;_di<_daysExpected;_di++){
+        var _dk=new Date(_fillTs+_di*86400000).toISOString().slice(0,10);
+        var _bkt=fb['day-'+_dk]||JSON.parse(localStorage.getItem('gk-day-'+_dk)||'null');
+        var _hasTaken=_bkt&&_bkt.taken&&Object.keys(_bkt.taken).some(function(k){return k.startsWith(drug);});
+        if(_hasTaken) _daysPresent++;
+        else _missing.push(_dk);
+      }
+      var _pct=_daysExpected>0?Math.round(100*_daysPresent/_daysExpected):100;
+      var _safe=_pct>=90;
+      log('  '+drug+': '+_daysPresent+'/'+_daysExpected+' days logged ('+_pct+'%) '+(_safe?'✓ ledger-ready':'⚠ insufficient for ledger')+(_missing.length?' missing:'+_missing.slice(0,3).join(','):''));
+    });
+    hr();
     log('DIAGNOSTIC COMPLETE — '+new Date().toLocaleString());
   },function(err){ log('Firebase query FAILED: '+err.message); });
 }
@@ -4810,6 +4935,8 @@ function renderMedical(){
   });
 
   px.appendChild(mk('div',{css:'font-size:11px;color:var(--ink4);line-height:1.5;text-align:center;margin:16px 0 8px;',txt:'Reference only. Always confirm current details with the care team.'}));
+
+
 
   // ── FIREBASE EXPORT (care team only — run from Claude artifact to migrate data) ──
   if(S.role==='care'){
@@ -5747,6 +5874,7 @@ function quickLogProcAt(type,date,time){
   date=date||TODAY; time=time||'';
   var ev={id:Date.now(),date:date,title:label,type:type,time:time,notes:''};
   S.events=(S.events||[]).concat(ev);
+  console.log(new Date().toLocaleTimeString()+' [S.events ADD] user-created type='+ev.type+' id='+ev.id+' total='+S.events.length);
   if(type==='para'){
     var volStr=prompt('How many liters were drained? (e.g. 3.5)','');
     var vol=volStr&&parseFloat(volStr)>0?parseFloat(volStr):null;
@@ -6236,7 +6364,7 @@ function saveEvent(){
   if(typeof renderAeQuick==='function') renderAeQuick();
 }
 
-function saveEvents(){lsSet('events',S.events);}
+function saveEvents(){console.log(new Date().toLocaleTimeString()+' [S.events WRITE] to-firebase count='+S.events.length);lsSet('events',S.events);}
 function deleteEvent(id){S.events=(S.events||[]).filter(function(e){return e.id!==id;});saveEvents();R();}
 function deleteCurrentEvent(){
   if(!S.editEventId) return;
