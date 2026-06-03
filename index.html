@@ -326,7 +326,15 @@ function setupFirebaseSync(){
   // Tracks whether Firebase is actually connected, not just initialized
   window._fbConnected=false;
   window._fbLastListenerActivity=Date.now();
+  // Three orthogonal flags — no timing assumptions
+  window._connHandlerAttached=false;
+  window._connCallbackFired=false;
+  window._connEverTrue=false;
+  window._connHandlerAttached=true; // set immediately — proves JS registered the listener
+  console.log('[FB CONNECT] .info/connected listener registered (attached=true)');
   window._fbDb.ref('.info/connected').on('value',function(snap){
+    window._connCallbackFired=true; // Firebase invoked the callback
+    if(snap.val()===true) window._connEverTrue=true;
     var connected=snap.val();
     var prev=window._fbConnected;
     window._fbConnected=connected;
@@ -5046,6 +5054,9 @@ function renderMedical(){
     ['Firebase',window._fbConnected?'Connected ✓':'Disconnected ✗'],
     ['Listeners',(window._listenerCount||0)+' / 9 '+(((window._listenerCount||0)===9)?'✓':'⚠')],
     ['Last sync',window._fbLastListenerActivity?new Date(window._fbLastListenerActivity).toLocaleTimeString():'—'],
+    ['Conn attached',window._connHandlerAttached?'Yes ✓':'No ✗'],
+    ['Conn fired',window._connCallbackFired?'Yes ✓':'No (pending)'],
+    ['Conn ever true',window._connEverTrue?'Yes ✓':'No ✗'],
   ];
   _rows.forEach(function(r){
     var _row=mk('div',{css:'display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--div);'});
