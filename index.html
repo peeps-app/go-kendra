@@ -317,20 +317,22 @@ function fbSet(k, v){
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
 // Set up after boot — critical keys get real-time push updates from Firebase
 function setupFirebaseSync(){
+  window._setupSyncEntered=true;
   console.log('[FB SYNC] entry _fbDb='+!!window._fbDb+' _syncWired='+!!window._syncWired+' role='+((S&&S.role)||'none'));
-  // Guard against duplicate listener registration (would stack onValue handlers)
-  if(window._syncWired){ console.warn('[Firebase] setupFirebaseSync called twice — skipping'); return; }
-  window._syncWired=true;
+  // Guard: _syncWired is set ONLY after successful registration
+  if(window._syncWired){ console.warn('[Firebase] setupFirebaseSync already wired — skipping'); return; }
+  // Guard: must have DB
+  if(!window._fbDb){ console.error('[FB SYNC] ABORT: _fbDb is null'); return; }
+
+  try{
 
   // ── FIREBASE CONNECTION LIVENESS ──────────────────────────────────────────
-  // Tracks whether Firebase is actually connected, not just initialized
   window._fbConnected=false;
   window._fbLastListenerActivity=Date.now();
-  // Three orthogonal flags — no timing assumptions
   window._connHandlerAttached=false;
   window._connCallbackFired=false;
   window._connEverTrue=false;
-  window._connHandlerAttached=true; // set immediately — proves JS registered the listener
+  window._connHandlerAttached=true;
   console.log('[FB CONNECT] .info/connected listener registered (attached=true)');
   window._fbDb.ref('.info/connected').on('value',function(snap){
     window._connCallbackFired=true; // Firebase invoked the callback
@@ -391,7 +393,7 @@ function setupFirebaseSync(){
       try{ localStorage.setItem('gk-day-'+dk, JSON.stringify(val)); }catch(_e){}
       if(dk===TODAY){ S.day=val; }
       console.log('[S.day SET] source=firebase-onValue-day food='+((val&&val.food)||[]).length+' moods='+((val&&val.moods)||[]).length+' hyd='+((val&&val.hyd)||0));
-      if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+      if(S.v==='app'&&!window._userTyping) R();
     });
   }
   _watchDay(TODAY);
@@ -409,7 +411,7 @@ function setupFirebaseSync(){
     if(val===null||val===undefined) return;
     console.log('[PRN-DOSES SET] source=firebase-onValue keys='+Object.keys(val).join(','));
     try{ localStorage.setItem('gk-prn-doses', JSON.stringify(val)); }catch(_e){}
-    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+    if(S.v==='app'&&!window._userTyping) R();
   });
 
   // Listen to milestones
@@ -422,7 +424,7 @@ function setupFirebaseSync(){
     if(!Array.isArray(val)||!val.length) return;
     try{ localStorage.setItem('gk-milestones', JSON.stringify(val)); }catch(_e){}
     S.milestones=val;
-    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+    if(S.v==='app'&&!window._userTyping) R();
   });
 
   // Listen to wishlist
@@ -435,7 +437,7 @@ function setupFirebaseSync(){
     if(!Array.isArray(val)||!val.length) return;
     console.log('[WISHLIST SET] source=firebase-onValue count='+val.length);
     try{ localStorage.setItem('gk-wishlist', JSON.stringify(val)); }catch(_e){}
-    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+    if(S.v==='app'&&!window._userTyping) R();
   });
 
   // Listen to med-fills — fillDate/fillQty per drug (Firebase-backed, survives deploys)
@@ -449,7 +451,7 @@ function setupFirebaseSync(){
     console.log('[MED FILLS SET] source=firebase-onValue drugs='+Object.keys(val).join(','));
     S.medFills=val;
     try{ localStorage.setItem('gk-med-fills', JSON.stringify(val)); }catch(_e){}
-    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+    if(S.v==='app'&&!window._userTyping) R();
   });
 
   // Listen to cheers — squad notes to Kenny
@@ -462,7 +464,7 @@ function setupFirebaseSync(){
     if(!Array.isArray(val)||!val.length) return;
     try{ localStorage.setItem('gk-cheers', JSON.stringify(val)); }catch(_e){}
     S.cheers=val;
-    if(S.v==='app'&&!window._fbBooting) R();
+    if(S.v==='app') R();
   });
 
   // Listen to events (calendar)
@@ -483,7 +485,7 @@ function setupFirebaseSync(){
     var _label=(_before>0&&val.length<_before)?'[S.events REPLACE]':'[S.events SET]';
     console.log(_ts+' '+_label+' source=firebase-onValue before='+_before+' after='+val.length+(val.length<=28&&_before>val.length?' *** COUNT DROPPED — possible data loss ***':''));
     S.events=val; recomputeCycleDates();
-    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+    if(S.v==='app'&&!window._userTyping) R();
   });
 
   // Listen to hospital steps total (global accumulator)
@@ -495,7 +497,7 @@ function setupFirebaseSync(){
     var val=snap.val();
     if(typeof val!=='number'||val<=0) return;
     try{ localStorage.setItem('gk-move-hospital-ft', JSON.stringify(val)); }catch(_e){}
-    if(S.v==='app'&&!window._fbBooting&&!window._userTyping) R();
+    if(S.v==='app'&&!window._userTyping) R();
   });
 
   // Pull latest from Firebase on boot (one-time read to hydrate fresh devices)
@@ -504,6 +506,8 @@ function setupFirebaseSync(){
   // Expected: 2 day-buckets + prn-doses + milestones + wishlist + med-fills + cheers + events = 8
   var _lc=window._listenerCount||0;
   console.log('[Firebase Sync Ready] listeners='+_lc+(_lc!==9?' *** EXPECTED 9 — investigate ***':''));
+  // Commit _syncWired only after all listeners successfully registered
+  window._syncWired=true;
 
   window._fbBooting=true;
   window._fbDb.ref('gk').once('value',function(snap){
@@ -569,6 +573,22 @@ function setupFirebaseSync(){
     window._fbBooting=false;
     if(S.v==='app') R(); // re-render with fresh Firebase data
   });
+
+  } catch(_setupErr) {
+    console.error('[FB SETUP ERROR] '+_setupErr.message+' — resetting _syncWired for retry');
+    window._syncWired=false; // allow retry on next call
+  }
+
+  // Auto-retry: if DB exists but not connected and listeners=0, retry every 10s
+  if(!window._setupRetry){
+    window._setupRetry=setInterval(function(){
+      if(window._fbDb && !window._fbConnected && (window._listenerCount||0)===0){
+        console.warn('[FB SETUP RETRY] 0 listeners + disconnected — retrying setupFirebaseSync');
+        window._syncWired=false;
+        setupFirebaseSync();
+      }
+    }, 10000);
+  }
 }
 // ── END FIREBASE ─────────────────────────────────────────────────────────────
 
@@ -1619,6 +1639,19 @@ function R() {
 
   if (S.wo) renderWoOverlay();
   else hideWoOverlay();
+
+  // ── SYNC STATUS FOOTER (all roles, all tabs) ────────────────────────────────
+  var _sf=document.getElementById('_syncFooter');
+  if(!_sf){ _sf=document.createElement('div'); _sf.id='_syncFooter';
+    _sf.style.cssText='position:fixed;bottom:0;left:0;right:0;height:18px;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;z-index:200;pointer-events:none;letter-spacing:.03em;';
+    document.body.appendChild(_sf);
+  }
+  var _fc=window._fbConnected;
+  var _lc=window._listenerCount||0;
+  var _col=_fc&&_lc===9?'#4ade80':(!_fc&&_lc===0?'#f87171':'#fbbf24');
+  _sf.style.color=_col;
+  _sf.textContent='v10.1 · FB:'+(_fc?'✓':'✗')+' · L:'+_lc+'/9 · setup:'+(_sf._entered?'Y':'N');
+  _sf._entered=!!window._setupSyncEntered;
 }
 
 function renderLoading() {
@@ -5049,6 +5082,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Version','v10.1 — 2026-06-02'],
+    ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
     ['Firebase',window._fbConnected?'Connected ✓':'Disconnected ✗'],
