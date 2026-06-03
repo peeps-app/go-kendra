@@ -269,6 +269,7 @@ select.inp{appearance:none;}
 <script>// ── FIREBASE REALTIME DATABASE ───────────────────────────────────────────────
 // Cross-device live sync — all writes replicate to every connected device
 function initFirebase(){
+  console.log('[FB INIT] start — firebase defined='+(typeof firebase!=='undefined'));
   try{
     var _fbConfig = {
       apiKey: "AIzaSyAcBpTCS6UwIXHcaq94tRBpDvBRjcMzVwo",
@@ -280,9 +281,13 @@ function initFirebase(){
       appId: "1:78459469028:web:41e406f3a6505d745d40f1"
     };
     if(!firebase.apps.length) firebase.initializeApp(_fbConfig);
+    console.log('[FB INIT] app initialized apps='+firebase.apps.length);
     window._fbDb = firebase.database();
-    console.log('Firebase connected');
-  }catch(_fe){ console.warn('Firebase init failed:',_fe); window._fbDb=null; }
+    console.log('[FB INIT] db created _fbDb='+!!window._fbDb);
+  }catch(_fe){
+    console.error('[FB INIT ERROR] stage=unknown error='+(_fe&&_fe.message||_fe));
+    window._fbDb=null;
+  }
 }
 
 // ── FIREBASE WRITE HELPER ─────────────────────────────────────────────────────
@@ -312,7 +317,7 @@ function fbSet(k, v){
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
 // Set up after boot — critical keys get real-time push updates from Firebase
 function setupFirebaseSync(){
-  console.log('[setupFirebaseSync START] role='+((S&&S.role)||'none'));
+  console.log('[FB SYNC] entry _fbDb='+!!window._fbDb+' _syncWired='+!!window._syncWired+' role='+((S&&S.role)||'none'));
   // Guard against duplicate listener registration (would stack onValue handlers)
   if(window._syncWired){ console.warn('[Firebase] setupFirebaseSync called twice — skipping'); return; }
   window._syncWired=true;
@@ -5035,9 +5040,11 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.0 — 2026-06-01'],
+    ['Version','v10.1 — 2026-06-02'],
+    ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
+    ['DB object',window._fbDb?'Created ✓':'null ✗'],
     ['Firebase',window._fbConnected?'Connected ✓':'Disconnected ✗'],
-    ['Listeners',(window._listenerCount||0)+' / 8 '+(((window._listenerCount||0)===8)?'✓':'⚠')],
+    ['Listeners',(window._listenerCount||0)+' / 9 '+(((window._listenerCount||0)===9)?'✓':'⚠')],
     ['Last sync',window._fbLastListenerActivity?new Date(window._fbLastListenerActivity).toLocaleTimeString():'—'],
   ];
   _rows.forEach(function(r){
