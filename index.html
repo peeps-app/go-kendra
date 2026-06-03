@@ -1643,6 +1643,8 @@ function R() {
   // ── SYNC STATUS FOOTER (all roles, all tabs) ────────────────────────────────
   var _sf=document.getElementById('_syncFooter');
   if(!_sf){ _sf=document.createElement('div'); _sf.id='_syncFooter';
+    // Keep footer live even if R() doesn't fire
+    setInterval(function(){ if(_sf.parentNode){ _sf._entered=!!window._setupSyncEntered; var _fc2=window._fbConnected; var _lc2=window._listenerCount||0; var _col2=_fc2&&_lc2>=9?'#4ade80':(!_fc2&&_lc2===0?'#f87171':'#fbbf24'); _sf.style.color=_col2; _sf.textContent='v10.2 · FB:'+(_fc2?'✓':'✗')+' · L:'+_lc2+'/9 · setup:'+(_sf._entered?'Y':'N'); }},2000);
     _sf.style.cssText='position:fixed;bottom:0;left:0;right:0;height:18px;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;z-index:200;pointer-events:none;letter-spacing:.03em;';
     document.body.appendChild(_sf);
   }
@@ -1650,8 +1652,8 @@ function R() {
   var _lc=window._listenerCount||0;
   var _col=_fc&&_lc===9?'#4ade80':(!_fc&&_lc===0?'#f87171':'#fbbf24');
   _sf.style.color=_col;
-  _sf.textContent='v10.1 · FB:'+(_fc?'✓':'✗')+' · L:'+_lc+'/9 · setup:'+(_sf._entered?'Y':'N');
   _sf._entered=!!window._setupSyncEntered;
+  _sf.textContent='v10.2 · FB:'+(_fc?'✓':'✗')+' · L:'+_lc+'/9 · setup:'+(_sf._entered?'Y':'N');
 }
 
 function renderLoading() {
@@ -5081,7 +5083,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.1 — 2026-06-02'],
+    ['Version','v10.2 — 2026-06-03'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
