@@ -368,7 +368,7 @@ function setupFirebaseSync(){
   document.addEventListener('focusout', function(e){
     if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) window._userTyping=false;
   });
-  if(!window._fbDb) return;
+  if(!window._fbDb){ console.error('[FB SYNC] EARLY EXIT: _fbDb is null — Firebase never initialized'); return; }
   var _CRITICAL=['prn-doses','events','milestones','cheers','wishlist'];
 
   // Listen to today's day bucket — most important for live care logging
