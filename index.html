@@ -575,8 +575,10 @@ function setupFirebaseSync(){
   });
 
   } catch(_setupErr) {
-    console.error('[FB SETUP ERROR] '+_setupErr.message+' — resetting _syncWired for retry');
-    window._syncWired=false; // allow retry on next call
+    var _errMsg=_setupErr&&_setupErr.message||String(_setupErr);
+    console.error('[FB SETUP ERROR] '+_errMsg+' — resetting _syncWired for retry');
+    window._setupError=_errMsg; // surface in App Status footer
+    window._syncWired=false;
   }
 
   // Auto-retry: if DB exists but not connected and listeners=0, retry every 10s
@@ -1223,8 +1225,8 @@ function bootLoad(){
   // ── CROSS-TAB LIVE SYNC ──────────────────────────────────────────────────
   // Any tab writing to localStorage triggers a re-render here automatically.
   // Critical for med safety: Kenny logs a dose → care team sees it instantly.
-  if(!window._syncWired){
-    window._syncWired=true;
+  if(!window._storageWired){
+    window._storageWired=true;
     window.addEventListener('storage',function(e){
       if(!e||!e.key||!e.key.startsWith('gk-')) return;
       var _k=e.key.slice(3);
@@ -1644,7 +1646,7 @@ function R() {
   var _sf=document.getElementById('_syncFooter');
   if(!_sf){ _sf=document.createElement('div'); _sf.id='_syncFooter';
     // Keep footer live even if R() doesn't fire
-    setInterval(function(){ if(_sf.parentNode){ _sf._entered=!!window._setupSyncEntered; var _fc2=window._fbConnected; var _lc2=window._listenerCount||0; var _col2=_fc2&&_lc2>=9?'#4ade80':(!_fc2&&_lc2===0?'#f87171':'#fbbf24'); _sf.style.color=_col2; _sf.textContent='v10.2 · FB:'+(_fc2?'✓':'✗')+' · L:'+_lc2+'/9 · setup:'+(_sf._entered?'Y':'N'); }},2000);
+    setInterval(function(){ if(_sf.parentNode){ _sf._entered=!!window._setupSyncEntered; var _fc2=window._fbConnected; var _lc2=window._listenerCount||0; var _col2=_fc2&&_lc2>=9?'#4ade80':(!_fc2&&_lc2===0?'#f87171':'#fbbf24'); _sf.style.color=_col2; _sf.textContent='v10.3 · FB:'+(_fc2?'✓':'✗')+' · L:'+_lc2+'/9 · setup:'+(_sf._entered?'Y':'N'); }},2000);
     _sf.style.cssText='position:fixed;bottom:0;left:0;right:0;height:18px;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;z-index:200;pointer-events:none;letter-spacing:.03em;';
     document.body.appendChild(_sf);
   }
@@ -1653,7 +1655,7 @@ function R() {
   var _col=_fc&&_lc===9?'#4ade80':(!_fc&&_lc===0?'#f87171':'#fbbf24');
   _sf.style.color=_col;
   _sf._entered=!!window._setupSyncEntered;
-  _sf.textContent='v10.2 · FB:'+(_fc?'✓':'✗')+' · L:'+_lc+'/9 · setup:'+(_sf._entered?'Y':'N');
+  _sf.textContent='v10.3 · FB:'+(_fc?'✓':'✗')+' · L:'+_lc+'/9 · setup:'+(_sf._entered?'Y':'N')+(window._setupError?' ERR':'');
 }
 
 function renderLoading() {
@@ -5083,7 +5085,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.2 — 2026-06-03'],
+    ['Version','v10.3 — 2026-06-03'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
