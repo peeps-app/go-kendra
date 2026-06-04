@@ -631,9 +631,7 @@ var MED_SLOTS = {
     {id:'methadone-am',drug:'methadone',unit:'tablet',perDose:3,name:'Methadone',generic:'dolophine',dose:'15mg \u00b7 3 \u00d7 5mg tablets',note:'Main long-acting pain med. MUST be on strict schedule \u2014 builds up to prevent pain spikes. Also targets nerve burning pain. Do not skip or shift timing.',strict:true},
     {id:'haldol-am',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Anti-nausea that works on brain signals. Spaced through the day.',strict:false},
     {id:'protonix-am',drug:'protonix',unit:'tablet',perDose:1,name:'Protonix',generic:'pantoprazole',dose:'40mg tablet',note:'Stronger acid blocker \u2014 protects against ulcers caused by the steroid.',strict:false},
-    {id:'pepcid-am',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'20mg tablet',note:'Reduces stomach acid. Protects stomach lining from all the medications.',strict:false},
-    {id:'bactrim-am',drug:'bactrim',unit:'mL',perDose:20,name:'Bactrim',generic:'sulfamethoxazole-trimethoprim',dose:'20mL oral suspension',note:'Preventive antibiotic. Steroids lower immunity \u2014 this protects against lung infections.',strict:false},
-    {id:'decadron-am',drug:'decadron',unit:'tablet',perDose:1,name:'Decadron',generic:'dexamethasone',dose:'4mg tablet',note:'Steroid that reduces inflammation. If pain/nausea worsen: increase to 8mg and notify team. Never stop suddenly.',strict:false},
+    {id:'pepcid-am',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'20mg tablet',note:'Reduces stomach acid. Protects stomach lining from all the medications.',strict:false},    {id:'decadron-am',drug:'decadron',unit:'tablet',perDose:1,name:'Decadron',generic:'dexamethasone',dose:'4mg tablet',note:'Steroid that reduces inflammation. If pain/nausea worsen: increase to 8mg and notify team. Never stop suddenly.',strict:false},
     {id:'cymbalta-am',drug:'cymbalta',unit:'capsule',perDose:1,name:'Cymbalta',generic:'duloxetine',dose:'20mg capsule',note:'For nerve pain \u2014 burning/shooting from cancer pressing on nerves. Works differently than opioids.',strict:false},
 
     {id:'tylenol-am',drug:'tylenol',unit:'mL',perDose:30,name:'Tylenol',generic:'acetaminophen',dose:'1,000mg (30mL) oral liquid',note:'Pain reliever, taken 3\u00d7 daily for pain (carried over from the hospital schedule).',strict:false},
@@ -644,6 +642,8 @@ var MED_SLOTS = {
   '2pm':{label:'2 PM',hour:14,win:[11,17],meds:[
     {id:'methadone-2pm',drug:'methadone',unit:'tablet',perDose:3,name:'Methadone',generic:'dolophine',dose:'15mg \u00b7 3 \u00d7 5mg tablets',note:'Second of three strictly timed doses. Keeps long-acting pain coverage continuous throughout the day.',strict:true},
     {id:'haldol-2pm',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Second anti-nausea dose of the day.',strict:false},
+
+    {id:'bactrim-am',drug:'bactrim',unit:'mL',perDose:20,name:'Bactrim',generic:'sulfamethoxazole-trimethoprim',dose:'20mL oral suspension',note:'Preventive antibiotic. Steroids lower immunity \u2014 this protects against lung infections.',strict:false},
     {id:'tylenol-2pm',drug:'tylenol',unit:'mL',perDose:30,name:'Tylenol',generic:'acetaminophen',dose:'1,000mg (30mL) oral liquid',note:'Second daily dose of pain reliever.',strict:false},
   ]},
   '6pm':{label:'6 PM',hour:18,win:[17,20],meds:[
