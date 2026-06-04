@@ -1000,6 +1000,11 @@ function bootLoad(){
     lsSet('fix-move-iso-strings-1',1);
   }
   if(!Array.isArray(S.day.moods))S.day.moods=migrateMoods(S.day);
+  // Remove any legacy seed-created mood entry from today's bucket.
+  // A real mood entry must have been created through saveCin(), not migrated from d.feel.
+  if(S.day && S.day.feel && S.day.feel.mood!=null){
+    try{ delete S.day.feel; saveDay(); }catch(_e){}
+  }
   try{S.cheers=lsRead('cheers')||[];}catch(e){S.cheers=[];}
   try{var cfg=lsRead('cfg');S.priv=(cfg&&cfg.priv)||DEFP;S.bdgs=(cfg&&cfg.bdgs)||BDGS;}catch(e){S.priv=DEFP;S.bdgs=BDGS;}
   try{var _lsEvts=lsRead('events')||[];console.log(new Date().toLocaleTimeString()+' [S.events SET] source=localStorage-boot count='+_lsEvts.length);S.events=_lsEvts;}catch(e){S.events=[];}
@@ -1274,7 +1279,7 @@ function bootstrapCanonicalData(){
       {id:1779000000019,date:'2026-06-23',time:'14:50',type:'infusion',title:'Infusion',arriveBy:'',location:'UCHealth Infusion Center, Cherry Creek',provider:'',notes:''},
       // Supplemental events
       {id:1779100001,date:'2026-05-22',time:'',type:'para-watch',title:'Tummy watch (day 3)',notes:'Monitor for pain, fever, drainage site issues.'},
-      {id:1779100002,date:'2026-05-23',time:'',type:'para-watch',title:'Tummy watch (day 4)',notes:'Day 4 post-para. Watch for rebound ascites.'},
+      {id:1779100002,date:'2026-05-23',time:'',type:'para-watch',title:'Tummy watch (day 4)',notes:'Day 7 post-para. Watch for rebound ascites.'},
       {id:1779100003,date:'2026-05-24',time:'',type:'para-watch',title:'Tummy watch (day 5)',notes:'Monitor comfort level and fluid return.'},
       {id:1779100004,date:'2026-05-25',time:'',type:'para-watch',title:'Tummy watch (day 6)',notes:'Day 6 post-para. Final watch window.'},
       {id:1779200001,date:'2026-05-19',time:'14:25',type:'frew',title:'I Frew Up',notes:'Threw up after 2pm meds. Possible causes: car motion sickness, post-para nausea, or new Tylenol PM interaction.'},
@@ -1351,11 +1356,18 @@ function bootstrapCanonicalData(){
 // ── RESTORED UTILITY FUNCTIONS ────────────────────────────────────────────
 function empty(){return {meds:{am:false,pm:false},moods:[],food:[],demon:[],hyd:0,move:{laps:0,dist:'',out:false,feet:0,waddles:0},wos:[],onion:[],belly:[],vitals:[],frew:[],notes:'',teeth:[],taken:{},lastShower:null,lastShowerTs:null,lastWashclothTs:null};}
 function migrateMoods(d){
-  if(d.feel && d.feel.mood!=null) return [{id:1,ts:TODAY+'T12:00:00',mood:d.feel.mood,nausea:d.feel.nausea,pain:d.feel.pain,energy:d.feel.energy,notes:''}];
+  // Legacy seed values like d.feel.mood must NOT be promoted into today's mood log.
+  // Mood should only appear as "today" when a real timestamped mood entry was logged today.
   return [];
 }
 
-function latestMood(d){var m=d&&d.moods&&Array.isArray(d.moods)?d.moods:[];return m.length?m[m.length-1]:null;}
+function latestMood(d){
+  var m=d&&d.moods&&Array.isArray(d.moods)?d.moods:[];
+  m=m.filter(function(e){
+    return e && typeof e.ts==='number' && isFinite(e.ts) && localDayKey(e.ts)===TODAY;
+  });
+  return m.length?m[m.length-1]:null;
+}
 function MC_color(i){return(i!=null&&i>=0&&i<=4)?MC[i]:'#8b7fa0';}
 
 function lc(name, sz, col) {
@@ -1885,7 +1897,7 @@ function renderWaddlesCard(){
 
 
   var wrap = mk('div',{css:'margin:0 0 14px;'});
-  var postChemoRecovery = CS.chemo && CS.chemo.daysSince!==null && CS.chemo.daysSince>=0 && CS.chemo.daysSince<=6; // chemo day + 6 days after; normal mode returns day 7
+  var postChemoRecovery = CS.chemo && CS.chemo.daysSince!==null && CS.chemo.daysSince>=0 && CS.chemo.daysSince<=3;
   var cardBg = postChemoRecovery ? '#FBF4FA' : (overdue ? '#FFF8F0' : 'var(--card)');
   var border  = postChemoRecovery ? '1.5px solid #E8CFE0' : (overdue ? '1.5px solid #F6AD55' : '1px solid var(--div)');
   var card = mk('div',{css:'background:'+cardBg+';border:'+border+';border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;'});
@@ -5067,7 +5079,7 @@ function renderMedical(){
       'Day 1: Fatigue sets in by evening. Nausea may begin — Haldol on schedule, Zyprexa at bedtime, Sancuso patch on. Small meals only.',
       'Day 2: Usually the worst nausea day; fatigue peaks. Loose stools begin. Keep all anti-nausea meds on schedule — prevention beats rescue.',
       'Day 3: Still rough. Burning diarrhea typically starts. Vaseline or zinc oxide after every bathroom visit. Avoid dairy, caffeine, raw veg.',
-      'Day 4: Usually turning a corner. Nausea eases. Good day for a short walk. Reintroduce eggs, soft carbs, broth.',
+      'Day 7: Usually turning a corner. Nausea eases. Good day for a short walk. Reintroduce eggs, soft carbs, broth.',
       'Day 5–7: Gradual improvement. Gentle arm exercises and short walks. Eat the moment hunger appears. SPF + hat outside.',
       'Day 8: Gemcitabine alone is usually easier than the day-1 combo. Same pre-med protocol. Fatigue compounds each cycle.'
     ]},
@@ -5454,7 +5466,7 @@ function getCycleSuggestions(){
     );
   } else if(cd===4){
     base=tip(
-      pt?'Day 4 \u2014 turning the corner':'Chemo Day 4 \u2014 improvement beginning',
+      pt?'Day 7 \u2014 turning the corner':'Chemo Day 7 \u2014 improvement beginning',
       'var(--am)',
       pt
         ? ['Eat the moment any hunger appears \u2014 that signal matters','Soft scrambled eggs: protein for your albumin','Plain yogurt, mashed potato, soft chicken if interested','Still nothing dairy if diarrhea continues']
@@ -5465,7 +5477,7 @@ function getCycleSuggestions(){
       pt
         ? 'Check methadone is on schedule if pain has crept up. PICC line daily check. Fever over 100.4\u00b0F \u2014 call CARE clinic.'
         : 'Pain check: if elevated, confirm methadone on exact schedule. PICC line: check for tenderness, swelling, warmth daily. DVT monitoring: left arm swelling. Bowel should be moving toward more formed stools.',
-      'Day 4: turning point. Sun sensitivity still active \u2014 if outside, hat + SPF, avoid 11am-3pm peak. GI improving but watch for continued loose stools. Immune function still suppressed \u2014 fever protocol active.'
+      'Day 7: turning point. Sun sensitivity still active \u2014 if outside, hat + SPF, avoid 11am-3pm peak. GI improving but watch for continued loose stools. Immune function still suppressed \u2014 fever protocol active.'
     );
   } else if(cd===5){
     base=tip(
