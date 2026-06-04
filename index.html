@@ -2388,7 +2388,8 @@ var EV_DISPLAY_NAME = {
   nurse:'Nurse Visit',tpn:'TPN',proc:'Procedure',
   para_watch:'Para Watch','para-watch':'Para Watch',frew:'Frew'
 };
-function evDisplayName(ev){ return EV_DISPLAY_NAME[ev.type]||ev.title||ev.type; }
+function evTypeName(ev){ return (ev&&EV_DISPLAY_NAME[ev.type])||((ev&&ev.type)||'Event'); }
+function evDisplayName(ev){ return (ev&&ev.title&&String(ev.title).trim())?String(ev.title).trim():evTypeName(ev); }
 
 function renderCal() {
   var wrap = mk('div',{cls:'fi'});
@@ -2595,7 +2596,7 @@ function renderCal() {
         titleRow.appendChild(tIc);
         titleRow.appendChild(mk('div',{css:'font-size:14px;font-weight:700;color:var(--ink);line-height:1.25;',txt:evDisplayName(ev)}));
         body.appendChild(titleRow);
-        body.appendChild(mk('div',{css:'font-size:11px;font-weight:600;color:var(--ink3);margin-top:1px;margin-left:20px;text-transform:uppercase;letter-spacing:.05em;',txt:evDisplayName(ev).toUpperCase()}));
+        body.appendChild(mk('div',{css:'font-size:11px;font-weight:600;color:var(--ink3);margin-top:1px;margin-left:20px;text-transform:uppercase;letter-spacing:.05em;',txt:evTypeName(ev).toUpperCase()}));
         if(ev.provider) body.appendChild(mk('div',{css:'font-size:12px;color:var(--ink2);margin-top:5px;margin-left:20px;',txt:ev.provider}));
         if(ev.location){
           var locRow=mk('div',{css:'display:flex;gap:5px;margin-top:5px;margin-left:20px;align-items:flex-start;'});
@@ -6538,25 +6539,61 @@ function closeAddEvent(){
   if(modal) modal.style.display='none';
  S.editEventId=null;}
 
+function _readEventForm(){
+  S.evForm=S.evForm||{};
+  var titleEl=document.getElementById('ev-title');
+  var typeEl=document.getElementById('ev-type');
+  var dateEl=document.getElementById('ev-date');
+  var locEl=document.getElementById('ev-loc');
+  var provEl=document.getElementById('ev-prov');
+  var notesEl=document.getElementById('ev-notes');
+  var volEl=document.getElementById('ev-vol');
+  return {
+    date:(dateEl&&dateEl.value)||S.evDate||TODAY,
+    title:((titleEl&&titleEl.value)||S.evForm.title||'').trim(),
+    type:(typeEl&&typeEl.value)||S.evForm.type||'appt',
+    time:S.evForm.time||'',
+    arriveBy:S.evForm.arriveBy||'',
+    location:((locEl&&locEl.value)||S.evForm.location||'').trim(),
+    provider:((provEl&&provEl.value)||S.evForm.provider||'').trim(),
+    notes:((notesEl&&notesEl.value)||S.evForm.notes||'').trim(),
+    vol:(volEl&&parseFloat(volEl.value)>0)?parseFloat(volEl.value):(S.evForm.vol||undefined)
+  };
+}
+function _focusCalendarOnEventDate(dt){
+  if(!dt) return;
+  S.cd=dt;
+  var d=new Date(dt+'T12:00:00');
+  if(!isNaN(d.getTime())) S.calMonth={y:d.getFullYear(),m:d.getMonth()};
+}
 function saveEvent(){
-  var f=S.evForm||{};
-  if(!f.title||!f.title.trim()){toast('Add a title');return;}
-  var volEl=document.getElementById('ev-vol');var evVol=volEl&&parseFloat(volEl.value)>0?parseFloat(volEl.value):null;
-  var ev={id:Date.now(),date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:evVol||undefined};
+  var f=_readEventForm();
+  if(!f.title){toast('Add a title');return;}
+  S.evDate=f.date;
+  var ev={id:Date.now(),date:f.date,title:f.title,type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:f.vol||undefined};
+
   if(S.editEventId){
+    var edited=false;
     S.events=(S.events||[]).map(function(e){
-      if(e.id!==S.editEventId) return e;
-      return {id:e.id,date:S.evDate,title:f.title.trim(),type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:evVol||undefined};
+      if(String(e.id)!==String(S.editEventId)) return e;
+      edited=true;
+      return {id:e.id,date:f.date,title:f.title,type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:f.vol||undefined};
     });
-    saveEvents();recomputeCycleDates();S.addingEvent=false;S.editEventId=null;
-    var _m=document.getElementById('add-event-modal');if(_m)_m.style.display='none';
-    toast('Event updated');R();return;
+    if(!edited) S.events=(S.events||[]).concat(ev);
+    recomputeCycleDates();
+    _focusCalendarOnEventDate(f.date);
+    S.addingEvent=false; S.editEventId=null; S.aeTpl=null;
+    var _m=document.getElementById('add-event-modal'); if(_m) _m.style.display='none';
+    try{ saveEvents(); }catch(_err){ console.error('[EVENT SAVE ERROR]',_err); toast('Event saved locally; sync issue'); }
+    toast('Event updated');
+    R();
+    return;
   }
+
   S.events=(S.events||[]).concat(ev);
-  recomputeCycleDates(); // immediate recompute so chemo state is fresh
   // Paracentesis: auto-create 5-day watch windows (days 3-6 post-procedure)
   if(f.type==='para'){
-    var base=new Date(S.evDate+'T12:00:00');
+    var base=new Date(f.date+'T12:00:00');
     for(var wi=3;wi<=6;wi++){
       var wd=new Date(base);wd.setDate(wd.getDate()+wi);
       var wdt=localDayKey(wd.getTime());
@@ -6566,9 +6603,11 @@ function saveEvent(){
   } else {
     toast('Event added');
   }
-  saveEvents();S.addingEvent=false;S.editEventId=null;
-  var _m2=document.getElementById('add-event-modal');if(_m2)_m2.style.display='none';
-  S.aeTpl=null;
+  recomputeCycleDates();
+  _focusCalendarOnEventDate(f.date);
+  S.addingEvent=false; S.editEventId=null; S.aeTpl=null;
+  var _m2=document.getElementById('add-event-modal'); if(_m2) _m2.style.display='none';
+  try{ saveEvents(); }catch(_err2){ console.error('[EVENT SAVE ERROR]',_err2); toast('Event saved locally; sync issue'); }
   R();
   if(typeof renderAeQuick==='function') renderAeQuick();
 }
@@ -7096,7 +7135,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
   <div id="add-event-sheet" onclick="event.stopPropagation()" style="background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px 40px;width:100%;max-width:430px;max-height:90vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div id="ae-heading" style="font-family:var(--serif);font-size:20px;font-style:italic;">Add Event</div>
-      <button onclick="closeAddEvent()" style="background:none;border:none;cursor:pointer;color:var(--ink3);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--raised);">
+      <button type="button" onclick="closeAddEvent();event.stopPropagation();" style="background:none;border:none;cursor:pointer;color:var(--ink3);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--raised);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
@@ -7166,11 +7205,11 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       <textarea id="ev-notes" class="inp" rows="2" style="height:60px;width:100%;box-sizing:border-box;resize:none;" placeholder="Anything else" oninput="S.evForm.notes=this.value"></textarea>
     </div>
 
-    <button onclick="saveEvent()" class="btn btn-ink" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
+    <button type="button" onclick="saveEvent();event.stopPropagation();" class="btn btn-ink" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       Save event
     </button>
-    <button id="ae-delete" onclick="deleteCurrentEvent()" style="display:none;align-items:center;justify-content:center;gap:7px;width:100%;height:46px;margin-top:10px;background:transparent;border:1.5px solid var(--ro);border-radius:var(--r-md);color:var(--ro);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);">
+    <button type="button" id="ae-delete" onclick="deleteCurrentEvent();event.stopPropagation();" style="display:none;align-items:center;justify-content:center;gap:7px;width:100%;height:46px;margin-top:10px;background:transparent;border:1.5px solid var(--ro);border-radius:var(--r-md);color:var(--ro);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       Delete event
     </button>
