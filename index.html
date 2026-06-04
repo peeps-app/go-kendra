@@ -3589,9 +3589,9 @@ function renderLogHome(){
 
   // ── Mood card — full width, primary action, above the fold ──
   var moodCard = mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:16px;margin:0 16px 0;'});
-  var _lm = latestMood(d);
+  var _lm = null; // picker should never preselect an old/logged mood on open
   var moodTitle = mk('div',{css:'font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;', txt: pt?'How am I feeling?':'How is Kendra feeling?'});
-  var moodSub = mk('div',{css:'font-size:11px;color:var(--ink3);margin-bottom:14px;', txt: _lm ? ('Last logged '+new Date(_lm.id||Date.parse(_lm.ts)).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+' \u00b7 tap to update') : (pt?'Tap to log':'Tap a face to log')});
+  var moodSub = mk('div',{css:'font-size:11px;color:var(--ink3);margin-bottom:14px;', txt: (pt?'Tap to log':'Tap a face to log')});
   var faceRow = mk('div',{css:'display:flex;gap:8px;'});
   for(var mi=0;mi<5;mi++){
     var sel = !!(_lm && _lm.mood===mi);
@@ -6312,7 +6312,8 @@ function evIconFor(ev){
 
 function openCin(){
   S.cin=true;
-  S.cinD={mood:null,nausea:null,pain:null,energy:null,notes:''};
+  window._cinOpenSession=Date.now();
+  S.cinD={mood:null,nausea:null,pain:null,energy:null,notes:'',_session:window._cinOpenSession};
   var el=document.getElementById('cin');
   if(!el) return;
   el.style.display='flex';
@@ -6326,7 +6327,8 @@ function closeCin(){
 }
 
 function renderCin(){
-  var d=S.cinD;
+  var d=S.cinD||{mood:null,nausea:null,pain:null,energy:null,notes:''};
+  if(d._session!==window._cinOpenSession){ d={mood:null,nausea:null,pain:null,energy:null,notes:'',_session:window._cinOpenSession}; S.cinD=d; }
   var timeEl=document.getElementById('cin-time');
   if(timeEl) timeEl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   var moodCon=document.getElementById('cin-moods');
@@ -6383,7 +6385,7 @@ function renderCinScale(cid,label,key,val){
   con.appendChild(wrap);
 }
 
-function pickMood(i){S.cinD.mood=i;S.cinD.nausea=null;S.cinD.pain=null;S.cinD.energy=null;renderCin();}
+function pickMood(i){S.cinD._session=window._cinOpenSession||S.cinD._session;S.cinD.mood=i;S.cinD.nausea=null;S.cinD.pain=null;S.cinD.energy=null;renderCin();}
 function renderScale(containerId,label,key,val){
   var con=document.getElementById(containerId);
   if(!con) return;
@@ -6404,7 +6406,7 @@ function saveCin(){
   var _mTs=Date.now();
   var _savedMood=S.cinD.mood;
   createEvent('mood',_mTs,{mood:S.cinD.mood,nausea:S.cinD.nausea,pain:S.cinD.pain,energy:S.cinD.energy,notes:S.cinD.notes});
-  S.cinD={mood:null,nausea:null,pain:null,energy:null,notes:''};
+  S.cinD={mood:null,nausea:null,pain:null,energy:null,notes:'',_session:null};
   S.cin=false;R();
   toast('Check-in saved — '+ML[_savedMood]+' at '+fmtT(_mTs));
 }
