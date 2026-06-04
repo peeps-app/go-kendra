@@ -1885,24 +1885,24 @@ function renderWaddlesCard(){
 
 
   var wrap = mk('div',{css:'margin:0 0 14px;'});
-  var cardBg = overdue ? '#FFF8F0' : 'var(--card)';
-  var border  = overdue ? '1.5px solid #F6AD55' : '1px solid var(--div)';
+  var postChemoRecovery = CS.chemo && CS.chemo.daysSince!==null && CS.chemo.daysSince>=0 && CS.chemo.daysSince<=3;
+  var cardBg = postChemoRecovery ? '#FBF4FA' : (overdue ? '#FFF8F0' : 'var(--card)');
+  var border  = postChemoRecovery ? '1.5px solid #E8CFE0' : (overdue ? '1.5px solid #F6AD55' : '1px solid var(--div)');
   var card = mk('div',{css:'background:'+cardBg+';border:'+border+';border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;'});
 
   var peepImg = mk('img',{css:'width:56px;height:56px;flex-shrink:0;object-fit:contain;'});
-  var postChemoRest = overdue && CS.chemo && CS.chemo.daysSince!==null && CS.chemo.daysSince>=0 && CS.chemo.daysSince<=3;
-  peepImg.src = postChemoRest ? PEEP_WADDLES_REST : (overdue ? PEEP_WADDLES_OVERDUE : PEEP_WADDLES);
+  peepImg.src = postChemoRecovery ? PEEP_WADDLES_REST : (overdue ? PEEP_WADDLES_OVERDUE : PEEP_WADDLES);
   card.appendChild(peepImg);
 
   var txt = mk('div',{css:'flex:1;min-width:0;'});
 
   // Header row with badge
   var hdRow = mk('div',{css:'display:flex;align-items:center;gap:6px;margin-bottom:4px;'});
-  hdRow.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:'+(overdue?'#C05621':'var(--ink3)')+';',txt:'Waddles'}));
+  hdRow.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:'+(postChemoRecovery?'#8A6A7A':(overdue?'#C05621':'var(--ink3)'))+';',txt:'Waddles'}));
   var tier = feet>=1201?3:feet>=801?2:feet>=401?1:feet>=1?0:-1;
   var tierLabel = tier===3?'Olympic Waddle ':tier===2?'Marathon Waddle':tier===1?'Full Lap Waddle':tier===0?'1/2 Lap Waddle':'No Waddles Yet';
-  var tierBg = tier>=0?'#C6F6D5':'#F6E6F0';
-  var tierCol = tier>=0?'#276749':'#8A6A7A';
+  var tierBg = postChemoRecovery ? (tier>=0?'#E6F4EA':'#F6E6F0') : (tier>=0?'#C6F6D5':'#FBD38D');
+  var tierCol = postChemoRecovery ? (tier>=0?'#2F6F4E':'#8A6A7A') : (tier>=0?'#276749':'#7B341E');
   var badge = mk('div',{css:'font-size:10px;font-weight:700;background:'+tierBg+';color:'+tierCol+';border-radius:99px;padding:2px 8px;',txt:tier>=0?((waddleCount>0?waddleCount+'x \u00b7 ':'')+feet+'ft'):formatTodayState(0,1)});
   hdRow.appendChild(badge);
   txt.appendChild(hdRow);
@@ -1913,9 +1913,13 @@ function renderWaddlesCard(){
     'She had her Wheaties! You\u2019re basically lapping the whole building. Lil Peepachu is shook.',
     'Peepsi\u2019s training has really paid off. You\u2019ve won the gold medal for today. Peepachu is positively PEWFED!'
   ];
-  var bodyTxt = tier>=0
-    ? tierMessages[tier]
-    : 'Lil Peepachu is playing nurse today. No waddles unless you feel up for it! Post-chemo feels usually hit you around this time so focus on taking it easy. We know Peepachu is!';
+  var bodyTxt = postChemoRecovery
+    ? (tier>=0
+      ? 'Nice work! Even a little movement helps. Now go be cozy again — Nurse Peepachu approves.'
+      : 'Lil Peepachu is playing nurse today. No waddles unless you feel up for it! Post-chemo feels usually hit you around this time so focus on taking it easy. We know Peepachu is!')
+    : (tier>=0
+      ? tierMessages[tier]
+      : 'Waddles get the blood flowing, keep the muscles awake, and help fight those clots. Even one makes a real difference. Lil Peepachu is by the door.');
   txt.appendChild(mk('div',{css:'font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:8px;',txt:bodyTxt}));
 
   // Log form
@@ -1925,7 +1929,7 @@ function renderWaddlesCard(){
   var _wdTime=mk('input',{type:'time',value:new Date().toTimeString().slice(0,5),css:'flex:1;height:34px;font-size:12px;padding:0 8px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);'});
   var _wdDist=mk('input',{type:'number',placeholder:'Distance in feet',css:'width:100%;height:34px;font-size:13px;box-sizing:border-box;padding:0 10px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);'});
   _wdDist.min='0';_wdDist.step='50';
-  var _wdConfirm=mk('button',{css:'background:'+(overdue?'#DD6B20':'var(--pu)')+';color:#fff;border:none;border-radius:99px;padding:5px 14px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;align-self:flex-start;',txt:'Log a waddle'});
+  var _wdConfirm=mk('button',{css:'background:'+(postChemoRecovery?'#A98CA3':(overdue?'#DD6B20':'var(--pu)'))+';color:#fff;border:none;border-radius:99px;padding:5px 14px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;align-self:flex-start;',txt:'Log a waddle'});
   _wdDist.addEventListener('keydown',function(e){if(e.key==='Enter')_wdConfirm.click();});
   _wdConfirm.addEventListener('click',function(){
     var _ft=_wdDist.value?parseInt(_wdDist.value):0;
@@ -1935,7 +1939,7 @@ function renderWaddlesCard(){
   });
   _wdR1.appendChild(_wdDate);_wdR1.appendChild(_wdTime);
   _wdPicker.appendChild(_wdR1);_wdPicker.appendChild(_wdDist);_wdPicker.appendChild(_wdConfirm);
-  var _wdBtn=mk('button',{css:'background:'+(overdue?'#DD6B20':'var(--pu)')+';color:#fff;border:none;border-radius:99px;padding:6px 16px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;margin-bottom:6px;'});
+  var _wdBtn=mk('button',{css:'background:'+(postChemoRecovery?'#A98CA3':(overdue?'#DD6B20':'var(--pu)'))+';color:#fff;border:none;border-radius:99px;padding:6px 16px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;margin-bottom:6px;'});
   _wdBtn.textContent='Log a waddle';
   _wdBtn.addEventListener('click',function(){
     _wdDate.value=getToday();_wdTime.value=new Date().toTimeString().slice(0,5);
@@ -7220,4 +7224,3 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
 </div>
 </body>
 </html>
-<!-- Recovery message update requested: Nice work! Even a little movement helps. Now go be cozy again — Nurse Peepachu approves. -->
