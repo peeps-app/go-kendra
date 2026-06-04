@@ -259,7 +259,7 @@ select.inp{appearance:none;}
   <button class="nb" data-t="home" onclick="go('home')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Today</button>
   <button class="nb" data-t="log" onclick="go('log')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="16" y2="11"/><line x1="12" y1="15" x2="16" y2="15"/></svg>Log</button>
   <button class="nb" data-t="train" onclick="go('train')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><rect x="6" y="5" width="3" height="14" rx="1"/><rect x="15" y="5" width="3" height="14" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/></svg>Train</button>
-  <button class="nb" data-t="squad" onclick="go('squad')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span id="nb-squad-label">Cheers</span></button>
+  <button class="nb" data-t="squad" onclick="go('squad')" style="position:relative;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span id="nb-squad-label">Cheers</span><span id="nb-squad-badge" style="display:none;position:absolute;top:4px;right:18px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#EF4444;color:#fff;font-size:10px;font-weight:900;line-height:16px;text-align:center;box-shadow:0 0 0 2px var(--cream);"></span></button>
   <button class="nb" data-t="cal" onclick="go('cal')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cal</button>
   <button class="nb" id="nb-wins" data-t="wins" onclick="go('wins')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>Wins</button>
   <button class="nb" id="nb-wishlist" data-t="wishlist" onclick="go('wishlist')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Support</button>
@@ -435,8 +435,13 @@ function setupFirebaseSync(){
     console.log('[LISTENER HEARTBEAT] wishlist ts='+new Date().toLocaleTimeString());
     var val=snap.val();
     if(!Array.isArray(val)||!val.length) return;
+    val=sanitizeSupportItems(val);
     console.log('[WISHLIST SET] source=firebase-onValue count='+val.length);
     try{ localStorage.setItem('gk-wishlist', JSON.stringify(val)); }catch(_e){}
+    try{
+      var _raw=snap.val();
+      if(_raw&&JSON.stringify(_raw)!==JSON.stringify(val)) window._fbDb.ref('gk/wishlist').set(val);
+    }catch(_e){}
     if(S.v==='app'&&!window._userTyping) R();
   });
 
@@ -1321,6 +1326,7 @@ function bootstrapCanonicalData(){
       if(!_wlIds[item.id]) _wl.push(item);
       else Object.assign(_wlIds[item.id], item); // update in place with canonical data
     });
+    _wl=sanitizeSupportItems(_wl);
     lsSetLocal('wishlist', _wl);
 
     // ── 3. MILESTONES — handled by seed-milestones-v2 if(true) block below ──
@@ -1624,6 +1630,12 @@ function R() {
   if(sqBtn) sqBtn.style.display='flex';
   var sqLabel=document.getElementById('nb-squad-label');
   if(sqLabel) sqLabel.textContent=(_fr)?'Home':'Cheers';
+  var sqBadge=document.getElementById('nb-squad-badge');
+  if(sqBadge){
+    var _newCheers=(!_fr && (S.role==='patient'||S.role==='care'))?getNewCheersCount():0;
+    sqBadge.style.display=_newCheers>0?'inline-block':'none';
+    sqBadge.textContent=_newCheers>9?'9+':String(_newCheers);
+  }
   var winsBtn=document.getElementById('nb-wins');
   if(winsBtn) winsBtn.style.display=(_fr||S.role==='patient'||S.role==='care'||_fam)?'flex':'none';
   var wlBtn=document.getElementById('nb-wishlist');
@@ -2679,7 +2691,7 @@ function renderSupportMgmt(){
   ph.appendChild(mk('div',{css:'font-family:var(--serif);font-size:18px;font-style:italic;',txt:"Kendra’s Support"}));
   wrap.appendChild(ph);
 
-  var items=lsGet('wishlist')||[];
+  var items=sanitizeSupportItems(lsGet('wishlist')||[]);
   var body=mk('div',{css:'padding:16px;'});
 
   // Add item form
@@ -2897,6 +2909,7 @@ function renderSquadPatientView(){
 
   // Cheers list
   var cheers=S.cheers||[];
+  markCheersViewed();
 
   // Cheer wall — read only
   if(cheers.length){
@@ -6071,7 +6084,7 @@ function sendCheer(){
 }
 
 function selDay(dt){S.cd=dt;loadCalDay(dt);R();}
-function go(tab){S.tab=tab;if(tab==='log') S.lt='home';R();}
+function go(tab){S.tab=tab;if(tab==='log') S.lt='home';if(tab==='squad'&&(S.role==='patient'||S.role==='care')) markCheersViewed();R();}
 
 function backupState(){
   // Export all gk-* localStorage keys as a JSON file download
@@ -7001,6 +7014,26 @@ function saveCfg(){
 }
 
 function lsGet(k){try{var v=localStorage.getItem('gk-'+k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function sanitizeSupportItems(items){
+  items=Array.isArray(items)?items:[];
+  var bad1='green'+' '+'plant', bad2='succ'+'ulent', bad3='bright'+'en her space', bad4='plant'+' works';
+  var badRe=new RegExp(bad1+'|'+bad2+'|'+bad3+'|'+bad4,'i');
+  var sentenceRe=new RegExp('\\s*If you want to '+bad3+'[^.?!]*[.?!]?','ig');
+  var plantRe=new RegExp('\\s*(?:a\\s+)?(?:small\\s+)?'+bad1+'[^.?!]*[.?!]?','ig');
+  var succRe=new RegExp('\\s*'+bad2+'[^.?!]*[.?!]?','ig');
+  return items.map(function(w){
+    if(!w||typeof w!=='object') return w;
+    if(w.id==='wl001'||/flowers/i.test(String(w.title||''))){
+      w=Object.assign({},w);
+      w.title='A note about flowers';
+      w.body='We know you mean well — but please no flowers. They carry bacteria that can be harmful to Kendra’s immune system right now.';
+    } else if(typeof w.body==='string' && badRe.test(w.body)){
+      w=Object.assign({},w);
+      w.body=w.body.replace(sentenceRe,'').replace(plantRe,'').replace(succRe,'').trim();
+    }
+    return w;
+  });
+}
 // lsSetLocal — boot/seed writes that must NOT go to Firebase
 function lsSetLocal(k,v){
   try{if(window.storage){var _p=window.storage.set('gk-'+k,JSON.stringify(v),false);if(_p&&_p.catch)_p.catch(function(){});}}catch(e){}
@@ -7008,6 +7041,23 @@ function lsSetLocal(k,v){
   return {catch:function(){return this;},then:function(){return this;}};
 }
 
+function getLastViewedCheersTs(){
+  try{return Number(localStorage.getItem('gk-cheers-last-viewed-ts')||0)||0;}catch(e){return 0;}
+}
+function setLastViewedCheersTs(ts){
+  ts=Number(ts)||Date.now();
+  try{localStorage.setItem('gk-cheers-last-viewed-ts',String(ts));}catch(e){}
+}
+function getNewCheersCount(){
+  var last=getLastViewedCheersTs();
+  var arr=Array.isArray(S.cheers)?S.cheers:[];
+  return arr.filter(function(c){return c&&Number(c.ts)>last;}).length;
+}
+function markCheersViewed(){
+  var arr=Array.isArray(S.cheers)?S.cheers:[];
+  var latest=arr.reduce(function(max,c){var t=Number(c&&c.ts)||0;return t>max?t:max;},Date.now());
+  setLastViewedCheersTs(latest);
+}
 function lsSet(k,v){try{if(window.storage){var _p=window.storage.set('gk-'+k,JSON.stringify(v),false);if(_p&&_p.catch)_p.catch(function(){});}}catch(e){}try{localStorage.setItem('gk-'+k,JSON.stringify(v));}catch(e){} fbSet(k,v); return {catch:function(){return this;},then:function(){return this;}};}
 
 // lsGetA/loadAll replaced by synchronous bootLoad — see init()
