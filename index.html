@@ -1001,10 +1001,18 @@ function bootLoad(){
   }
   if(!Array.isArray(S.day.moods))S.day.moods=migrateMoods(S.day);
   // Remove any legacy seed-created mood entry from today's bucket.
-  // A real mood entry must have been created through saveCin(), not migrated from d.feel.
-  if(S.day && S.day.feel && S.day.feel.mood!=null){
-    try{ delete S.day.feel; saveDay(); }catch(_e){}
-  }
+  // A real mood entry must have been created through saveCin()/logMood(), not migrated from d.feel.
+  try{
+    var _moodCleaned=false;
+    if(S.day && S.day.feel && S.day.feel.mood!=null){ delete S.day.feel; _moodCleaned=true; }
+    if(S.day && Array.isArray(S.day.moods)){
+      var _beforeM=S.day.moods.length;
+      S.day.moods=S.day.moods.filter(function(e){ return !isLegacySeedMood(e); })
+                             .sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+      if(S.day.moods.length!==_beforeM) _moodCleaned=true;
+    }
+    if(_moodCleaned) saveDay();
+  }catch(_e){}
   try{S.cheers=lsRead('cheers')||[];}catch(e){S.cheers=[];}
   try{var cfg=lsRead('cfg');S.priv=(cfg&&cfg.priv)||DEFP;S.bdgs=(cfg&&cfg.bdgs)||BDGS;}catch(e){S.priv=DEFP;S.bdgs=BDGS;}
   try{var _lsEvts=lsRead('events')||[];console.log(new Date().toLocaleTimeString()+' [S.events SET] source=localStorage-boot count='+_lsEvts.length);S.events=_lsEvts;}catch(e){S.events=[];}
@@ -1360,12 +1368,21 @@ function migrateMoods(d){
   // Mood should only appear as "today" when a real timestamped mood entry was logged today.
   return [];
 }
-
-function latestMood(d){
+function isLegacySeedMood(e){
+  // Old seed migration created {id:1, ts:TODAY noon, mood:...}; never treat it as real.
+  return !!(e && e.id===1 && !e.quick);
+}
+function todayMoods(d){
   var m=d&&d.moods&&Array.isArray(d.moods)?d.moods:[];
-  m=m.filter(function(e){
-    return e && typeof e.ts==='number' && isFinite(e.ts) && localDayKey(e.ts)===TODAY;
-  });
+  return m.filter(function(e){
+    return e && !isLegacySeedMood(e) &&
+      typeof e.ts==='number' && isFinite(e.ts) &&
+      e.mood!=null && e.mood>=0 && e.mood<=4 &&
+      localDayKey(e.ts)===TODAY;
+  }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+}
+function latestMood(d){
+  var m=todayMoods(d);
   return m.length?m[m.length-1]:null;
 }
 function MC_color(i){return(i!=null&&i>=0&&i<=4)?MC[i]:'#8b7fa0';}
@@ -1547,7 +1564,7 @@ function getCareState(now) {
   var _hour=new Date(now).getHours();
   var teeth = { count:_tToday.length, noonOverdue:_tToday.length===0 && _hour>=12 };
 
-  var _moods = day.moods||[], _lm = _moods.length?_moods[_moods.length-1]:null;
+  var _moods = todayMoods(day), _lm = _moods.length?_moods[_moods.length-1]:null;
   var mood = { today:_moods, last:_lm, idx:_lm?_lm.mood:null };
 
   var _tEvts = events.filter(function(e){ return e.date===_todayKey && !e.cancelled; });
@@ -2127,9 +2144,16 @@ function moodFace(i,sz,sel){
 function logMood(i){
   S.day=S.day||empty();
   if(!Array.isArray(S.day.moods)) S.day.moods=[];
-  var arr=S.day.moods, last=arr[arr.length-1];
-  if(last && last.quick && (Date.now()-(last.id||0))<300000){ last.mood=i; }
-  else { arr.push({id:Date.now(),ts:Date.now(),mood:i,nausea:null,pain:null,energy:null,notes:'',quick:true}); }
+  S.day.moods=S.day.moods.filter(function(e){return !isLegacySeedMood(e);});
+  var arr=S.day.moods, now=Date.now();
+  var today=todayMoods(S.day);
+  var last=today.length?today[today.length-1]:null;
+  if(last && last.quick && (now-(last.id||last.ts||0))<300000){
+    last.mood=i; last.ts=now; last.id=last.id||now;
+  } else {
+    arr.push({id:now,ts:now,mood:i,nausea:null,pain:null,energy:null,notes:'',quick:true});
+  }
+  S.day.moods=arr.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
   saveDay(); R();
 }
 function renderLog() {
@@ -3565,7 +3589,7 @@ function renderLogHome(){
 
   // ── Mood card — full width, primary action, above the fold ──
   var moodCard = mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:16px;margin:0 16px 0;'});
-  var _lm = (d.moods&&d.moods.length) ? d.moods[d.moods.length-1] : null;
+  var _lm = latestMood(d);
   var moodTitle = mk('div',{css:'font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;', txt: pt?'How am I feeling?':'How is Kendra feeling?'});
   var moodSub = mk('div',{css:'font-size:11px;color:var(--ink3);margin-bottom:14px;', txt: _lm ? ('Last logged '+new Date(_lm.id||Date.parse(_lm.ts)).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+' \u00b7 tap to update') : (pt?'Tap to log':'Tap a face to log')});
   var faceRow = mk('div',{css:'display:flex;gap:8px;'});
@@ -6378,9 +6402,11 @@ function pickScale(key,i){S.cinD[key]=i;renderCin();}
 function saveCin(){
   if(S.cinD.mood===null) return;
   var _mTs=Date.now();
+  var _savedMood=S.cinD.mood;
   createEvent('mood',_mTs,{mood:S.cinD.mood,nausea:S.cinD.nausea,pain:S.cinD.pain,energy:S.cinD.energy,notes:S.cinD.notes});
+  S.cinD={mood:null,nausea:null,pain:null,energy:null,notes:''};
   S.cin=false;R();
-  toast('Check-in saved — '+ML[S.cinD.mood]+' at '+fmtT(_mTs));
+  toast('Check-in saved — '+ML[_savedMood]+' at '+fmtT(_mTs));
 }
 
 // -- LOG -------------------------------------------------
@@ -6874,6 +6900,10 @@ function _mergeDayBuckets(remote, local){
   remote=(remote&&typeof remote==='object')?remote:{}; local=(local&&typeof local==='object')?local:{};
   var out=Object.assign({},remote,local);
   ['teeth','frew','belly','onion','vitals','moods','food','wos'].forEach(function(f){out[f]=_mergeUniqueEvents(remote[f],local[f]);});
+  if(Array.isArray(out.moods)){
+    out.moods=out.moods.filter(function(e){return !isLegacySeedMood(e);})
+                       .sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+  }
   var rMove=Array.isArray(remote.move)?remote.move:[];
   var lMove=Array.isArray(local.move)?local.move:[];
   if(rMove.length||lMove.length) out.move=_mergeUniqueEvents(rMove,lMove);
