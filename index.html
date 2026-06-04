@@ -4211,21 +4211,26 @@ function renderMeds() {
   }
   function _appendPrnDose(id,name,ts){
     ts=Number(ts); if(!isFinite(ts)) return false;
+    var m=getPrnDef(id)||{}, intervalMs=(Number(m.interval)||0)*3600000;
     var local=getPrnRaw();
     local[id]=_normPrnArr((local[id]||[]).concat([ts]));
     _savePrnLocal(id, local[id]);
     if(window._fbDb&&!window._bootPhase){
-      var m=getPrnDef(id)||{}, intervalMs=isPatchPrn(id)?((Number(m.interval)||0)*3600000):0;
       window._fbDb.ref('gk/prn-doses/'+id).transaction(function(cur){
         var arr=_normPrnArr(cur||[]);
         if(intervalMs){
           for(var i=0;i<arr.length;i++){ if(Math.abs(ts-arr[i])<intervalMs) return; }
         }
+        if(m.maxDaily){
+          var selectedDay=localDayKey(ts);
+          var dayCount=arr.filter(function(x){return localDayKey(x)===selectedDay;}).length;
+          if(dayCount>=m.maxDaily) return;
+        }
         arr.push(ts);
         return _normPrnArr(arr);
       },function(err,committed,snap){
         if(err){ console.error('[PRN WRITE FAILED] '+id, err.message); if(typeof toast==='function') toast('PRN save failed — check sync'); return; }
-        if(!committed){ if(typeof toast==='function') toast(isPatchPrn(id)?'Patch still locked — not logged':'Dose not logged'); return; }
+        if(!committed){ if(typeof toast==='function') toast(isPatchPrn(id)?'Patch still locked — not logged':'Dose locked — not logged'); return; }
         var arr=(snap&&Array.isArray(snap.val()))?snap.val():local[id];
         _savePrnLocal(id,arr);
         if(S.v==='app'&&!window._userTyping) R();
@@ -4244,18 +4249,16 @@ function renderMeds() {
   function logPrn(id,name){ var ts=Date.now(); if(_appendPrnDose(id,name,ts)){ if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(ts)); R(); } }
   function undoPrn(id){ if(_undoPrnDose(id)) R(); }
   function openDoseModal(id,name){
-    var st=getPrnLockState(id);
-    if(st.locked){
-      if(isPatchPrn(id)) toast('Patch is locked · replace '+(st.leftMs>0?'in '+fmtLeft(st.leftMs):'when due'));
-      else toast('Dose locked · '+(st.intervalLocked&&st.leftMs>0?fmtLeft(st.leftMs):'not available yet'));
-      return;
-    }
+    // Always open the modal: users sometimes need to retroactively log a missed PRN/patch.
+    // Safety locks are enforced against the selected date+time on confirm.
     S.doseModal={id:id,name:name};
     var now=new Date();
+    var yyyy=now.getFullYear(), mo=String(now.getMonth()+1).padStart(2,'0'), dd=String(now.getDate()).padStart(2,'0');
     var hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0');
     var modal=document.getElementById('dose-modal'); if(!modal) return;
     var t=document.getElementById('dose-modal-title'); if(t) t.textContent=isPatchPrn(id)?'Log patch':'Log '+name;
-    var inp=document.getElementById('dose-modal-time'); if(inp) inp.value=hh+':'+mm;
+    var dateInp=document.getElementById('dose-modal-date'); if(dateInp) dateInp.value=yyyy+'-'+mo+'-'+dd;
+    var timeInp=document.getElementById('dose-modal-time'); if(timeInp) timeInp.value=hh+':'+mm;
     modal.style.display='flex';
   }
   function closeDoseModal(){
@@ -4264,36 +4267,55 @@ function renderMeds() {
   }
   function confirmDoseLog(){
     var dm=S.doseModal; if(!dm) return;
-    var inp=document.getElementById('dose-modal-time');
-    var v=inp?inp.value:'';
-    logPrnAt(dm.id,dm.name,v);
-    closeDoseModal();
+    var dateInp=document.getElementById('dose-modal-date');
+    var timeInp=document.getElementById('dose-modal-time');
+    var dateVal=dateInp?dateInp.value:'';
+    var timeVal=timeInp?timeInp.value:'';
+    var ok=logPrnAt(dm.id,dm.name,dateVal,timeVal);
+    if(ok) closeDoseModal();
   }
   window.openDoseModal=openDoseModal;
   window.closeDoseModal=closeDoseModal;
   window.confirmDoseLog=confirmDoseLog;
-  function logPrnAt(id,name,hhmm){
-    if(!hhmm||hhmm.indexOf(':')<0){ if(typeof toast==='function')toast('Pick a time first'); return; }
+  function logPrnAt(id,name,dateStr,hhmm){
+    if(!dateStr||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(dateStr)){ if(typeof toast==='function')toast('Pick a date first'); return false; }
+    if(!hhmm||hhmm.indexOf(':')<0){ if(typeof toast==='function')toast('Pick a time first'); return false; }
     var p=hhmm.split(':');
-    var d=new Date(); d.setHours(parseInt(p[0],10),parseInt(p[1],10),0,0);
-    if(d.getTime()>Date.now()) d.setDate(d.getDate()-1); // a future time = earlier today/yesterday
+    var d=new Date(dateStr+'T'+String(p[0]).padStart(2,'0')+':'+String(p[1]).padStart(2,'0')+':00');
+    var target=d.getTime();
+    if(!isFinite(target)){ if(typeof toast==='function')toast('Invalid dose date/time'); return false; }
+    if(target>Date.now()+60000){ if(typeof toast==='function')toast('Dose time cannot be in the future'); return false; }
     if(isPatchPrn(id)){
-      var m=getPrnDef(id), intervalMs=(m&&m.interval?m.interval:0)*3600000, existing=(getPrnLog()[id]||[]), target=d.getTime();
+      var m=getPrnDef(id), intervalMs=(m&&m.interval?m.interval:0)*3600000, existing=(getPrnLog()[id]||[]);
       for(var _pi=0;_pi<existing.length;_pi++){
         if(Math.abs(target-existing[_pi])<intervalMs){
           var _due=existing[_pi]+intervalMs;
-          toast('Patch already logged · replace '+(_due>Date.now()?'in '+fmtLeft(_due-Date.now()):'now'));
-          return;
+          toast('Patch already logged · replace '+(_due>Date.now()?'in '+fmtLeft(_due-Date.now()):'after '+fmtDoseDate(_due)));
+          return false;
         }
       }
     } else {
-      var st=getPrnLockState(id,d.getTime());
-      if(st.locked){ toast('Dose locked · '+(st.intervalLocked&&st.unlockAt?fmtLeft(st.unlockAt-Date.now()):'not available yet')); return; }
+      var md=getPrnDef(id)||{}, doseIntervalMs=(Number(md.interval)||0)*3600000, existingDoses=(getPrnLog()[id]||[]);
+      if(doseIntervalMs){
+        for(var _di=0;_di<existingDoses.length;_di++){
+          if(Math.abs(target-existingDoses[_di])<doseIntervalMs){
+            toast('Dose locked for selected time · too close to another logged dose');
+            return false;
+          }
+        }
+      }
+      if(md.maxDaily){
+        var selectedDay=localDayKey(target);
+        var dayCount=existingDoses.filter(function(x){return localDayKey(x)===selectedDay;}).length;
+        if(dayCount>=md.maxDaily){ toast('Dose locked for selected date · max daily reached'); return false; }
+      }
     }
-    if(_appendPrnDose(id,name,d.getTime())){
-      if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(d.getTime()));
+    if(_appendPrnDose(id,name,target)){
+      if(typeof toast==='function')toast(name+' logged · '+fmtDoseDate(target)+' '+fmtClock(target));
       R();
+      return true;
     }
+    return false;
   }
   function fmtClock(ts){ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
   function fmtLeft(ms){ if(ms<=0) return null; var h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); if(h>=48)return Math.floor(h/24)+'d'; if(h>=1)return h+'h '+m+'m'; return m+'m'; }
@@ -7191,9 +7213,12 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div class="lbl" style="margin-bottom:8px;">Time taken</div>
-    <input id="dose-modal-time" type="time" class="tinp" style="height:50px;width:100%;box-sizing:border-box;margin-bottom:6px;">
-    <div style="font-size:11px;color:var(--ink4);margin-bottom:20px;">Defaults to now — change it if the dose was taken earlier.</div>
+    <div class="lbl" style="margin-bottom:8px;">Date and time taken</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+      <input id="dose-modal-date" type="date" class="tinp" style="height:50px;width:100%;box-sizing:border-box;">
+      <input id="dose-modal-time" type="time" class="tinp" style="height:50px;width:100%;box-sizing:border-box;">
+    </div>
+    <div style="font-size:11px;color:var(--ink4);margin-bottom:20px;">Defaults to now — change date/time if this was taken earlier.</div>
     <button onclick="confirmDoseLog()" class="btn btn-ink" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       Log dose
