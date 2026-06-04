@@ -1885,7 +1885,7 @@ function renderWaddlesCard(){
 
 
   var wrap = mk('div',{css:'margin:0 0 14px;'});
-  var postChemoRecovery = CS.chemo && CS.chemo.daysSince!==null && CS.chemo.daysSince>=0 && CS.chemo.daysSince<=3;
+  var postChemoRecovery = CS.chemo && CS.chemo.daysSince!==null && CS.chemo.daysSince>=0 && CS.chemo.daysSince<=6; // chemo day + 6 days after; normal mode returns day 7
   var cardBg = postChemoRecovery ? '#FBF4FA' : (overdue ? '#FFF8F0' : 'var(--card)');
   var border  = postChemoRecovery ? '1.5px solid #E8CFE0' : (overdue ? '1.5px solid #F6AD55' : '1px solid var(--div)');
   var card = mk('div',{css:'background:'+cardBg+';border:'+border+';border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;'});
