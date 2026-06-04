@@ -262,7 +262,7 @@ select.inp{appearance:none;}
   <button class="nb" data-t="squad" onclick="go('squad')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span id="nb-squad-label">Cheers</span></button>
   <button class="nb" data-t="cal" onclick="go('cal')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cal</button>
   <button class="nb" id="nb-wins" data-t="wins" onclick="go('wins')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>Wins</button>
-  <button class="nb" id="nb-wishlist" data-t="wishlist" onclick="go('wishlist')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Wishlist</button>
+  <button class="nb" id="nb-wishlist" data-t="wishlist" onclick="go('wishlist')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Support</button>
   <button class="nb" id="nb-meds" data-t="meds" onclick="go('meds')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>Meds</button>
   <button class="nb" id="nb-medical" data-t="medical" onclick="go('medical')" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>FYI</button>
 </div>
@@ -1631,7 +1631,7 @@ function R() {
   // medicalBtn already set above (L1061) — fam included
 
   var screens = { home:renderHome, log:renderLog, train:renderTrain, cal:renderCal,
-                  squad:renderSquad, notes:renderNotes, meds:renderMeds, medical:renderMedical, wishlist:renderWishlistMgmt, wins:renderWins };
+                  squad:renderSquad, notes:renderNotes, meds:renderMeds, medical:renderMedical, wishlist:renderSupportMgmt, wins:renderWins };
   var _tab = (S.role==='friends' && S.tab==='home') ? 'squad' : S.tab;
   var fn = S.wo ? null : (screens[_tab] || renderHome);
   try {
@@ -2062,7 +2062,7 @@ function renderHome() {
         }
       }
       return _total;
-    })(),unit:'est. feet',c:'var(--te)'},
+    })(),unit:'total est. feet',c:'var(--te)'},
     {l:'Sippin',v:(d.hyd||0)+'/8',unit:'glasses',c:'var(--blue)'},
     {l:'Food',v:(d.food||[]).length,unit:'nibbles',c:'var(--sg)'},
     {l:'Check-ins',v:(d.moods||[]).filter(function(e){return isSameDay(e.ts);}).length,unit:'today',c:'var(--pu)'},
@@ -2669,14 +2669,14 @@ function renderCal() {
 }
 
 // ── SQUAD SCREEN ──────────────────────────────────────────────
-function renderWishlistMgmt(){
-  if(S.role==='friends') return renderSquadWishlist();
+function renderSupportMgmt(){
+  if(S.role==='friends') return renderSquadSupport();
   var wrap=mk('div',{cls:'fi'});
   var ph=mk('div',{cls:'ph',css:'padding:16px;display:flex;align-items:center;gap:10px;'});
   var back=mk('button',{cls:'fam-allow',css:'background:transparent;border:1.5px solid var(--div);color:var(--ink2);padding:6px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'← Back'});
   back.addEventListener('click',function(){R();});
   ph.appendChild(back);
-  ph.appendChild(mk('div',{css:'font-family:var(--serif);font-size:18px;font-style:italic;',txt:"Kendra’s Wishlist"}));
+  ph.appendChild(mk('div',{css:'font-family:var(--serif);font-size:18px;font-style:italic;',txt:"Kendra’s Support"}));
   wrap.appendChild(ph);
 
   var items=lsGet('wishlist')||[];
@@ -2764,7 +2764,7 @@ function renderWins() {
   return wrap;
 }
 
-function renderSquadWishlist() {
+function renderSquadSupport() {
   var wrap=mk('div',{cls:'fi'});
   var ph=mk('div',{cls:'ph',css:'background:linear-gradient(135deg,#FF8FB1,#F65C8E);padding:20px 110px 30px 16px;position:relative;overflow:visible;'});
   ph.appendChild(mk('div',{css:'font-family:var(--serif);font-size:22px;font-style:italic;color:#fff;padding-right:80px;',txt:"Kenny\'s Korner"}));
@@ -2949,10 +2949,6 @@ function renderSquad() {
 
   var px=mk('div',{cls:'px',css:'padding-top:16px;'});
 
-  var secWarn=mk('div',{css:'font-size:10px;color:var(--ink4);line-height:1.35;margin:0 0 12px;text-align:center;'});
-  secWarn.textContent='Security note: Firebase database rules must require authorized users only. Do not leave health data publicly writable/readable.';
-  px.appendChild(secWarn);
-
   function secLabel(t){
     px.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin:4px 0 9px;',txt:t}));
   }
@@ -3026,7 +3022,7 @@ function renderSquad() {
     }
 
     var statsCard=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:14px 16px;margin-bottom:16px;'});
-    statsCard.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;',txt:"Today's Stats"}));
+    statsCard.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;',txt:"Kendra's Stats"}));
     var _grid=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;'});
 
     function statTile(val, unit, color){
@@ -3036,7 +3032,7 @@ function renderSquad() {
       return tile;
     }
 
-    _grid.appendChild(statTile(_steps,'est. feet walked','var(--te)'));
+    _grid.appendChild(statTile(_steps,'total est. feet walked','var(--te)'));
     _grid.appendChild(statTile(_hyd+'/8','glasses today','var(--blue)'));
     _grid.appendChild(statTile(_food,'nibbles today','var(--sg)'));
     _grid.appendChild(statTile(_moods,'check-ins today','var(--pu)'));
@@ -6884,9 +6880,32 @@ function loadCalDay(dt){
 }
 
 function addCheer(name,msg){
-  var c = {name:name,msg:msg,ts:Date.now()};
-  S.cheers = [c].concat(S.cheers||[]).slice(0,40);
-  lsSet('cheers',S.cheers);
+  var c = {id:Date.now()+'-'+Math.random().toString(36).slice(2,8),name:name,msg:msg,ts:Date.now()};
+  S.cheers = [c].concat(S.cheers||[]).slice(0,80);
+  try{localStorage.setItem('gk-cheers',JSON.stringify(S.cheers));}catch(_e){}
+  try{if(window.storage){var _p=window.storage.set('gk-cheers',JSON.stringify(S.cheers),false);if(_p&&_p.catch)_p.catch(function(){});}}catch(_e){}
+  if(window._fbDb&&!window._bootPhase){
+    try{
+      window._fbDb.ref('gk/cheers').transaction(function(cur){
+        var arr=Array.isArray(cur)?cur:[];
+        var seen={};
+        var out=[c].concat(arr).filter(function(x){
+          var k=(x&&x.id)||((x&&x.ts)+'|'+(x&&x.name||'')+'|'+(x&&x.msg||''));
+          if(!k||seen[k]) return false;
+          seen[k]=1; return true;
+        }).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,80);
+        return out;
+      },function(err,committed,snap){
+        if(err){console.error('[CHEER WRITE FAILED]',err.message);return;}
+        var merged=(snap&&snap.val())||S.cheers;
+        S.cheers=merged;
+        try{localStorage.setItem('gk-cheers',JSON.stringify(merged));}catch(_e){}
+        if(S.v==='app')R();
+      });
+    }catch(_e){console.error('[CHEER WRITE ERROR]',_e.message);}
+  } else {
+    lsSet('cheers',S.cheers);
+  }
 }
 
 // -- DATA HELPERS ---------------------------------------
