@@ -474,11 +474,11 @@ function setupFirebaseSync(){
     window._fbLastListenerActivity=Date.now();
     console.log('[LISTENER HEARTBEAT] events ts='+new Date().toLocaleTimeString());
     var val=snap.val();
-    if(!Array.isArray(val)||!val.length) return;
-    // Merge canonical seed into Firebase events before storing
-    var _ids={}; val.forEach(function(e){ _ids[e.id]=1; });
-    var _canonical=window._CANONICAL_EVENTS||[];
-    _canonical.forEach(function(e){ if(!_ids[e.id]) val.push(e); });
+    if(!Array.isArray(val)) val=[];
+    // Merge Firebase, local, and canonical events while honoring delete tombstones.
+    var del=_eventDeleteMap([]);
+    var _canonical=(window._CANONICAL_EVENTS||[]).filter(function(e){return e&&e.id!==undefined&&!del[String(e.id)];});
+    val=_mergeEventsById(val, (S.events||[]).concat(_canonical), []);
     try{ localStorage.setItem('gk-events', JSON.stringify(val)); }catch(_e){}
     var _ts=new Date().toLocaleTimeString();
     var _before=(S.events||[]).length;
@@ -523,22 +523,16 @@ function setupFirebaseSync(){
       try{ localStorage.setItem('gk-move-hospital-ft', JSON.stringify(all['move-hospital-ft'])); }catch(_e){}
     }
     // Re-hydrate S from Firebase data — merge don't replace to avoid wiping local logs
-    if(all['events']&&Array.isArray(all['events'])&&all['events'].length){
-      // Firebase is source of truth — merge canonical seed INTO Firebase events
-      // (only add events that Firebase doesn't have yet, never remove)
-      var _fbEvts=all['events'];
-      var _fbIds={}; _fbEvts.forEach(function(e){ _fbIds[e.id]=1; });
-      var _canonical=window._CANONICAL_EVENTS||[];
-      _canonical.forEach(function(e){ if(!_fbIds[e.id]) _fbEvts.push(e); });
+    if(all['events-deleted']&&typeof all['events-deleted']==='object'){
+      try{ localStorage.setItem('gk-events-deleted', JSON.stringify(all['events-deleted'])); }catch(_e){}
+    }
+    if((all['events']&&Array.isArray(all['events'])&&all['events'].length)||(window._CANONICAL_EVENTS&&window._CANONICAL_EVENTS.length)){
+      var _del=_eventDeleteMap([]);
+      var _canonical=(window._CANONICAL_EVENTS||[]).filter(function(e){return e&&e.id!==undefined&&!_del[String(e.id)];});
+      var _fbEvts=_mergeEventsById(Array.isArray(all['events'])?all['events']:[], (S.events||[]).concat(_canonical), []);
       console.log(new Date().toLocaleTimeString()+' [S.events SET] source=firebase-once count='+_fbEvts.length);
       S.events=_fbEvts;
       // Write merged result back so localStorage stays in sync
-      try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
-      recomputeCycleDates();
-    } else if(window._CANONICAL_EVENTS&&window._CANONICAL_EVENTS.length){
-      // Firebase has no events yet — use canonical seed as starting point
-      console.log('[S.events SET] source=canonical-seed-fallback count='+window._CANONICAL_EVENTS.length);
-      S.events=window._CANONICAL_EVENTS.slice();
       try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
       recomputeCycleDates();
     }
@@ -1641,21 +1635,7 @@ function R() {
 
   if (S.wo) renderWoOverlay();
   else hideWoOverlay();
-
-  // ── SYNC STATUS FOOTER (all roles, all tabs) ────────────────────────────────
-  var _sf=document.getElementById('_syncFooter');
-  if(!_sf){ _sf=document.createElement('div'); _sf.id='_syncFooter';
-    // Keep footer live even if R() doesn't fire
-    setInterval(function(){ if(_sf.parentNode){ _sf._entered=!!window._setupSyncEntered; var _fc2=window._fbConnected; var _lc2=window._listenerCount||0; var _col2=_fc2&&_lc2>=9?'#4ade80':(!_fc2&&_lc2===0?'#f87171':'#fbbf24'); _sf.style.color=_col2; _sf.textContent='v10.3 · FB:'+(_fc2?'✓':'✗')+' · L:'+_lc2+'/9 · setup:'+(_sf._entered?'Y':'N'); }},2000);
-    _sf.style.cssText='position:fixed;bottom:0;left:0;right:0;height:18px;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:monospace;z-index:200;pointer-events:none;letter-spacing:.03em;';
-    document.body.appendChild(_sf);
-  }
-  var _fc=window._fbConnected;
-  var _lc=window._listenerCount||0;
-  var _col=_fc&&_lc===9?'#4ade80':(!_fc&&_lc===0?'#f87171':'#fbbf24');
-  _sf.style.color=_col;
-  _sf._entered=!!window._setupSyncEntered;
-  _sf.textContent='v10.3 · FB:'+(_fc?'✓':'✗')+' · L:'+_lc+'/9 · setup:'+(_sf._entered?'Y':'N')+(window._setupError?' ERR':'');
+  var _oldSyncFooter=document.getElementById('_syncFooter'); if(_oldSyncFooter) _oldSyncFooter.remove();
 }
 
 function renderLoading() {
@@ -2925,6 +2905,10 @@ function renderSquad() {
 
   var px=mk('div',{cls:'px',css:'padding-top:16px;'});
 
+  var secWarn=mk('div',{css:'font-size:10px;color:var(--ink4);line-height:1.35;margin:0 0 12px;text-align:center;'});
+  secWarn.textContent='Security note: Firebase database rules must require authorized users only. Do not leave health data publicly writable/readable.';
+  px.appendChild(secWarn);
+
   function secLabel(t){
     px.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin:4px 0 9px;',txt:t}));
   }
@@ -4142,15 +4126,95 @@ function renderMeds() {
   console.log('[PRN LOG READ] source=localStorage keys='+Object.keys(_raw).join(','));
   return _raw;
 }
-  function getPrnLog(){ var saved=getPrnRaw(), out={}, k; for(k in DOSE_DEFAULTS) out[k]=DOSE_DEFAULTS[k].slice(); for(k in saved) out[k]=(out[k]||[]).concat(saved[k]); for(k in out) out[k].sort(function(a,b){return a-b;}); return out; }
-  function logPrn(id,name){ var l=getPrnRaw(); (l[id]=l[id]||[]).push(Date.now()); if(l[id].length>60)l[id]=l[id].slice(-60); lsSet('prn-doses',l); if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(Date.now())); R(); }
-  function undoPrn(id){ var l=getPrnRaw(); if(l[id]&&l[id].length){ l[id].pop(); lsSet('prn-doses',l); R(); } }
+  function _normPrnArr(arr){
+    if(!Array.isArray(arr)) return [];
+    var seen={}, out=[];
+    arr.forEach(function(ts){
+      ts=Number(ts);
+      if(!isFinite(ts)) return;
+      var k=String(Math.round(ts));
+      if(seen[k]) return;
+      seen[k]=1; out.push(ts);
+    });
+    out.sort(function(a,b){return a-b;});
+    if(out.length>60) out=out.slice(-60);
+    return out;
+  }
+  function getPrnDef(id){
+    var all=(MED_PRN||[]).concat(MED_PRN_RARE||[]);
+    for(var i=0;i<all.length;i++){ if(all[i].id===id) return all[i]; }
+    return null;
+  }
+  function isPatchPrn(id){ return id==='sancuso-prn'||id==='scopolamine-prn'; }
+  function getPrnLog(){
+    var saved=getPrnRaw(), out={}, k;
+    for(k in DOSE_DEFAULTS) out[k]=_normPrnArr(DOSE_DEFAULTS[k]);
+    for(k in saved) out[k]=_normPrnArr((out[k]||[]).concat(saved[k]));
+    return out;
+  }
+  function getPrnLockState(id, refTs){
+    var m=getPrnDef(id)||{}, log=getPrnLog(), doses=_normPrnArr(log[id]||[]);
+    var nowTs=(typeof refTs==='number'&&isFinite(refTs))?refTs:Date.now();
+    var lastTs=doses.length?doses[doses.length-1]:null;
+    var intervalMs=(Number(m.interval)||0)*3600000;
+    var unlockAt=(lastTs&&intervalMs)?lastTs+intervalMs:null;
+    var intervalLocked=!!(unlockAt&&nowTs<unlockAt);
+    var todayN=doses.filter(function(ts){return new Date(ts).toDateString()===new Date(nowTs).toDateString();}).length;
+    var dailyLocked=!!(m.maxDaily&&todayN>=m.maxDaily);
+    return {doses:doses,lastTs:lastTs,unlockAt:unlockAt,leftMs:unlockAt?Math.max(0,unlockAt-nowTs):0,intervalLocked:intervalLocked,dailyLocked:dailyLocked,locked:intervalLocked||dailyLocked,todayN:todayN};
+  }
+  function _savePrnLocal(id, arr){
+    var l=getPrnRaw();
+    l[id]=_normPrnArr(arr);
+    try{ localStorage.setItem('gk-prn-doses', JSON.stringify(l)); }catch(_e){}
+    try{ if(window.storage){var _p=window.storage.set('gk-prn-doses',JSON.stringify(l),false); if(_p&&_p.catch)_p.catch(function(){});} }catch(_e){}
+  }
+  function _appendPrnDose(id,name,ts){
+    ts=Number(ts); if(!isFinite(ts)) return false;
+    var local=getPrnRaw();
+    local[id]=_normPrnArr((local[id]||[]).concat([ts]));
+    _savePrnLocal(id, local[id]);
+    if(window._fbDb&&!window._bootPhase){
+      var m=getPrnDef(id)||{}, intervalMs=isPatchPrn(id)?((Number(m.interval)||0)*3600000):0;
+      window._fbDb.ref('gk/prn-doses/'+id).transaction(function(cur){
+        var arr=_normPrnArr(cur||[]);
+        if(intervalMs){
+          for(var i=0;i<arr.length;i++){ if(Math.abs(ts-arr[i])<intervalMs) return; }
+        }
+        arr.push(ts);
+        return _normPrnArr(arr);
+      },function(err,committed,snap){
+        if(err){ console.error('[PRN WRITE FAILED] '+id, err.message); if(typeof toast==='function') toast('PRN save failed — check sync'); return; }
+        if(!committed){ if(typeof toast==='function') toast(isPatchPrn(id)?'Patch still locked — not logged':'Dose not logged'); return; }
+        var arr=(snap&&Array.isArray(snap.val()))?snap.val():local[id];
+        _savePrnLocal(id,arr);
+        if(S.v==='app'&&!window._userTyping) R();
+      });
+    }
+    return true;
+  }
+  function _undoPrnDose(id){
+    var l=getPrnRaw(); if(!(l[id]&&l[id].length)) return false;
+    l[id]=_normPrnArr(l[id]); l[id].pop(); _savePrnLocal(id,l[id]);
+    if(window._fbDb&&!window._bootPhase){
+      window._fbDb.ref('gk/prn-doses/'+id).transaction(function(cur){ var arr=_normPrnArr(cur||[]); if(arr.length) arr.pop(); return arr; });
+    }
+    return true;
+  }
+  function logPrn(id,name){ var ts=Date.now(); if(_appendPrnDose(id,name,ts)){ if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(ts)); R(); } }
+  function undoPrn(id){ if(_undoPrnDose(id)) R(); }
   function openDoseModal(id,name){
+    var st=getPrnLockState(id);
+    if(st.locked){
+      if(isPatchPrn(id)) toast('Patch is locked · replace '+(st.leftMs>0?'in '+fmtLeft(st.leftMs):'when due'));
+      else toast('Dose locked · '+(st.intervalLocked&&st.leftMs>0?fmtLeft(st.leftMs):'not available yet'));
+      return;
+    }
     S.doseModal={id:id,name:name};
     var now=new Date();
     var hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0');
     var modal=document.getElementById('dose-modal'); if(!modal) return;
-    var t=document.getElementById('dose-modal-title'); if(t) t.textContent='Log '+name;
+    var t=document.getElementById('dose-modal-title'); if(t) t.textContent=isPatchPrn(id)?'Log patch':'Log '+name;
     var inp=document.getElementById('dose-modal-time'); if(inp) inp.value=hh+':'+mm;
     modal.style.display='flex';
   }
@@ -4173,12 +4237,23 @@ function renderMeds() {
     var p=hhmm.split(':');
     var d=new Date(); d.setHours(parseInt(p[0],10),parseInt(p[1],10),0,0);
     if(d.getTime()>Date.now()) d.setDate(d.getDate()-1); // a future time = earlier today/yesterday
-    var l=getPrnRaw(); (l[id]=l[id]||[]).push(d.getTime());
-    l[id].sort(function(a,b){return a-b;});
-    if(l[id].length>60)l[id]=l[id].slice(-60);
-    lsSet('prn-doses',l);
-    if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(d.getTime()));
-    R();
+    if(isPatchPrn(id)){
+      var m=getPrnDef(id), intervalMs=(m&&m.interval?m.interval:0)*3600000, existing=(getPrnLog()[id]||[]), target=d.getTime();
+      for(var _pi=0;_pi<existing.length;_pi++){
+        if(Math.abs(target-existing[_pi])<intervalMs){
+          var _due=existing[_pi]+intervalMs;
+          toast('Patch already logged · replace '+(_due>Date.now()?'in '+fmtLeft(_due-Date.now()):'now'));
+          return;
+        }
+      }
+    } else {
+      var st=getPrnLockState(id,d.getTime());
+      if(st.locked){ toast('Dose locked · '+(st.intervalLocked&&st.unlockAt?fmtLeft(st.unlockAt-Date.now()):'not available yet')); return; }
+    }
+    if(_appendPrnDose(id,name,d.getTime())){
+      if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(d.getTime()));
+      R();
+    }
   }
   function fmtClock(ts){ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
   function fmtLeft(ms){ if(ms<=0) return null; var h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); if(h>=48)return Math.floor(h/24)+'d'; if(h>=1)return h+'h '+m+'m'; return m+'m'; }
@@ -4400,17 +4475,18 @@ function renderMeds() {
   prnSec.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-bottom:10px;',txt:'Each med locks after a dose until the next is safe.'}));
 
   function prnPill(m){
-    var doses=getPrnLog()[m.id]||[];
-    var lastTs=doses.length?doses[doses.length-1]:null;
+    var _st=getPrnLockState(m.id);
+    var doses=_st.doses||[];
+    var lastTs=_st.lastTs;
     var todayN=doses.filter(isToday).length;  // must be before ready check
     var intervalMs=m.interval*3600000;
     var now=Date.now();
     var elapsed=lastTs?now-lastTs:Infinity;  // Infinity = no prior dose = always available
-    var intervalLocked=lastTs&&elapsed<intervalMs;
-    var dailyLocked=m.maxDaily&&todayN>=m.maxDaily;
-    var ready=!intervalLocked&&!dailyLocked;
-    var unlockAt=lastTs?lastTs+intervalMs:null;
-    var leftMs=unlockAt?Math.max(0,unlockAt-now):0;
+    var intervalLocked=_st.intervalLocked;
+    var dailyLocked=_st.dailyLocked;
+    var ready=!_st.locked;
+    var unlockAt=_st.unlockAt;
+    var leftMs=_st.leftMs;
     var leftStr=!ready&&leftMs>0?fmtLeft(leftMs):(dailyLocked?'Max daily reached':null);
     var prog=lastTs?Math.min(100,Math.round(elapsed/intervalMs*100)):100;
     var _lockReason=!ready?(intervalLocked&&dailyLocked?'interval,maxDaily':intervalLocked?'interval':'maxDaily'):'none';
@@ -4435,15 +4511,24 @@ function renderMeds() {
     prow.appendChild(mk('div',{css:'font-size:13px;font-weight:700;color:var(--ink);line-height:1.15;',txt:m.name}));
     pill.appendChild(prow);
     pill.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);line-height:1.3;',txt:dose}));
-    pill.appendChild(mk('div',{css:'font-size:9.5px;color:var(--ink4);margin-top:2px;height:12px;overflow:hidden;',txt:todayN>0?(todayN+'\u00d7 today \u00b7 '+fmtClock(lastTs)):lastTs?('last: '+fmtDoseDate(lastTs)+' \u00b7 '+fmtClock(lastTs)):'not given today'}));
+    var _isPatch=(m.id==='sancuso-prn'||m.id==='scopolamine-prn');
+    var _statusTxt;
+    if(_isPatch){
+      if(!lastTs) _statusTxt='No patch logged';
+      else if(intervalLocked) _statusTxt='Patch active · replace in '+fmtLeft(leftMs);
+      else _statusTxt='Patch due · replace now';
+    } else {
+      _statusTxt=todayN>0?(todayN+'\u00d7 today \u00b7 '+fmtClock(lastTs)):lastTs?('last: '+fmtDoseDate(lastTs)+' \u00b7 '+fmtClock(lastTs)):'not given today';
+    }
+    pill.appendChild(mk('div',{css:'font-size:9.5px;color:var(--ink4);margin-top:2px;height:12px;overflow:hidden;',txt:_statusTxt}));
     var btn;
     if(ready){
-      btn=mk('button',{css:'width:100%;height:31px;margin-top:7px;background:var(--sg);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Log dose'});
+      btn=mk('button',{css:'width:100%;height:31px;margin-top:7px;background:var(--sg);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:_isPatch?'Log patch':'Log dose'});
       btn.addEventListener('click',(function(id,nm){return function(){ openDoseModal(id,nm); };})(m.id,m.name));
     } else {
       btn=mk('button',{css:'width:100%;height:31px;margin-top:7px;background:var(--raised);color:var(--ink3);border:1.5px solid var(--div);border-radius:8px;font-size:11.5px;font-weight:700;cursor:default;font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:4px;'});
       var li=lc('lock',11); if(li){li.style.opacity='.7';btn.appendChild(li);}
-      btn.appendChild(mk('span',{txt:'Locked \u00b7 '+leftStr}));
+      btn.appendChild(mk('span',{txt:_isPatch?('Locked · '+(leftMs>0?'replace in '+fmtLeft(leftMs):'replace now')):('Locked \u00b7 '+leftStr)}));
       btn.disabled=true;
     }
     pill.appendChild(btn);
@@ -4654,14 +4739,12 @@ async function dumpAllDataAsJSON(){
   var out=document.getElementById('fb-dump-output');
   if(!out) return;
   out.style.display='block';
-  out.innerHTML='<div style="padding:8px;color:var(--ink3);font-size:12px;">Reading data...</div>';
+  out.innerHTML='<div style="padding:8px;color:var(--ink3);font-size:12px;">Building local backup...</div>';
 
   try{
-    var result={'gk':{}};
+    var result={meta:{createdAt:new Date().toISOString(),source:'local-backup-only',warning:'Do NOT import this into Firebase. This is a read-only emergency backup.'},data:{}};
     var allKeys=[];
-    // Try window.storage list
     try{ var listed=await window.storage.list('gk-'); allKeys=(listed&&listed.keys)||[]; }catch(_e){}
-    // Fallback to localStorage
     if(!allKeys.length){
       for(var i=0;i<localStorage.length;i++){
         var k=localStorage.key(i);
@@ -4674,19 +4757,15 @@ async function dumpAllDataAsJSON(){
       var val=null;
       try{ var r=await window.storage.get(fullKey); val=r&&r.value?JSON.parse(r.value):null; }catch(_e){}
       if(val===null){ try{ var ls=localStorage.getItem(fullKey); val=ls?JSON.parse(ls):null; }catch(_e){} }
-      if(val!==null){
-        // Firebase keys can't contain . so replace with _
-        var fbKey=shortKey.replace(/[.$#\[\]\/]/g,'_').replace(/^_+|_+$/g,'').replace(/^$/g,'unknown');
-        result['gk'][fbKey]=val;
-      }
+      if(val!==null){ result.data[shortKey]=val; }
     }
-    var jsonStr=JSON.stringify(result,null,2);
-    out.innerHTML='<div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">Copy everything below → paste into Firebase Import JSON</div>'
+    var jsonStr=JSON.stringify(result,null,2).replace(/</g,'&lt;');
+    out.innerHTML='<div style="font-size:11px;color:var(--ro);margin-bottom:8px;font-weight:700;">Emergency local backup only — do NOT import into Firebase.</div>'
       +'<textarea style="width:100%;height:200px;font-family:monospace;font-size:10px;padding:8px;border:1px solid var(--div);border-radius:8px;background:var(--raised);color:var(--ink);resize:vertical;" readonly>'+jsonStr+'</textarea>'
-      +'<button id="fb-copy-btn" style="margin-top:8px;width:100%;height:36px;background:var(--pu);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Copy to Clipboard</button>';
+      +'<button id="fb-copy-btn" style="margin-top:8px;width:100%;height:36px;background:var(--ink3);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Copy Backup</button>';
     out.querySelector('#fb-copy-btn').addEventListener('click',function(){
       var ta=out.querySelector('textarea');
-      if(ta){ta.select();try{document.execCommand('copy');}catch(_e){} this.textContent='Copied!';}
+      if(ta){ta.select();try{document.execCommand('copy');}catch(_e){} this.textContent='Copied backup';}
     });
   }catch(_err){
     out.innerHTML='<div style="color:#E53E3E;font-size:12px;">Failed: '+_err.message+'</div>';
@@ -4698,46 +4777,8 @@ async function dumpAllDataAsJSON(){
 // Reads ALL data from window.storage (Claude artifact storage) and pushes to Firebase
 // Run once from the Claude artifact tab to migrate all data to Firebase
 async function exportAllToFirebase(){
-  if(!window._fbDb){ alert('Firebase not connected'); return; }
-  var btn=document.getElementById('fb-export-btn');
-  if(btn){ btn.textContent='Exporting...'; btn.disabled=true; }
-
-  try{
-    // Get all keys from window.storage
-    var allKeys=[];
-    try{ var listed=await window.storage.list('gk-'); allKeys=(listed&&listed.keys)||[]; }catch(_e){}
-
-    if(!allKeys.length){
-      // Fallback: try common known keys from localStorage
-      for(var i=0;i<localStorage.length;i++){
-        var k=localStorage.key(i);
-        if(k&&k.startsWith('gk-')) allKeys.push(k);
-      }
-    }
-
-    var pushed=0, failed=0;
-    for(var ki=0;ki<allKeys.length;ki++){
-      var fullKey=allKeys[ki];
-      var shortKey=fullKey.startsWith('gk-')?fullKey.slice(3):fullKey;
-      try{
-        // Try window.storage first, fall back to localStorage
-        var val=null;
-        try{ var r=await window.storage.get(fullKey); val=r&&r.value?JSON.parse(r.value):null; }catch(_e){}
-        if(val===null){ var ls=localStorage.getItem(fullKey); val=ls?JSON.parse(ls):null; }
-        if(val!==null){
-          await window._fbDb.ref('gk/'+shortKey).set(val);
-          pushed++;
-        }
-      }catch(_e){ failed++; }
-    }
-
-    var msg='Exported '+pushed+' keys to Firebase'+(failed?' ('+failed+' failed)':'')+'!';
-    if(btn){ btn.textContent='Done! '+pushed+' keys uploaded'; btn.style.background='var(--sg)'; }
-    alert(msg+' Open GitHub Pages on any device to sync.');
-  }catch(_err){
-    alert('Export failed: '+_err.message);
-    if(btn){ btn.textContent='Export failed'; btn.style.background='#E53E3E'; }
-  }
+  alert('Disabled for safety: this button could overwrite good Firebase data with stale local data. Use the Firebase console backup/export tools instead.');
+  return;
 }
 // ── END FIREBASE EXPORT ───────────────────────────────────────────────────────
 
@@ -5109,18 +5150,18 @@ function renderMedical(){
   // ── FIREBASE EXPORT (care team only — run from Claude artifact to migrate data) ──
   if(S.role==='care'){
     var fbSection=mk('div',{css:'margin:20px 0;padding:16px;background:var(--raised);border-radius:var(--r-md);border:1px solid var(--div);'});
-    fbSection.appendChild(mk('div',{css:'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'Firebase Sync'}));
-    fbSection.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);margin-bottom:12px;line-height:1.5;',txt:'Run this once from the Claude tab to push all data to Firebase so every device stays in sync.'}));
-    var _expBtn=mk('button',{css:'width:100%;height:44px;background:var(--pu);color:#fff;border:none;border-radius:var(--r-md);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-bottom:8px;',txt:'Export All Data to Firebase',id:'fb-export-btn'});
-    _expBtn.addEventListener('click',exportAllToFirebase);
-    fbSection.appendChild(_expBtn);
-    var _dumpBtn=mk('button',{css:'width:100%;height:44px;background:var(--card);color:var(--ink2);border:1px solid var(--div);border-radius:var(--r-md);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Dump All Data as JSON (for Firebase import)',id:'fb-dump-btn'});
+    fbSection.appendChild(mk('div',{css:'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'Firebase Safety'}));
+    fbSection.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);margin-bottom:12px;line-height:1.5;',txt:'Cloud overwrite/import tools are disabled in-app to prevent stale local data from replacing good Firebase data.'}));
+    var _dumpBtn=mk('button',{css:'width:100%;height:44px;background:var(--card);color:var(--ink2);border:1px solid var(--div);border-radius:var(--r-md);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Copy Emergency Local Backup',id:'fb-dump-btn'});
     _dumpBtn.addEventListener('click',dumpAllDataAsJSON);
     fbSection.appendChild(_dumpBtn);
     var _dumpOut=mk('div',{id:'fb-dump-output',css:'display:none;margin-top:12px;'});
     fbSection.appendChild(_dumpOut);
     px.appendChild(fbSection);
   }
+
+  var _fySync=mk('div',{css:'font-size:9px;color:var(--ink4);text-align:center;margin:18px 0 4px;font-family:monospace;letter-spacing:.02em;',txt:'v10.3 · FB:'+(window._fbConnected?'✓':'✗')+' · L:'+(window._listenerCount||0)+'/9'});
+  px.appendChild(_fySync);
 
   px.appendChild(mk('div',{css:'height:24px;'}));
   // ── Add Win button (Kenny + care team only) ─────────────────────────────
@@ -5924,7 +5965,7 @@ function writeCareEvent(type,ts,payload){
     _obj.move.push({type:'waddle',ts:ts,laps:1,distance:_p.distance||0});
   }
   if(_isToday){S.day=_obj;saveDay();}
-  else{lsSet('day-'+_date,_obj).catch(function(){});}
+  else{_saveDayBucket(_date,_obj);}
 }
 
 function _cloneArr(arr){
@@ -6532,8 +6573,67 @@ function saveEvent(){
   if(typeof renderAeQuick==='function') renderAeQuick();
 }
 
-function saveEvents(){console.log(new Date().toLocaleTimeString()+' [S.events WRITE] to-firebase count='+S.events.length);lsSet('events',S.events);}
-function deleteEvent(id){S.events=(S.events||[]).filter(function(e){return e.id!==id;});saveEvents();R();}
+function _eventDeleteMap(extraIds){
+  var del={};
+  try{
+    var stored=lsRead('events-deleted')||{};
+    if(stored&&typeof stored==='object'&&!Array.isArray(stored)){
+      Object.keys(stored).forEach(function(k){ if(stored[k]) del[String(k)]=stored[k]; });
+    }
+  }catch(_e){}
+  (extraIds||[]).forEach(function(id){ if(id!==undefined&&id!==null) del[String(id)]=Date.now(); });
+  return del;
+}
+function _persistEventDeletes(ids){
+  if(!ids||!ids.length) return;
+  var del=_eventDeleteMap(ids);
+  try{ localStorage.setItem('gk-events-deleted', JSON.stringify(del)); }catch(_e){}
+  try{ if(window.storage){var _p=window.storage.set('gk-events-deleted',JSON.stringify(del),false);if(_p&&_p.catch)_p.catch(function(){});} }catch(_e){}
+  if(window._fbDb&&!window._bootPhase){
+    var upd={}; ids.forEach(function(id){ if(id!==undefined&&id!==null) upd[String(id)]=del[String(id)]||Date.now(); });
+    try{ window._fbDb.ref('gk/events-deleted').update(upd).catch(function(err){console.error('[Firebase WRITE FAILED] gk/events-deleted',err.message);}); }catch(_e){console.error('[Firebase WRITE ERROR] gk/events-deleted',_e.message);}
+  }
+}
+function _mergeEventsById(remote, local, deleteIds){
+  var del=_eventDeleteMap(deleteIds);
+  var byId={}, order=[];
+  function addList(list){
+    (Array.isArray(list)?list:[]).forEach(function(e){
+      if(!e||e.id===undefined||e.id===null) return;
+      var id=String(e.id);
+      if(del[id]) return;
+      if(!byId[id]) order.push(id);
+      byId[id]=e;
+    });
+  }
+  addList(remote);
+  addList(local);
+  return order.map(function(id){return byId[id];});
+}
+function saveEvents(opts){
+  opts=opts||{};
+  var deleteIds=opts.deleteIds||[];
+  _persistEventDeletes(deleteIds);
+  S.events=_mergeEventsById(lsRead('events')||[], S.events||[], deleteIds);
+  console.log(new Date().toLocaleTimeString()+' [S.events WRITE] to-firebase count='+S.events.length+(deleteIds.length?' deleteIds='+deleteIds.join(','):''));
+  try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
+  try{ if(window.storage){var _p=window.storage.set('gk-events',JSON.stringify(S.events),false);if(_p&&_p.catch)_p.catch(function(){});} }catch(_e){}
+  if(window._fbDb && !window._bootPhase){
+    var _localSnapshot=S.events.slice();
+    window._fbDb.ref('gk/events').transaction(function(cur){
+      return _mergeEventsById(Array.isArray(cur)?cur:[], _localSnapshot, deleteIds);
+    }, function(err, committed, snap){
+      if(err){ console.error('[Firebase WRITE FAILED] gk/events', err.message); return; }
+      var merged=(snap&&Array.isArray(snap.val()))?snap.val():_localSnapshot;
+      S.events=merged;
+      try{ localStorage.setItem('gk-events', JSON.stringify(merged)); }catch(_e){}
+      console.log('[Firebase WRITE OK] gk/events ('+merged.length+' items)');
+      recomputeCycleDates();
+      if(S.v==='app'&&!window._userTyping) R();
+    });
+  }
+}
+function deleteEvent(id){S.events=(S.events||[]).filter(function(e){return String(e.id)!==String(id);});saveEvents({deleteIds:[id]});R();}
 function deleteCurrentEvent(){
   if(!S.editEventId) return;
   var btn=document.getElementById('ae-delete');
@@ -6705,6 +6805,43 @@ function addCheer(name,msg){
 
 // -- DATA HELPERS ---------------------------------------
 
+function _mergeUniqueEvents(a,b){
+  var out=[], seen={};
+  function key(e){return String((e&&e.id!==undefined)?e.id:(e&&e.ts!==undefined?e.ts:JSON.stringify(e)));}
+  function add(list){(Array.isArray(list)?list:[]).forEach(function(e){var k=key(e);if(!seen[k]){seen[k]=1;out.push(e);}});}
+  add(a); add(b);
+  return out;
+}
+function _mergeDayBuckets(remote, local){
+  remote=(remote&&typeof remote==='object')?remote:{}; local=(local&&typeof local==='object')?local:{};
+  var out=Object.assign({},remote,local);
+  ['teeth','frew','belly','onion','vitals','moods','food','wos'].forEach(function(f){out[f]=_mergeUniqueEvents(remote[f],local[f]);});
+  var rMove=Array.isArray(remote.move)?remote.move:[];
+  var lMove=Array.isArray(local.move)?local.move:[];
+  if(rMove.length||lMove.length) out.move=_mergeUniqueEvents(rMove,lMove);
+  out.taken=Object.assign({},remote.taken||{},local.taken||{});
+  ['lastShowerTs','lastWashclothTs'].forEach(function(k){
+    var rv=Number(remote[k]||0), lv=Number(local[k]||0);
+    out[k]=Math.max(rv,lv)||null;
+  });
+  if(Array.isArray(out.teeth)) out.teeth=normalizeTeeth(out.teeth);
+  return out;
+}
+function _saveDayBucket(dk,obj){
+  try{ localStorage.setItem('gk-day-'+dk, JSON.stringify(obj)); }catch(_e){}
+  try{ if(window.storage){var _p=window.storage.set('gk-day-'+dk,JSON.stringify(obj),false);if(_p&&_p.catch)_p.catch(function(){});} }catch(_e){}
+  if(window._fbDb&&!window._bootPhase&&(S&&S.role)==='patient'){
+    try{
+      window._fbDb.ref('gk/day-'+dk).transaction(function(cur){return _mergeDayBuckets(cur,obj);},function(err,committed,snap){
+        if(err){console.error('[Firebase WRITE FAILED] gk/day-'+dk,err.message);return;}
+        var merged=(snap&&snap.val())||obj;
+        try{localStorage.setItem('gk-day-'+dk,JSON.stringify(merged));}catch(_e){}
+        if(dk===TODAY){S.day=merged;if(S.v==='app'&&!window._userTyping)R();}
+      });
+    }catch(_e){console.error('[Firebase WRITE ERROR] gk/day-'+dk,_e.message);}
+  }
+}
+
 function saveDay(){
   if(!S.day) return;
   // Never persist a lastShowerTs that belongs to a different day
@@ -6714,7 +6851,7 @@ function saveDay(){
   // During boot phase, write locally only — Firebase has the source of truth
   // After setupFirebaseSync() completes, full writes resume
   if(window._bootPhase) return lsSetLocal('day-'+TODAY, S.day);
-  lsSet('day-'+TODAY, S.day);
+  _saveDayBucket(TODAY, S.day);
   // Update last-saved heartbeat
   try{
     var _ls=document.getElementById('last-saved');
