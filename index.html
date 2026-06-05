@@ -4197,7 +4197,7 @@ var REFILL_DEFAULTS = {
   scopolamine:{fillDate:MED_FILL_BASELINE_DATE,qty:1,refills:0},
   tylenol:{fillDate:MED_FILL_BASELINE_DATE,qty:236},
   bactrim:{fillDate:MED_FILL_BASELINE_DATE,qty:600,refills:5},
-  lovenox:{fillDate:'2026-05-20',qty:60,refills:0},
+  lovenox:{fillDate:MED_FILL_BASELINE_DATE,qty:25,refills:0},
   gummyday:{fillDate:'2026-06-01',qty:7},
   gummysleep:{fillDate:'2026-06-01',qty:9}
 };
@@ -4432,7 +4432,17 @@ function renderMeds() {
   return out; }
   function schedDosesPerDay(drug){
     var n=0;
-    Object.keys(MED_SLOTS).forEach(function(k){ MED_SLOTS[k].meds.forEach(function(m){ if(m.drug===drug) n++; }); });
+    Object.keys(MED_SLOTS).forEach(function(k){
+      MED_SLOTS[k].meds.forEach(function(m){
+        if(m.drug!==drug) return;
+        var perDose=m.perDose||1;
+        if(m.daysOfWeek&&m.daysOfWeek.length){
+          n += perDose*(m.daysOfWeek.length/7);
+        } else {
+          n += perDose;
+        }
+      });
+    });
     return n;
   }
   function drugSupply(m){
