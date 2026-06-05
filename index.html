@@ -393,6 +393,7 @@ function setupFirebaseSync(){
       try{ localStorage.setItem('gk-day-'+dk, JSON.stringify(val)); }catch(_e){}
       if(dk===TODAY){ S.day=val; }
       console.log('[S.day SET] source=firebase-onValue-day food='+((val&&val.food)||[]).length+' moods='+((val&&val.moods)||[]).length+' hyd='+((val&&val.hyd)||0));
+      if(val) flushPendingEvents();
       if(S.v==='app'&&!window._userTyping) R();
     });
   }
@@ -452,10 +453,13 @@ function setupFirebaseSync(){
     window._fbLastListenerActivity=Date.now();
     console.log('[LISTENER HEARTBEAT] med-fills ts='+new Date().toLocaleTimeString());
     var val=snap.val();
-    if(!val||typeof val!=='object') return;
+    if(!val||typeof val!=='object') val={};
+    var raw=val;
+    val=normalizeMedFills(val);
     console.log('[MED FILLS SET] source=firebase-onValue drugs='+Object.keys(val).join(','));
     S.medFills=val;
     try{ localStorage.setItem('gk-med-fills', JSON.stringify(val)); }catch(_e){}
+    try{ if(JSON.stringify(raw)!==JSON.stringify(val)) window._fbDb.ref('gk/med-fills').set(val); }catch(_e){}
     if(S.v==='app'&&!window._userTyping) R();
   });
 
@@ -472,6 +476,24 @@ function setupFirebaseSync(){
     if(S.v==='app') R();
   });
 
+  // Listen to event deletion tombstones before calendar events.
+  window._listenerCount=(window._listenerCount||0)+1;
+  console.log('[Firebase Listener Registered] events-deleted total='+window._listenerCount);
+  window._fbDb.ref('gk/events-deleted').on('value',function(snap){
+    window._fbLastListenerActivity=Date.now();
+    console.log('[LISTENER HEARTBEAT] events-deleted ts='+new Date().toLocaleTimeString());
+    var remote=snap.val()||{};
+    if(!remote||typeof remote!=='object'||Array.isArray(remote)) remote={};
+    var merged=_mergeEventDeleteMaps(lsRead('events-deleted')||{}, remote);
+    _saveEventDeleteMap(merged);
+    _applyEventDeletesToMemory();
+    purgeDeletedEventsFromFirebase('events-deleted-listener');
+    try{
+      if(JSON.stringify(remote)!==JSON.stringify(merged)) window._fbDb.ref('gk/events-deleted').update(merged);
+    }catch(_e){}
+    if(S.v==='app'&&!window._userTyping) R();
+  });
+
   // Listen to events (calendar)
   window._listenerCount=(window._listenerCount||0)+1;
   console.log('[Firebase Listener Registered] events total='+window._listenerCount);
@@ -483,7 +505,9 @@ function setupFirebaseSync(){
     // Merge Firebase, local, and canonical events while honoring delete tombstones.
     var del=_eventDeleteMap([]);
     var _canonical=(window._CANONICAL_EVENTS||[]).filter(function(e){return e&&e.id!==undefined&&!del[String(e.id)];});
+    var _remoteEvents=val.slice();
     val=_mergeEventsById(val, (S.events||[]).concat(_canonical), []);
+    reconcileEventsToFirebase(_remoteEvents, val, 'events-onValue');
     try{ localStorage.setItem('gk-events', JSON.stringify(val)); }catch(_e){}
     var _ts=new Date().toLocaleTimeString();
     var _before=(S.events||[]).length;
@@ -508,9 +532,9 @@ function setupFirebaseSync(){
   // Pull latest from Firebase on boot (one-time read to hydrate fresh devices)
   // All listeners registered — log final count
   // All 8 listeners are unconditional (no role/tab conditions)
-  // Expected: 2 day-buckets + prn-doses + milestones + wishlist + med-fills + cheers + events = 8
+  // Expected: 2 day-buckets + prn-doses + milestones + wishlist + med-fills + cheers + events-deleted + events + move-hospital-ft = 10
   var _lc=window._listenerCount||0;
-  console.log('[Firebase Sync Ready] listeners='+_lc+(_lc!==9?' *** EXPECTED 9 — investigate ***':''));
+  console.log('[Firebase Sync Ready] listeners='+_lc+(_lc!==10?' *** EXPECTED 10 — investigate ***':''));
   // Commit _syncWired only after all listeners successfully registered
   window._syncWired=true;
 
@@ -529,12 +553,18 @@ function setupFirebaseSync(){
     }
     // Re-hydrate S from Firebase data — merge don't replace to avoid wiping local logs
     if(all['events-deleted']&&typeof all['events-deleted']==='object'){
-      try{ localStorage.setItem('gk-events-deleted', JSON.stringify(all['events-deleted'])); }catch(_e){}
+      var _mergedDel=_mergeEventDeleteMaps(lsRead('events-deleted')||{}, all['events-deleted']);
+      _saveEventDeleteMap(_mergedDel);
+      _applyEventDeletesToMemory();
+      purgeDeletedEventsFromFirebase('firebase-once-events-deleted');
+      try{ if(JSON.stringify(all['events-deleted'])!==JSON.stringify(_mergedDel)) window._fbDb.ref('gk/events-deleted').update(_mergedDel); }catch(_e){}
     }
     if((all['events']&&Array.isArray(all['events'])&&all['events'].length)||(window._CANONICAL_EVENTS&&window._CANONICAL_EVENTS.length)){
       var _del=_eventDeleteMap([]);
       var _canonical=(window._CANONICAL_EVENTS||[]).filter(function(e){return e&&e.id!==undefined&&!_del[String(e.id)];});
-      var _fbEvts=_mergeEventsById(Array.isArray(all['events'])?all['events']:[], (S.events||[]).concat(_canonical), []);
+      var _remoteOnce=Array.isArray(all['events'])?all['events']:[];
+      var _fbEvts=_mergeEventsById(_remoteOnce, (S.events||[]).concat(_canonical), []);
+      reconcileEventsToFirebase(_remoteOnce, _fbEvts, 'firebase-once');
       console.log(new Date().toLocaleTimeString()+' [S.events SET] source=firebase-once count='+_fbEvts.length);
       S.events=_fbEvts;
       // Write merged result back so localStorage stays in sync
@@ -564,9 +594,15 @@ function setupFirebaseSync(){
       try{ localStorage.setItem('gk-move-hospital-ft', JSON.stringify(all['move-hospital-ft'])); }catch(_e){}
     }
     if(all['med-fills']&&typeof all['med-fills']==='object'){
-      S.medFills=all['med-fills'];
-      console.log('[MED FILLS SET] source=firebase-once drugs='+Object.keys(all['med-fills']).join(','));
-      try{ localStorage.setItem('gk-med-fills', JSON.stringify(all['med-fills'])); }catch(_e){}
+      var _rawFills=all['med-fills'];
+      S.medFills=normalizeMedFills(_rawFills);
+      console.log('[MED FILLS SET] source=firebase-once drugs='+Object.keys(S.medFills).join(','));
+      try{ localStorage.setItem('gk-med-fills', JSON.stringify(S.medFills)); }catch(_e){}
+      try{ if(JSON.stringify(_rawFills)!==JSON.stringify(S.medFills)) window._fbDb.ref('gk/med-fills').set(S.medFills); }catch(_e){}
+    } else {
+      S.medFills=normalizeMedFills({});
+      try{ localStorage.setItem('gk-med-fills', JSON.stringify(S.medFills)); }catch(_e){}
+      try{ if(window._fbDb&&!window._bootPhase) window._fbDb.ref('gk/med-fills').set(S.medFills); }catch(_e){}
     }
     if(all['milestones']&&Array.isArray(all['milestones'])&&all['milestones'].length) S.milestones=all['milestones'];
     window._fbBooting=false;
@@ -632,20 +668,18 @@ var MED_SLOTS = {
     {id:'haldol-am',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Anti-nausea that works on brain signals. Spaced through the day.',strict:false},
     {id:'protonix-am',drug:'protonix',unit:'tablet',perDose:1,name:'Protonix',generic:'pantoprazole',dose:'40mg tablet',note:'Stronger acid blocker \u2014 protects against ulcers caused by the steroid.',strict:false},
     {id:'pepcid-am',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'20mg tablet',note:'Reduces stomach acid. Protects stomach lining from all the medications.',strict:false},    {id:'decadron-am',drug:'decadron',unit:'tablet',perDose:1,name:'Decadron',generic:'dexamethasone',dose:'4mg tablet',note:'Steroid that reduces inflammation. If pain/nausea worsen: increase to 8mg and notify team. Never stop suddenly.',strict:false},
-    {id:'cymbalta-am',drug:'cymbalta',unit:'capsule',perDose:1,name:'Cymbalta',generic:'duloxetine',dose:'20mg capsule',note:'For nerve pain \u2014 burning/shooting from cancer pressing on nerves. Works differently than opioids.',strict:false},
-
-    {id:'tylenol-am',drug:'tylenol',unit:'mL',perDose:30,name:'Tylenol',generic:'acetaminophen',dose:'1,000mg (30mL) oral liquid',note:'Pain reliever, taken 3\u00d7 daily for pain (carried over from the hospital schedule).',strict:false},
-  ]},
+    {id:'cymbalta-am',drug:'cymbalta',unit:'capsule',perDose:1,name:'Cymbalta',generic:'duloxetine',dose:'20mg capsule',note:'For nerve pain \u2014 burning/shooting from cancer pressing on nerves. Works differently than opioids.',strict:false},  ]},
   '9am':{label:'9 AM',hour:9,win:[8,11],meds:[
     {id:'lovenox-9am',drug:'lovenox',unit:'injection',perDose:1,name:'Lovenox',generic:'enoxaparin',dose:'subcutaneous injection',note:'Blood thinner shot \u2014 replaces Eliquis while we see if her gut is absorbing the pills. Given every 12 hours.',strict:true},
   ]},
-  '2pm':{label:'2 PM',hour:14,win:[11,17],meds:[
-    {id:'methadone-2pm',drug:'methadone',unit:'tablet',perDose:3,name:'Methadone',generic:'dolophine',dose:'15mg \u00b7 3 \u00d7 5mg tablets',note:'Second of three strictly timed doses. Keeps long-acting pain coverage continuous throughout the day.',strict:true},
-    {id:'haldol-2pm',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Second anti-nausea dose of the day.',strict:false},
+  '11am':{label:'11 AM',hour:11,win:[10,12],meds:[
+
 
     {id:'bactrim-am',drug:'bactrim',unit:'mL',perDose:20,name:'Bactrim',generic:'sulfamethoxazole-trimethoprim',dose:'20mL oral suspension',note:'Preventive antibiotic. Steroids lower immunity \u2014 this protects against lung infections.',strict:false},
-    {id:'tylenol-2pm',drug:'tylenol',unit:'mL',perDose:30,name:'Tylenol',generic:'acetaminophen',dose:'1,000mg (30mL) oral liquid',note:'Second daily dose of pain reliever.',strict:false},
   ]},
+  '2pm':{label:'2 PM',hour:14,win:[11,17],meds:[
+    {id:'methadone-2pm',drug:'methadone',unit:'tablet',perDose:3,name:'Methadone',generic:'dolophine',dose:'15mg \u00b7 3 \u00d7 5mg tablets',note:'Second of three strictly timed doses. Keeps long-acting pain coverage continuous throughout the day.',strict:true},
+    {id:'haldol-2pm',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Second anti-nausea dose of the day.',strict:false},  ]},
   '6pm':{label:'6 PM',hour:18,win:[17,20],meds:[
     {id:'haldol-6pm',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Third anti-nausea dose of the day.',strict:false},
     {id:'vitamind-thu',drug:'vitamind',unit:'tablet',perDose:1,name:'Vitamin D2',generic:'ergocalciferol',dose:'50,000 IU tablet',note:'Once-weekly dose on Thursdays. Vitamin D2 for chronically low calcium \u2014 helps with cramping and bone health.',strict:false,daysOfWeek:[4]},
@@ -656,12 +690,11 @@ var MED_SLOTS = {
     {id:'protonix-bed',drug:'protonix',unit:'tablet',perDose:1,name:'Protonix',generic:'pantoprazole',dose:'40mg tablet',note:'Second daily dose of ulcer protector \u2014 bedtime.',strict:false},
     {id:'haldol-9pm',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Final anti-nausea dose \u2014 covers the overnight stretch.',strict:false},
     {id:'zyprexa-9pm',drug:'zyprexa',unit:'tablet',perDose:1,name:'Zyprexa',generic:'olanzapine',dose:'5mg dissolving tablet',note:'Nausea prevention at bedtime. Dissolves under the tongue \u2014 no swallowing needed. Also helps with sleep.',strict:false},
-    {id:'pepcid-9pm',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'20mg tablet',note:'Second dose of acid reducer. Prevents overnight heartburn.',strict:false},
-    {id:'tylenol-9pm',drug:'tylenol',unit:'mL',perDose:30,name:'Tylenol',generic:'acetaminophen',dose:'1,000mg (30mL) oral liquid',note:'Third daily dose of pain reliever, before sleep.',strict:false},
-  ]}
+    {id:'pepcid-9pm',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'20mg tablet',note:'Second dose of acid reducer. Prevents overnight heartburn.',strict:false},  ]}
 };
 var MED_PRN = [
-  {id:'dilaudid-prn',drug:'dilaudid',unit:'tablet',perDose:1,name:'Dilaudid',generic:'hydromorphone',dose:'4mg tablet',interval:4,maxDaily:6,note:'Fast-acting strong painkiller for breakthrough pain. Works in 15\u201330 min. Track how many doses per day \u2014 rising use is worth telling the team.',reason:'breakthrough pain'},
+  {id:'dilaudid-prn',drug:'dilaudid',unit:'dose',perDose:1,name:'Dilaudid',generic:'hydromorphone',dose:'6mg total · 4mg tablet + 2mg tablet',components:[{drug:'dilaudid4',perDose:1,label:'4mg tabs'},{drug:'dilaudid2',perDose:1,label:'2mg tabs'}],interval:4,maxDaily:6,note:'Fast-acting strong painkiller for breakthrough pain. Each 6mg dose uses TWO pills: one 4mg tablet plus one 2mg tablet. Works in 15–30 min. Track use — rising use is worth telling the team.',reason:'breakthrough pain'},
+  {id:'tylenol-prn',drug:'tylenol',unit:'mL',perDose:30,name:'Tylenol',generic:'acetaminophen',dose:'1,000mg (30mL) oral liquid',interval:6,maxDaily:3,note:'As-needed pain reliever. No longer scheduled. Max 3 doses per day.',reason:'pain / fever'},
   {id:'flexeril-prn',drug:'flexeril',unit:'tablet',perDose:1,name:'Flexeril',generic:'cyclobenzaprine',dose:'5mg tablet',interval:8,maxDaily:3,note:'Muscle relaxant for cramping and spasms. Up to 3\u00d7 daily.',reason:'muscle spasm'},
   {id:'gummy-day-prn',drug:'gummyday',unit:'gummy',perDose:1,name:'Day Gummy',generic:'20mg CBD / 10mg THC edible',dose:'1 gummy',interval:6,maxDaily:4,note:'Daytime CBD/THC edible \u2014 helps nausea, appetite and anxiety. Effects start in 30\u201390 min and last several hours, so wait it out \u2014 do not re-dose just because it has not kicked in yet.',reason:'nausea / appetite / anxiety'},
   {id:'gummy-sleep-prn',drug:'gummysleep',unit:'gummy',perDose:1,name:'Sleep Gummy',generic:'5mg CBD / 5mg CBN / 5mg THC (1:1:1)',maxDaily:1,dose:'1 gummy',interval:24,note:'Nighttime sleep edible \u2014 5mg each CBD / CBN / THC. Take ~30\u201360 min before bed, once nightly.',reason:'sleep'},
@@ -2166,7 +2199,7 @@ function logMood(i){
     arr.push({id:now,ts:now,mood:i,nausea:null,pain:null,energy:null,notes:'',quick:true});
   }
   S.day.moods=arr.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
-  saveDay(); R();
+  saveDay(); if(typeof toast==='function')toast('Mood logged — '+ML[i]); R();
 }
 function renderLog() {
   var wrap = mk('div',{cls:'fi'});
@@ -2443,6 +2476,10 @@ var EV_DISPLAY_NAME = {
   nurse:'Nurse Visit',tpn:'TPN',proc:'Procedure',
   para_watch:'Para Watch','para-watch':'Para Watch',frew:'Frew'
 };
+function newEventId(){
+  try{ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); }catch(_e){}
+  return Date.now()+'-'+Math.random().toString(36).slice(2,10);
+}
 function evTypeName(ev){ return (ev&&EV_DISPLAY_NAME[ev.type])||((ev&&ev.type)||'Event'); }
 function evDisplayName(ev){ return (ev&&ev.title&&String(ev.title).trim())?String(ev.title).trim():evTypeName(ev); }
 
@@ -4144,22 +4181,38 @@ function renderProcs() {
 
 // ── MEDS SCREEN ───────────────────────────────────────────────
 // ── REFILL_DEFAULTS — global scope ──────────────────────────────────────────
+var MED_FILL_BASELINE_DATE = '2026-06-08';
 var REFILL_DEFAULTS = {
-  decadron:{fillDate:'2026-06-01',qty:29,refills:5},
-  protonix:{fillDate:'2026-06-01',qty:23,refills:4},
-  cymbalta:{fillDate:'2026-06-01',qty:13,refills:4},
-  methadone:{fillDate:'2026-06-01',qty:109,refills:0},
+  protonix:{fillDate:MED_FILL_BASELINE_DATE,qty:8,refills:4},
+  zyprexa:{fillDate:MED_FILL_BASELINE_DATE,qty:4,refills:4},
+  vitamind:{fillDate:MED_FILL_BASELINE_DATE,qty:1,refills:0},
+  cymbalta:{fillDate:MED_FILL_BASELINE_DATE,qty:6,refills:4},
+  pepcid:{fillDate:MED_FILL_BASELINE_DATE,qty:86},
+  methadone:{fillDate:MED_FILL_BASELINE_DATE,qty:46,refills:0},
+  haldol:{fillDate:MED_FILL_BASELINE_DATE,qty:140,refills:1},
+  flexeril:{fillDate:MED_FILL_BASELINE_DATE,qty:15,refills:4},
+  decadron:{fillDate:MED_FILL_BASELINE_DATE,qty:22,refills:5},
+  dilaudid4:{fillDate:MED_FILL_BASELINE_DATE,qty:36,refills:0},
+  dilaudid2:{fillDate:MED_FILL_BASELINE_DATE,qty:105,refills:0},
+  scopolamine:{fillDate:MED_FILL_BASELINE_DATE,qty:1,refills:0},
+  tylenol:{fillDate:MED_FILL_BASELINE_DATE,qty:236},
+  bactrim:{fillDate:MED_FILL_BASELINE_DATE,qty:600,refills:5},
   lovenox:{fillDate:'2026-05-20',qty:60,refills:0},
-  haldol:{fillDate:'2026-06-01',qty:13,refills:1},
-  zyprexa:{fillDate:'2026-06-01',qty:10,refills:4},
-  flexeril:{fillDate:'2026-06-01',qty:20,refills:4},
-  dilaudid:{fillDate:'2026-06-01',qty:45,refills:0},
-  bactrim:{fillDate:'2026-06-01',qty:93,refills:5},
-  vitamind:{fillDate:'2026-06-01',qty:2,refills:0},
-  pepcid:{fillDate:'2026-06-01',qty:100},
   gummyday:{fillDate:'2026-06-01',qty:7},
   gummysleep:{fillDate:'2026-06-01',qty:9}
 };
+function normalizeMedFills(fills){
+  fills=(fills&&typeof fills==='object'&&!Array.isArray(fills))?Object.assign({},fills):{};
+  Object.keys(REFILL_DEFAULTS).forEach(function(k){
+    var base=REFILL_DEFAULTS[k];
+    if(!base||!base.fillDate) return;
+    var cur=fills[k];
+    if(!cur||!cur.fillDate||String(cur.fillDate)<MED_FILL_BASELINE_DATE){
+      fills[k]=Object.assign({},base);
+    }
+  });
+  return fills;
+}
 
 function renderMeds() {
   // Enable refill source logging on first render so getRefills() logs sources
@@ -4226,8 +4279,12 @@ function renderMeds() {
     ts=Number(ts); if(!isFinite(ts)) return false;
     var m=getPrnDef(id)||{}, intervalMs=(Number(m.interval)||0)*3600000;
     var local=getPrnRaw();
-    local[id]=_normPrnArr((local[id]||[]).concat([ts]));
-    _savePrnLocal(id, local[id]);
+    var nextLocal=_normPrnArr((local[id]||[]).concat([ts]));
+    // Online: Firebase transaction is source of truth. Offline: save local for later visibility.
+    if(!(window._fbDb&&!window._bootPhase)){
+      local[id]=nextLocal;
+      _savePrnLocal(id, local[id]);
+    }
     if(window._fbDb&&!window._bootPhase){
       window._fbDb.ref('gk/prn-doses/'+id).transaction(function(cur){
         var arr=_normPrnArr(cur||[]);
@@ -4243,8 +4300,14 @@ function renderMeds() {
         return _normPrnArr(arr);
       },function(err,committed,snap){
         if(err){ console.error('[PRN WRITE FAILED] '+id, err.message); if(typeof toast==='function') toast('PRN save failed — check sync'); return; }
-        if(!committed){ if(typeof toast==='function') toast(isPatchPrn(id)?'Patch still locked — not logged':'Dose locked — not logged'); return; }
-        var arr=(snap&&Array.isArray(snap.val()))?snap.val():local[id];
+        if(!committed){
+          var arr0=(snap&&Array.isArray(snap.val()))?snap.val():_normPrnArr((getPrnRaw()[id]||[]).filter(function(x){return x!==ts;}));
+          _savePrnLocal(id,arr0);
+          if(typeof toast==='function') toast(isPatchPrn(id)?'Patch still locked — not logged':'Dose locked — not logged');
+          if(S.v==='app'&&!window._userTyping) R();
+          return;
+        }
+        var arr=(snap&&Array.isArray(snap.val()))?snap.val():nextLocal;
         _savePrnLocal(id,arr);
         if(S.v==='app'&&!window._userTyping) R();
       });
@@ -4259,8 +4322,11 @@ function renderMeds() {
     }
     return true;
   }
-  function logPrn(id,name){ var ts=Date.now(); if(_appendPrnDose(id,name,ts)){ if(typeof toast==='function')toast(name+' logged \u00b7 '+fmtClock(ts)); R(); } }
-  function undoPrn(id){ if(_undoPrnDose(id)) R(); }
+  function logPrn(id,name){ if(S&&(S.role==='fam'||S.role==='friends')){ if(typeof toast==='function')toast('Medication logging is locked.'); return; } var ts=Date.now(); if(_appendPrnDose(id,name,ts)){ if(typeof toast==='function')toast(name+' logged · '+fmtClock(ts)); R(); } }
+  function undoPrn(id){
+    if(typeof toast==='function')toast('PRN logs are locked. Add a corrected date/time entry instead of undoing.');
+    return;
+  }
   function openDoseModal(id,name){
     // Always open the modal: users sometimes need to retroactively log a missed PRN/patch.
     // Safety locks are enforced against the selected date+time on confirm.
@@ -4291,6 +4357,7 @@ function renderMeds() {
   window.closeDoseModal=closeDoseModal;
   window.confirmDoseLog=confirmDoseLog;
   function logPrnAt(id,name,dateStr,hhmm){
+    if(S&&(S.role==='fam'||S.role==='friends')){ if(typeof toast==='function')toast('Medication logging is locked.'); return false; }
     if(!dateStr||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(dateStr)){ if(typeof toast==='function')toast('Pick a date first'); return false; }
     if(!hhmm||hhmm.indexOf(':')<0){ if(typeof toast==='function')toast('Pick a time first'); return false; }
     var p=hhmm.split(':');
@@ -4346,8 +4413,8 @@ function renderMeds() {
   // ── CALCULATED REFILL TRACKING ──────────────────────────
   function getRefills(){
   // Priority: 1) S.medFills (Firebase-backed) 2) med-refills (local override) 3) REFILL_DEFAULTS (fallback)
-  var firebase_fills = S.medFills || lsGet('med-fills') || {};
-  var saved=lsGet('med-refills')||{};
+  var firebase_fills = normalizeMedFills(S.medFills || lsGet('med-fills') || {});
+  var saved=normalizeMedFills(lsGet('med-refills')||{});
   var hasSaved=Object.keys(saved).length>0;
   var hasFirebase=Object.keys(firebase_fills).length>0;
   console.log('[REFILL DEFAULT LOAD] source='+(hasFirebase?'firebase-med-fills':hasSaved?'localStorage-override':'hardcoded-REFILL_DEFAULTS')+' overrideKeys='+Object.keys(saved).join(','));
@@ -4369,12 +4436,41 @@ function renderMeds() {
     return n;
   }
   function drugSupply(m){
-    var rf=getRefills()[m.drug];
+    var refills=getRefills();
+    var rf=refills[m.drug];
+    var isPrn=String(m.id).indexOf('-prn')>=0;
+    if(m.components&&m.components.length){
+      var doseLog=(getPrnLog()[m.id]||[]);
+      var componentStates=[];
+      var fillTs=null;
+      m.components.forEach(function(c){
+        var crf=refills[c.drug]||{};
+        if(crf.fillDate){ var cTs=new Date(crf.fillDate+'T00:00:00').getTime(); fillTs=(fillTs===null)?cTs:Math.max(fillTs,cTs); }
+      });
+      if(fillTs===null) return null;
+      var doses=doseLog.filter(function(t){return t>=fillTs;});
+      var limiting=null;
+      m.components.forEach(function(c){
+        var crf=refills[c.drug]||{};
+        var qty=parseFloat(crf.qty);
+        if(!(qty>0)) return;
+        var used=doses.length*(c.perDose||1);
+        var left=qty-used;
+        var dosesLeft=left/(c.perDose||1);
+        componentStates.push((c.label||c.drug)+': '+Math.floor(left));
+        limiting=(limiting===null)?dosesLeft:Math.min(limiting,dosesLeft);
+      });
+      if(limiting===null) return null;
+      var daysSince=Math.max(0,(Date.now()-fillTs)/86400000);
+      var span=Math.max(3,daysSince), perDay=doses.length/span;
+      var daysLeft=perDay>0?limiting/perDay:null;
+      console.log('[PRN COMPONENT SUPPLY CALC] id='+m.id+' fillDate='+new Date(fillTs).toISOString().slice(0,10)+' loggedDoses='+doses.length+' remainingDoses='+limiting.toFixed(1)+' components='+componentStates.join(', '));
+      return {left:limiting,daysLeft:daysLeft,unit:'dose',isPrn:true,detail:componentStates.join(' · ')};
+    }
     if(!rf||!rf.fillDate||!(parseFloat(rf.qty)>0)) return null;
     var qty=parseFloat(rf.qty), perDose=m.perDose||1;
     var fillTs=new Date(rf.fillDate+'T00:00:00').getTime();
     var daysSince=Math.max(0,(Date.now()-fillTs)/86400000);
-    var isPrn=String(m.id).indexOf('-prn')>=0;
     if(isPrn){
       var doses=(getPrnLog()[m.id]||[]).filter(function(t){return t>=fillTs;});
       var used=doses.length*perDose, left=qty-used;
@@ -6179,7 +6275,8 @@ function quickLogProcAt(type,date,time){
 }
 function quickLogProc(type){
   var label=evLabel(type);
-  var ev={id:Date.now(),date:TODAY,title:label,type:type,time:'',notes:''};
+  var _qNow=Date.now();
+  var ev={id:newEventId(),createdAt:_qNow,updatedAt:_qNow,date:TODAY,title:label,type:type,time:'',notes:''};
   S.events=(S.events||[]).concat(ev);
   if(type==='para'){
     var volStr=prompt('How many liters were drained? (e.g. 3.5)','');
@@ -6370,12 +6467,19 @@ function renderCin(){
       var btn=document.createElement('button');
       btn.type='button';
       btn.setAttribute('onclick','pickMood('+i+')');
-      btn.style.cssText='flex:1;border-radius:12px;border:2px solid '+(on?MC[i]:'var(--div)')+';background:'+(on?MCL[i]:'var(--card)')+';padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;';
+      btn.setAttribute('aria-pressed',on?'true':'false');
+      btn.style.cssText='position:relative;flex:1;border-radius:12px;border:'+(on?'3px':'2px')+' solid '+(on?MC[i]:'var(--div)')+';background:'+(on?MCL[i]:'var(--card)')+';padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;box-shadow:'+(on?'0 0 0 3px rgba(124,92,252,.18)':'none')+';transform:'+(on?'translateY(-1px)':'none')+';';
+      if(on){
+        var chk=document.createElement('div');
+        chk.textContent='✓';
+        chk.style.cssText='position:absolute;top:4px;right:5px;width:17px;height:17px;border-radius:50%;background:'+MC[i]+';color:#fff;font-size:11px;font-weight:900;line-height:17px;text-align:center;';
+        btn.appendChild(chk);
+      }
       var dot=document.createElement('div');
-      dot.style.cssText='width:'+(on?'28px':'22px')+';height:'+(on?'28px':'22px')+';border-radius:50%;background:'+MC[i]+';margin:0 auto;';
+      dot.style.cssText='width:'+(on?'30px':'22px')+';height:'+(on?'30px':'22px')+';border-radius:50%;background:'+MC[i]+';margin:0 auto;box-shadow:'+(on?'0 0 0 4px #fff':'none')+';';
       var lbl=document.createElement('div');
-      lbl.style.cssText='font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:'+(on?MC[i]:'var(--ink4)')+';';
-      lbl.textContent=ML[i];
+      lbl.style.cssText='font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:'+(on?MC[i]:'var(--ink4)')+';';
+      lbl.textContent=(on?'✓ ':'')+ML[i];
       btn.appendChild(dot);btn.appendChild(lbl);
       moodCon.appendChild(btn);
     }
@@ -6648,14 +6752,15 @@ function saveEvent(){
   var f=_readEventForm();
   if(!f.title){toast('Add a title');return;}
   S.evDate=f.date;
-  var ev={id:Date.now(),date:f.date,title:f.title,type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:f.vol||undefined};
+  var _nowEvt=Date.now(), _newEvtId=newEventId();
+  var ev={id:_newEvtId,createdAt:_nowEvt,updatedAt:_nowEvt,date:f.date,title:f.title,type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:f.vol||undefined};
 
   if(S.editEventId){
     var edited=false;
     S.events=(S.events||[]).map(function(e){
       if(String(e.id)!==String(S.editEventId)) return e;
       edited=true;
-      return {id:e.id,date:f.date,title:f.title,type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:f.vol||undefined};
+      return {id:e.id,createdAt:e.createdAt||e.id,updatedAt:Date.now(),date:f.date,title:f.title,type:f.type||'appt',time:f.time||'',arriveBy:f.arriveBy||'',location:f.location||'',provider:f.provider||'',notes:f.notes||'',vol:f.vol||undefined};
     });
     if(!edited) S.events=(S.events||[]).concat(ev);
     recomputeCycleDates();
@@ -6675,7 +6780,7 @@ function saveEvent(){
     for(var wi=3;wi<=6;wi++){
       var wd=new Date(base);wd.setDate(wd.getDate()+wi);
       var wdt=localDayKey(wd.getTime());
-      S.events.push({id:Date.now()+wi,date:wdt,title:'Tummy watch (day '+wi+' post-para)',type:'para-watch',time:'',notes:'Monitor for bloating. May need paracentesis if uncomfortable.',soft:true});
+      var _wNow=Date.now()+wi; S.events.push({id:_wNow,createdAt:_wNow,updatedAt:_wNow,date:wdt,title:'Tummy watch (day '+wi+' post-para)',type:'para-watch',time:'',notes:'Monitor for bloating. May need paracentesis if uncomfortable.',soft:true});
     }
     toast('Paracentesis logged — watch windows added for days 3-6');
   } else {
@@ -6701,15 +6806,61 @@ function _eventDeleteMap(extraIds){
   (extraIds||[]).forEach(function(id){ if(id!==undefined&&id!==null) del[String(id)]=Date.now(); });
   return del;
 }
+function _mergeEventDeleteMaps(a,b){
+  var out={};
+  function add(m){
+    if(m&&typeof m==='object'&&!Array.isArray(m)){
+      Object.keys(m).forEach(function(k){
+        var v=Number(m[k]||0)||Date.now();
+        out[String(k)]=Math.max(Number(out[String(k)]||0)||0,v);
+      });
+    }
+  }
+  add(a); add(b);
+  return out;
+}
+function _saveEventDeleteMap(map){
+  map=(map&&typeof map==='object'&&!Array.isArray(map))?map:{};
+  try{localStorage.setItem('gk-events-deleted',JSON.stringify(map));}catch(_e){}
+  try{if(window.storage){var _p=window.storage.set('gk-events-deleted',JSON.stringify(map),false);if(_p&&_p.catch)_p.catch(function(){});}}catch(_e){}
+}
+function _applyEventDeletesToMemory(){
+  var del=_eventDeleteMap([]);
+  S.events=(S.events||[]).filter(function(e){return e&&e.id!==undefined&&!del[String(e.id)];});
+  try{localStorage.setItem('gk-events',JSON.stringify(S.events));}catch(_e){}
+}
+function purgeDeletedEventsFromFirebase(reason){
+  if(!window._fbDb||window._bootPhase) return;
+  try{
+    var del=_eventDeleteMap([]);
+    window._fbDb.ref('gk/events').transaction(function(cur){
+      var arr=Array.isArray(cur)?cur:[];
+      var filtered=arr.filter(function(e){return e&&e.id!==undefined&&!del[String(e.id)];});
+      return filtered;
+    },function(err,committed,snap){
+      if(err){console.error('[EVENT PURGE FAILED] '+reason,err.message);return;}
+      var val=(snap&&Array.isArray(snap.val()))?snap.val():[];
+      S.events=_mergeEventsById(val,S.events||[],[]);
+      _applyEventDeletesToMemory();
+      if(S.v==='app'&&!window._userTyping) R();
+    });
+  }catch(_e){console.error('[EVENT PURGE ERROR] '+reason,_e.message);}
+}
+
 function _persistEventDeletes(ids){
   if(!ids||!ids.length) return;
   var del=_eventDeleteMap(ids);
-  try{ localStorage.setItem('gk-events-deleted', JSON.stringify(del)); }catch(_e){}
-  try{ if(window.storage){var _p=window.storage.set('gk-events-deleted',JSON.stringify(del),false);if(_p&&_p.catch)_p.catch(function(){});} }catch(_e){}
+  _saveEventDeleteMap(del);
+  _applyEventDeletesToMemory();
   if(window._fbDb&&!window._bootPhase){
     var upd={}; ids.forEach(function(id){ if(id!==undefined&&id!==null) upd[String(id)]=del[String(id)]||Date.now(); });
-    try{ window._fbDb.ref('gk/events-deleted').update(upd).catch(function(err){console.error('[Firebase WRITE FAILED] gk/events-deleted',err.message);}); }catch(_e){console.error('[Firebase WRITE ERROR] gk/events-deleted',_e.message);}
+    try{ window._fbDb.ref('gk/events-deleted').update(upd).then(function(){purgeDeletedEventsFromFirebase('delete-save');}).catch(function(err){console.error('[Firebase WRITE FAILED] gk/events-deleted',err.message);}); }catch(_e){console.error('[Firebase WRITE ERROR] gk/events-deleted',_e.message);}
+  } else {
+    try{localStorage.setItem('gk-events-deleted-dirty','1');}catch(_e){}
   }
+}
+function _eventStamp(e){
+  return Number((e&&(e.updatedAt||e.createdAt||e.ts||e.id))||0)||0;
 }
 function _mergeEventsById(remote, local, deleteIds){
   var del=_eventDeleteMap(deleteIds);
@@ -6719,19 +6870,84 @@ function _mergeEventsById(remote, local, deleteIds){
       if(!e||e.id===undefined||e.id===null) return;
       var id=String(e.id);
       if(del[id]) return;
-      if(!byId[id]) order.push(id);
-      byId[id]=e;
+      if(!byId[id]){
+        order.push(id);
+        byId[id]=e;
+        return;
+      }
+      var oldS=_eventStamp(byId[id]), newS=_eventStamp(e);
+      if(newS>=oldS) byId[id]=e;
     });
   }
   addList(remote);
   addList(local);
-  return order.map(function(id){return byId[id];});
+  return order.map(function(id){return byId[id];}).sort(function(a,b){
+    var ad=String(a.date||''), bd=String(b.date||'');
+    if(ad!==bd) return ad.localeCompare(bd);
+    var at=String(a.time||a.arriveBy||''), bt=String(b.time||b.arriveBy||'');
+    if(at!==bt) return at.localeCompare(bt);
+    return _eventStamp(a)-_eventStamp(b);
+  });
+}
+function _markEventsDirty(){
+  try{localStorage.setItem('gk-events-dirty','1');}catch(_e){}
+}
+function _clearEventsDirty(){
+  try{localStorage.removeItem('gk-events-dirty');}catch(_e){}
+}
+function _eventsDirty(){
+  try{return localStorage.getItem('gk-events-dirty')==='1';}catch(_e){return false;}
+}
+function flushPendingEvents(){
+  if(!window._fbDb||window._bootPhase) return;
+  try{
+    if(localStorage.getItem('gk-events-deleted-dirty')==='1'){
+      var del=lsRead('events-deleted')||{};
+      window._fbDb.ref('gk/events-deleted').update(del).then(function(){try{localStorage.removeItem('gk-events-deleted-dirty');}catch(_e){} purgeDeletedEventsFromFirebase('delete-dirty-flush');}).catch(function(err){console.error('[EVENT DELETE FLUSH FAILED]',err.message);});
+    }
+    if(!_eventsDirty()) return;
+    var local=lsRead('events')||[];
+    S.events=_mergeEventsById(S.events||[],local,[]);
+    saveEvents({flush:true});
+  }catch(_e){console.error('[EVENT FLUSH ERROR]',_e.message);}
+}
+function _eventListSig(list){
+  return (Array.isArray(list)?list:[]).map(function(e){
+    return String(e&&e.id)+':' + _eventStamp(e);
+  }).sort().join('|');
+}
+function reconcileEventsToFirebase(remoteList, mergedList, reason){
+  if(!window._fbDb||window._bootPhase) return;
+  var del=_eventDeleteMap([]);
+  mergedList=(Array.isArray(mergedList)?mergedList:[]).filter(function(e){return e&&e.id!==undefined&&!del[String(e.id)];});
+  remoteList=(Array.isArray(remoteList)?remoteList:[]).filter(function(e){return e&&e.id!==undefined&&!del[String(e.id)];});
+  if(_eventListSig(remoteList)===_eventListSig(mergedList)) return;
+  try{
+    _markEventsDirty();
+    console.warn('[EVENT RECONCILE] reason='+reason+' remote='+(Array.isArray(remoteList)?remoteList.length:0)+' merged='+(Array.isArray(mergedList)?mergedList.length:0));
+    window._fbDb.ref('gk/events').transaction(function(cur){
+      return _mergeEventsById(Array.isArray(cur)?cur:[], mergedList||[], []);
+    },function(err,committed,snap){
+      if(err){console.error('[EVENT RECONCILE FAILED]',err.message);return;}
+      var val=(snap&&Array.isArray(snap.val()))?snap.val():(mergedList||[]);
+      S.events=val;
+      try{localStorage.setItem('gk-events',JSON.stringify(val));}catch(_e){}
+      _clearEventsDirty();
+      recomputeCycleDates();
+      if(S.v==='app'&&!window._userTyping) R();
+    });
+  }catch(_e){console.error('[EVENT RECONCILE ERROR]',_e.message);}
+}
+if(!window._eventsFlushTimer){
+  window._eventsFlushTimer=setInterval(flushPendingEvents,10000);
 }
 function saveEvents(opts){
   opts=opts||{};
+  if(S&&(S.role==='fam'||S.role==='friends')){ console.warn('[EVENT WRITE BLOCKED] friend/fam role cannot write calendar'); return; }
   var deleteIds=opts.deleteIds||[];
   _persistEventDeletes(deleteIds);
   S.events=_mergeEventsById(lsRead('events')||[], S.events||[], deleteIds);
+  _markEventsDirty();
   console.log(new Date().toLocaleTimeString()+' [S.events WRITE] to-firebase count='+S.events.length+(deleteIds.length?' deleteIds='+deleteIds.join(','):''));
   try{ localStorage.setItem('gk-events', JSON.stringify(S.events)); }catch(_e){}
   try{ if(window.storage){var _p=window.storage.set('gk-events',JSON.stringify(S.events),false);if(_p&&_p.catch)_p.catch(function(){});} }catch(_e){}
@@ -6744,6 +6960,7 @@ function saveEvents(opts){
       var merged=(snap&&Array.isArray(snap.val()))?snap.val():_localSnapshot;
       S.events=merged;
       try{ localStorage.setItem('gk-events', JSON.stringify(merged)); }catch(_e){}
+      _clearEventsDirty();
       console.log('[Firebase WRITE OK] gk/events ('+merged.length+' items)');
       recomputeCycleDates();
       if(S.v==='app'&&!window._userTyping) R();
