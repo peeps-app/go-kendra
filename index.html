@@ -4201,13 +4201,19 @@ var REFILL_DEFAULTS = {
   gummyday:{fillDate:'2026-06-01',qty:7},
   gummysleep:{fillDate:'2026-06-01',qty:9}
 };
+var MED_FILL_AUTHORITATIVE = {
+  protonix:1,zyprexa:1,vitamind:1,cymbalta:1,pepcid:1,methadone:1,haldol:1,flexeril:1,decadron:1,
+  dilaudid4:1,dilaudid2:1,scopolamine:1,tylenol:1,bactrim:1,lovenox:1
+};
 function normalizeMedFills(fills){
   fills=(fills&&typeof fills==='object'&&!Array.isArray(fills))?Object.assign({},fills):{};
   Object.keys(REFILL_DEFAULTS).forEach(function(k){
     var base=REFILL_DEFAULTS[k];
     if(!base||!base.fillDate) return;
     var cur=fills[k];
-    if(!cur||!cur.fillDate||String(cur.fillDate)<MED_FILL_BASELINE_DATE){
+    // Monday 2026-06-08 inventory count is authoritative for the listed meds.
+    // This prevents stale localStorage/Firebase med-refill overrides from resurrecting old counts.
+    if(MED_FILL_AUTHORITATIVE[k]||!cur||!cur.fillDate||String(cur.fillDate)<MED_FILL_BASELINE_DATE){
       fills[k]=Object.assign({},base);
     }
   });
@@ -4421,7 +4427,11 @@ function renderMeds() {
   var out={};
   for(var k in REFILL_DEFAULTS) out[k]=REFILL_DEFAULTS[k];
   for(var k3 in firebase_fills) out[k3]=firebase_fills[k3];
-  for(var k2 in saved) out[k2]=saved[k2];
+  for(var k2 in saved){
+    if(MED_FILL_AUTHORITATIVE[k2]) continue;
+    out[k2]=saved[k2];
+  }
+  out=normalizeMedFills(out);
   // Log source per drug for observability
   if(typeof window!=='undefined'&&window._logRefillSource){
     Object.keys(out).forEach(function(drug){
