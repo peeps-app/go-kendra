@@ -4181,6 +4181,7 @@ function renderProcs() {
 
 // ── MEDS SCREEN ───────────────────────────────────────────────
 // ── REFILL_DEFAULTS — global scope ──────────────────────────────────────────
+var MEDCOUNTS_BUILD = 'medcounts-no-local-authority — 2026-06-08 inventory locked';
 var MED_FILL_BASELINE_DATE = '2026-06-08';
 var REFILL_DEFAULTS = {
   protonix:{fillDate:MED_FILL_BASELINE_DATE,qty:8,refills:4},
@@ -4205,7 +4206,22 @@ var MED_FILL_AUTHORITATIVE = {
   protonix:1,zyprexa:1,vitamind:1,cymbalta:1,pepcid:1,methadone:1,haldol:1,flexeril:1,decadron:1,
   dilaudid4:1,dilaudid2:1,scopolamine:1,tylenol:1,bactrim:1,lovenox:1
 };
+function purgeAuthoritativeMedFillOverrides(){
+  try{
+    // Legacy local override path is retired. Inventory must not be sourced from localStorage.
+    localStorage.removeItem('gk-med-refills');
+    var raw=localStorage.getItem('gk-med-fills');
+    if(raw){
+      var obj=JSON.parse(raw)||{}, changed=false;
+      Object.keys(MED_FILL_AUTHORITATIVE||{}).forEach(function(k){
+        if(obj&&obj[k]){ delete obj[k]; changed=true; }
+      });
+      if(changed) localStorage.setItem('gk-med-fills',JSON.stringify(obj));
+    }
+  }catch(_e){}
+}
 function normalizeMedFills(fills){
+  purgeAuthoritativeMedFillOverrides();
   fills=(fills&&typeof fills==='object'&&!Array.isArray(fills))?Object.assign({},fills):{};
   Object.keys(REFILL_DEFAULTS).forEach(function(k){
     var base=REFILL_DEFAULTS[k];
@@ -4418,20 +4434,19 @@ function renderMeds() {
 
   // ── CALCULATED REFILL TRACKING ──────────────────────────
   function getRefills(){
-  // Priority: 1) S.medFills (Firebase-backed) 2) med-refills (local override) 3) REFILL_DEFAULTS (fallback)
+  // Source of truth: hardcoded locked Monday baseline + Firebase med-fills.
+  // localStorage is cache only and is never an authority for inventory counts.
   var firebase_fills = normalizeMedFills(S.medFills || lsGet('med-fills') || {});
-  var saved=normalizeMedFills(lsGet('med-refills')||{});
-  var hasSaved=Object.keys(saved).length>0;
+  var saved={};
   var hasFirebase=Object.keys(firebase_fills).length>0;
-  console.log('[REFILL DEFAULT LOAD] source='+(hasFirebase?'firebase-med-fills':hasSaved?'localStorage-override':'hardcoded-REFILL_DEFAULTS')+' overrideKeys='+Object.keys(saved).join(','));
+  console.log('[REFILL DEFAULT LOAD] source='+(hasFirebase?'firebase-med-fills':'hardcoded-REFILL_DEFAULTS')+' localStorageAuthority=false');
   var out={};
   for(var k in REFILL_DEFAULTS) out[k]=REFILL_DEFAULTS[k];
   for(var k3 in firebase_fills) out[k3]=firebase_fills[k3];
-  for(var k2 in saved){
-    if(MED_FILL_AUTHORITATIVE[k2]) continue;
-    out[k2]=saved[k2];
-  }
   out=normalizeMedFills(out);
+  Object.keys(MED_FILL_AUTHORITATIVE||{}).forEach(function(k){
+    if(REFILL_DEFAULTS[k]) out[k]=Object.assign({},REFILL_DEFAULTS[k]);
+  });
   // Log source per drug for observability
   if(typeof window!=='undefined'&&window._logRefillSource){
     Object.keys(out).forEach(function(drug){
@@ -4626,24 +4641,35 @@ function renderMeds() {
     }
     var br=mk('div',{css:'display:flex;gap:6px;'});
     var sv=mk('button',{css:'flex:1;height:36px;background:var(--pu);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Save'});
-    sv.addEventListener('click',function(){ var o=lsGet('med-overrides')||{}; o[m.id]={dose:di.value.trim(),note:ni.value.trim()}; lsSet('med-overrides',o); var rfs=lsGet('med-refills')||{}; if(fdi.value||qti.value||rli.value){ rfs[m.drug]={fillDate:fdi.value||'',qty:qti.value||'',refills:(rli.value!==''?parseInt(rli.value,10):null)}; } else { delete rfs[m.drug]; } lsSet('med-refills',rfs);
-          // Also write to Firebase med-fills so it survives deploys
-          if(window._fbDb&&(fdi.value||qti.value)){
+    sv.addEventListener('click',function(){
+          var o=lsGet('med-overrides')||{};
+          o[m.id]={dose:di.value.trim(),note:ni.value.trim()};
+          lsSet('med-overrides',o);
+          if(fdi.value||qti.value||rli.value){
+            if(MED_FILL_AUTHORITATIVE[m.drug]){
+              toast('Inventory for '+m.name+' is locked to the June 8 count in this build.', 'warn');
+              S_medsEdit=null; R(); return;
+            }
+            if(!window._fbDb){
+              toast('Inventory changes require Firebase connection. Local-only inventory saves are disabled.', 'warn');
+              S_medsEdit=null; R(); return;
+            }
             var _fbFill={fillDate:fdi.value||'',qty:parseFloat(qti.value)||0,refills:parseInt(rli.value)||0};
-            if(!S.medFills) S.medFills={};
-            S.medFills[m.drug]=_fbFill;
             window._fbDb.ref('gk/med-fills/'+m.drug).set(_fbFill)
               .then(function(){
-                console.log('[MED FILL SAVE] drug='+m.drug+' fillDate='+_fbFill.fillDate+' qty='+_fbFill.qty+' localStorage=OK firebase=OK');
+                if(!S.medFills) S.medFills={};
+                S.medFills[m.drug]=_fbFill;
+                try{ localStorage.setItem('gk-med-fills', JSON.stringify(normalizeMedFills(S.medFills))); }catch(_e){}
+                console.log('[MED FILL SAVE] drug='+m.drug+' fillDate='+_fbFill.fillDate+' qty='+_fbFill.qty+' firebase=OK localStorage=CACHE_ONLY');
                 toast(m.drug+' fill data saved');
               })
               .catch(function(e){
-                console.error('[MED FILL SAVE FAILED] drug='+m.drug+' localStorage=OK firebase=FAILED error='+e.message);
-                toast('Local save OK — Firebase failed: '+e.message, 'warn');
+                console.error('[MED FILL SAVE FAILED] drug='+m.drug+' firebase=FAILED error='+e.message);
+                toast('Inventory save failed — Firebase did not confirm it.', 'warn');
               });
-          } else {
-            console.log('[MED FILL SAVE] drug='+m.drug+' localStorage=OK firebase=SKIPPED(no connection)');
-          } S_medsEdit=null; R(); });
+          }
+          S_medsEdit=null; R();
+        });
     var cn=mk('button',{css:'height:36px;padding:0 14px;background:var(--card);border:1.5px solid var(--div);border-radius:9px;font-size:13px;cursor:pointer;color:var(--ink2);font-family:var(--sans);',txt:'Cancel'});
     cn.addEventListener('click',function(){ S_medsEdit=null; R(); });
     var rs=mk('button',{css:'height:36px;padding:0 12px;background:var(--card);border:1.5px solid var(--div);border-radius:9px;font-size:11px;cursor:pointer;color:var(--ink3);font-family:var(--sans);',txt:'Reset'});
@@ -5317,7 +5343,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3 — 2026-06-03'],
+    ['Version','v10.3 · medcounts-no-local-authority'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
