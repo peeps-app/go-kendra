@@ -314,6 +314,7 @@ function fbSet(k, v){
   }catch(_e){ console.error('[Firebase WRITE ERROR] gk/'+_fk, _e.message); }
 }
 
+var FB_EXPECTED_LISTENERS = 10;
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
 // Set up after boot — critical keys get real-time push updates from Firebase
 function setupFirebaseSync(){
@@ -534,7 +535,7 @@ function setupFirebaseSync(){
   // All 8 listeners are unconditional (no role/tab conditions)
   // Expected: 2 day-buckets + prn-doses + milestones + wishlist + med-fills + cheers + events-deleted + events + move-hospital-ft = 10
   var _lc=window._listenerCount||0;
-  console.log('[Firebase Sync Ready] listeners='+_lc+(_lc!==10?' *** EXPECTED 10 — investigate ***':''));
+  console.log('[Firebase Sync Ready] listeners='+_lc+(_lc!==FB_EXPECTED_LISTENERS?' *** EXPECTED '+FB_EXPECTED_LISTENERS+' — investigate ***':''));
   // Commit _syncWired only after all listeners successfully registered
   window._syncWired=true;
 
@@ -5442,7 +5443,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.7-refill-watch-redesign'],
+    ['Version','v10.3.8-listener-status-fix'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -5476,7 +5477,7 @@ function renderMedical(){
     px.appendChild(fbSection);
   }
 
-  var _fySync=mk('div',{css:'font-size:9px;color:var(--ink4);text-align:center;margin:18px 0 4px;font-family:monospace;letter-spacing:.02em;',txt:'v10.3 · FB:'+(window._fbConnected?'✓':'✗')+' · L:'+(window._listenerCount||0)+'/9'});
+  var _fySync=mk('div',{css:'font-size:9px;color:var(--ink4);text-align:center;margin:18px 0 4px;font-family:monospace;letter-spacing:.02em;',txt:'v10.3 · FB:'+(window._fbConnected?'✓':'✗')+' · L:'+(window._listenerCount||0)+'/'+FB_EXPECTED_LISTENERS});
   px.appendChild(_fySync);
 
   px.appendChild(mk('div',{css:'height:24px;'}));
