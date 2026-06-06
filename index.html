@@ -314,6 +314,37 @@ function fbSet(k, v){
   }catch(_e){ console.error('[Firebase WRITE ERROR] gk/'+_fk, _e.message); }
 }
 
+
+function canWriteCareData(){
+  return !!(S && (S.role==='patient' || S.role==='care'));
+}
+function canWriteKey(k){
+  if(k==='cheers') return true;
+  return canWriteCareData();
+}
+function guardedFirebaseSet(key, value, reason){
+  if(!canWriteKey(key)){
+    console.warn('[WRITE BLOCKED] set key='+key+' role='+((S&&S.role)||'none')+' reason='+(reason||'guardedFirebaseSet'));
+    return false;
+  }
+  if(window._fbDb&&!window._bootPhase){
+    try{ window._fbDb.ref('gk/'+key.replace(/\./g,'_')).set(value); return true; }
+    catch(e){ console.error('[WRITE FAILED] set key='+key, e.message); return false; }
+  }
+  return false;
+}
+function guardedFirebaseUpdate(key, value, reason){
+  if(!canWriteKey(key)){
+    console.warn('[WRITE BLOCKED] update key='+key+' role='+((S&&S.role)||'none')+' reason='+(reason||'guardedFirebaseUpdate'));
+    return {then:function(){return this;},catch:function(){return this;}};
+  }
+  if(window._fbDb&&!window._bootPhase){
+    try{ return window._fbDb.ref('gk/'+key.replace(/\./g,'_')).update(value); }
+    catch(e){ console.error('[WRITE FAILED] update key='+key, e.message); }
+  }
+  return {then:function(){return this;},catch:function(){return this;}};
+}
+
 var FB_EXPECTED_LISTENERS = 10;
 // ── FIREBASE LIVE LISTENERS ───────────────────────────────────────────────────
 // Set up after boot — critical keys get real-time push updates from Firebase
@@ -442,7 +473,7 @@ function setupFirebaseSync(){
     try{ localStorage.setItem('gk-wishlist', JSON.stringify(val)); }catch(_e){}
     try{
       var _raw=snap.val();
-      if(_raw&&JSON.stringify(_raw)!==JSON.stringify(val)) window._fbDb.ref('gk/wishlist').set(val);
+      if(_raw&&JSON.stringify(_raw)!==JSON.stringify(val)) guardedFirebaseSet('wishlist',val,'sanitize-support-listener');
     }catch(_e){}
     if(S.v==='app'&&!window._userTyping) R();
   });
@@ -460,7 +491,7 @@ function setupFirebaseSync(){
     console.log('[MED FILLS SET] source=firebase-onValue drugs='+Object.keys(val).join(','));
     S.medFills=val;
     try{ localStorage.setItem('gk-med-fills', JSON.stringify(val)); }catch(_e){}
-    try{ if(JSON.stringify(raw)!==JSON.stringify(val)) window._fbDb.ref('gk/med-fills').set(val); }catch(_e){}
+    try{ if(JSON.stringify(raw)!==JSON.stringify(val)) guardedFirebaseSet('med-fills',val,'normalize-med-fills-listener'); }catch(_e){}
     if(S.v==='app'&&!window._userTyping) R();
   });
 
@@ -492,7 +523,7 @@ function setupFirebaseSync(){
     _applyEventDeletesToMemory();
     purgeDeletedEventsFromFirebase('events-deleted-listener');
     try{
-      if(JSON.stringify(remote)!==JSON.stringify(merged)) window._fbDb.ref('gk/events-deleted').update(merged);
+      if(JSON.stringify(remote)!==JSON.stringify(merged)) guardedFirebaseUpdate('events-deleted',merged,'events-deleted-listener-merge');
     }catch(_e){}
     if(S.v==='app'&&!window._userTyping) R();
   });
@@ -560,7 +591,7 @@ function setupFirebaseSync(){
       _saveEventDeleteMap(_mergedDel);
       _applyEventDeletesToMemory();
       purgeDeletedEventsFromFirebase('firebase-once-events-deleted');
-      try{ if(JSON.stringify(all['events-deleted'])!==JSON.stringify(_mergedDel)) window._fbDb.ref('gk/events-deleted').update(_mergedDel); }catch(_e){}
+      try{ if(JSON.stringify(all['events-deleted'])!==JSON.stringify(_mergedDel)) guardedFirebaseUpdate('events-deleted',_mergedDel,'events-deleted-once-merge'); }catch(_e){}
     }
     if((all['events']&&Array.isArray(all['events'])&&all['events'].length)||(window._CANONICAL_EVENTS&&window._CANONICAL_EVENTS.length)){
       var _del=_eventDeleteMap([]);
@@ -601,11 +632,11 @@ function setupFirebaseSync(){
       S.medFills=normalizeMedFills(_rawFills);
       console.log('[MED FILLS SET] source=firebase-once drugs='+Object.keys(S.medFills).join(','));
       try{ localStorage.setItem('gk-med-fills', JSON.stringify(S.medFills)); }catch(_e){}
-      try{ if(JSON.stringify(_rawFills)!==JSON.stringify(S.medFills)) window._fbDb.ref('gk/med-fills').set(S.medFills); }catch(_e){}
+      try{ if(JSON.stringify(_rawFills)!==JSON.stringify(S.medFills)) guardedFirebaseSet('med-fills',S.medFills,'normalize-med-fills-once'); }catch(_e){}
     } else {
       S.medFills=normalizeMedFills({});
       try{ localStorage.setItem('gk-med-fills', JSON.stringify(S.medFills)); }catch(_e){}
-      try{ if(window._fbDb&&!window._bootPhase) window._fbDb.ref('gk/med-fills').set(S.medFills); }catch(_e){}
+      try{ if(window._fbDb&&!window._bootPhase) guardedFirebaseSet('med-fills',S.medFills,'normalize-empty-med-fills-once'); }catch(_e){}
     }
     if(all['milestones']&&Array.isArray(all['milestones'])&&all['milestones'].length) S.milestones=all['milestones'];
     window._fbBooting=false;
@@ -5618,7 +5649,8 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.17-force-patch-refill-watch'],
+    ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
+    ['Version','v10.3.20-full-read-write-guard'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -6501,7 +6533,23 @@ function sendCheer(){
 }
 
 function selDay(dt){S.cd=dt;loadCalDay(dt);R();}
-function go(tab){S.tab=tab;if(tab==='log') S.lt='home';if(tab==='squad'&&(S.role==='patient'||S.role==='care')) markCheersViewed();R();}
+function viewerRoleAllowedTab(tab){
+  if(S.role==='friends') return tab==='squad'||tab==='wishlist';
+  if(S.role==='fam') return tab==='squad'||tab==='wishlist'||tab==='medical';
+  return true;
+}
+function go(tab){
+  if(!viewerRoleAllowedTab(tab)){
+    console.warn('[NAV BLOCKED] role='+((S&&S.role)||'none')+' tab='+tab);
+    S.tab='squad';
+    R();
+    return;
+  }
+  S.tab=tab;
+  if(tab==='log') S.lt='home';
+  if(tab==='squad'&&(S.role==='patient'||S.role==='care')) markCheersViewed();
+  R();
+}
 
 function backupState(){
   // Export all gk-* localStorage keys as a JSON file download
@@ -7175,7 +7223,7 @@ function _persistEventDeletes(ids){
   _applyEventDeletesToMemory();
   if(window._fbDb&&!window._bootPhase){
     var upd={}; ids.forEach(function(id){ if(id!==undefined&&id!==null) upd[String(id)]=del[String(id)]||Date.now(); });
-    try{ window._fbDb.ref('gk/events-deleted').update(upd).then(function(){purgeDeletedEventsFromFirebase('delete-save');}).catch(function(err){console.error('[Firebase WRITE FAILED] gk/events-deleted',err.message);}); }catch(_e){console.error('[Firebase WRITE ERROR] gk/events-deleted',_e.message);}
+    try{ guardedFirebaseUpdate('events-deleted',upd,'delete-save').then(function(){purgeDeletedEventsFromFirebase('delete-save');}).catch(function(err){console.error('[Firebase WRITE FAILED] gk/events-deleted',err.message);}); }catch(_e){console.error('[Firebase WRITE ERROR] gk/events-deleted',_e.message);}
   } else {
     try{localStorage.setItem('gk-events-deleted-dirty','1');}catch(_e){}
   }
@@ -7224,7 +7272,7 @@ function flushPendingEvents(){
   try{
     if(localStorage.getItem('gk-events-deleted-dirty')==='1'){
       var del=lsRead('events-deleted')||{};
-      window._fbDb.ref('gk/events-deleted').update(del).then(function(){try{localStorage.removeItem('gk-events-deleted-dirty');}catch(_e){} purgeDeletedEventsFromFirebase('delete-dirty-flush');}).catch(function(err){console.error('[EVENT DELETE FLUSH FAILED]',err.message);});
+      guardedFirebaseUpdate('events-deleted',del,'delete-dirty-flush').then(function(){try{localStorage.removeItem('gk-events-deleted-dirty');}catch(_e){} purgeDeletedEventsFromFirebase('delete-dirty-flush');}).catch(function(err){console.error('[EVENT DELETE FLUSH FAILED]',err.message);});
     }
     if(!_eventsDirty()) return;
     var local=lsRead('events')||[];
@@ -7262,7 +7310,7 @@ function reconcileEventsToFirebase(remoteList, mergedList, reason){
 if(!window._eventsFlushTimer){
   window._eventsFlushTimer=setInterval(flushPendingEvents,10000);
 }
-function saveEvents(opts){
+function saveEvents(opts){if(S.role!=='patient'&&S.role!=='care'){ console.warn('[SAVE BLOCKED] saveEvents role='+S.role); return; }
   opts=opts||{};
   if(S&&(S.role==='fam'||S.role==='friends')){ console.warn('[EVENT WRITE BLOCKED] friend/fam role cannot write calendar'); return; }
   var deleteIds=opts.deleteIds||[];
