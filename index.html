@@ -4641,6 +4641,11 @@ function renderMeds() {
   function refillSecondaryText(x){
     var m=x.m, s=x.s;
     var amount=supplyAmountText(s,m);
+    if(String(m.id).indexOf('-prn')>=0 && isPatchPrn(m.id) && patchReplacementDueNow(m.id)){
+      var rf=getRefills()[m.drug]||{};
+      if(rf.refills===0 && s.left<=1) return '0 patches after today\'s replacement · needs new prescription';
+      return amount+' · replacement due now';
+    }
     var weekly=nextScheduledDoseText(m);
     if(weekly) return amount+' · '+weekly;
     return amount+' · '+refillDaysText(s.daysLeft);
@@ -4655,8 +4660,18 @@ function renderMeds() {
     var rf=getRefills()[x.m.drug]||{};
     var days=Math.round(x.s.daysLeft||0);
     if(x.s.left<=0 || rf.refills===0) return 'action';
+    if(String(x.m.id).indexOf('-prn')>=0 && isPatchPrn(x.m.id) && rf.refills===0 && x.s.left<=1 && patchReplacementDueNow(x.m.id)) return 'action';
     if(days<=7) return 'soon';
     return 'watch';
+  }
+  function patchReplacementDueNow(id){
+    if(!isPatchPrn(id)) return false;
+    var m=getPrnDef(id)||{}, intervalMs=(Number(m.interval)||0)*3600000;
+    if(!intervalMs) return false;
+    var log=(typeof getPrnLog==='function'?getPrnLog():getPrnLogGlobal()), arr=(typeof _normPrnArr==='function'?_normPrnArr(log[id]||[]):normPrnTsArrayGlobal(log[id]||[]));
+    var last=arr.length?arr[arr.length-1]:null;
+    if(!last) return true;
+    return Date.now()>=last+intervalMs || startOfLocalDay(last+intervalMs)===startOfLocalDay(Date.now());
   }
   function pendingPatchReplacementCount(id, fillTs){
     if(!isPatchPrn(id)) return 0;
@@ -4735,9 +4750,13 @@ function renderMeds() {
       var rf=getRefills()[m.drug]||{};
       var noRefills=(rf.refills===0);
       var depleted=(s&&s.left!=null&&s.left<=0);
-      if(s && ((s.daysLeft!=null && s.daysLeft<=14) || (depleted&&noRefills))) due.push({m:m,s:s});
+      var duePatchNoStock=(String(m.id).indexOf('-prn')>=0 && isPatchPrn(m.id) && noRefills && s && s.left<=1 && patchReplacementDueNow(m.id));
+      if(s && ((s.daysLeft!=null && s.daysLeft<=14) || (depleted&&noRefills) || duePatchNoStock)) due.push({m:m,s:s});
     });
-    due.sort(function(a,b){ return a.s.daysLeft-b.s.daysLeft; });
+    due.sort(function(a,b){
+      var ad=(a.s.daysLeft==null?0:a.s.daysLeft), bd=(b.s.daysLeft==null?0:b.s.daysLeft);
+      return ad-bd;
+    });
     if(due.length){
       var action=due.filter(function(x){return refillTone(x)==='action';});
       var watch=due.filter(function(x){return refillTone(x)!=='action';});
@@ -5569,12 +5588,12 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.14-patch-watch-render-fix'],
+    ['Version','v10.3.16-scop-refill-final-audit'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
     ['Firebase',window._fbConnected?'Connected ✓':'Disconnected ✗'],
-    ['Listeners',(window._listenerCount||0)+' / 9 '+(((window._listenerCount||0)===9)?'✓':'⚠')],
+    ['Listeners',(window._listenerCount||0)+' / '+FB_EXPECTED_LISTENERS+' '+(((window._listenerCount||0)===FB_EXPECTED_LISTENERS)?'✓':'⚠')],
     ['Last sync',window._fbLastListenerActivity?new Date(window._fbLastListenerActivity).toLocaleTimeString():'—'],
     ['Conn attached',window._connHandlerAttached?'Yes ✓':'No ✗'],
     ['Conn fired',window._connCallbackFired?'Yes ✓':'No (pending)'],
