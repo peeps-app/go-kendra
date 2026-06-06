@@ -4506,6 +4506,48 @@ function renderMeds() {
     if(unit==='dose') return rounded+' dose'+(rounded==='1'?'':'s')+' left';
     return rounded+' '+unit+(rounded==='1'?'':'s')+' left';
   }
+  function refillDaysText(days){
+    if(days===null||days===undefined||!isFinite(days)) return '';
+    var dl=Math.round(days);
+    if(dl<=0) return 'runs out today';
+    if(dl===1) return 'lasts about 1 day';
+    return 'lasts about '+dl+' days';
+  }
+  function nextScheduledDoseText(m){
+    if(!(m&&m.daysOfWeek&&m.daysOfWeek.length)) return '';
+    var names=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var today=new Date(); today.setHours(0,0,0,0);
+    var best=null;
+    for(var d=0; d<14; d++){
+      var cur=new Date(today.getTime()+d*86400000);
+      if(m.daysOfWeek.indexOf(cur.getDay())>=0){best=cur;break;}
+    }
+    if(!best) return '';
+    var diff=Math.round((best-today)/86400000);
+    if(diff===0) return 'next dose today';
+    if(diff===1) return 'next dose tomorrow';
+    return 'next dose '+names[best.getDay()];
+  }
+  function refillSecondaryText(x){
+    var m=x.m, s=x.s;
+    var amount=supplyAmountText(s,m);
+    var weekly=nextScheduledDoseText(m);
+    if(weekly) return amount+' · '+weekly;
+    return amount+' · '+refillDaysText(s.daysLeft);
+  }
+  function refillRxText(x){
+    var rf=getRefills()[x.m.drug]||{};
+    if(rf.refills===0) return 'Needs new prescription';
+    if(typeof rf.refills==='number'&&rf.refills>0) return rf.refills+' refill'+(rf.refills===1?'':'s')+' remaining';
+    return '';
+  }
+  function refillTone(x){
+    var rf=getRefills()[x.m.drug]||{};
+    var days=Math.round(x.s.daysLeft||0);
+    if(x.s.left<=0 || rf.refills===0) return 'action';
+    if(days<=7) return 'soon';
+    return 'watch';
+  }
   function drugSupply(m){
     var refills=getRefills();
     var rf=refills[m.drug];
@@ -4570,59 +4612,73 @@ function renderMeds() {
     drugs.forEach(function(m){ var s=drugSupply(m); if(s && s.daysLeft!=null && s.daysLeft<=14) due.push({m:m,s:s}); });
     due.sort(function(a,b){ return a.s.daysLeft-b.s.daysLeft; });
     if(due.length){
-      var overdue=due.some(function(x){return x.s.left<=0;});
-      var card=mk('div',{css:'background:var(--card);border:1.5px solid '+('var(--ro)')+';border-radius:var(--r-md);overflow:hidden;margin-bottom:20px;'});
-      // Header strip
-      var hdr=mk('div',{css:'padding:8px 13px 6px;display:flex;align-items:center;gap:6px;'});
-      var ci=lc('triangle-alert',13,'var(--ro)'); if(ci)hdr.appendChild(ci);
-      hdr.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:'+('var(--ro)')+';',txt:'Refills to order \u00b7 '+due.length+' med'+(due.length===1?'':'s')}));
+      var action=due.filter(function(x){return refillTone(x)==='action';});
+      var watch=due.filter(function(x){return refillTone(x)!=='action';});
+      var card=mk('section',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);overflow:hidden;margin-bottom:20px;box-shadow:0 8px 24px rgba(83,58,48,.045);'});
+      var hdr=mk('div',{css:'padding:14px 15px 10px;border-bottom:1px solid var(--div);'});
+      var eyebrow=mk('div',{css:'font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink4);margin-bottom:3px;',txt:'Refill watch'});
+      hdr.appendChild(eyebrow);
+      var headline=mk('div',{css:'font-family:var(--serif);font-size:18px;font-style:italic;color:var(--ink);line-height:1.15;',txt:(action.length?action.length+' needs action':'Supplies to monitor')});
+      hdr.appendChild(headline);
+      var sub=mk('div',{css:'font-size:11.5px;color:var(--ink3);margin-top:5px;line-height:1.35;',txt:action.length?'Prioritized by refill risk and prescription status.':'No urgent refill actions right now.'});
+      hdr.appendChild(sub);
       card.appendChild(hdr);
-      // Drug rows
-      due.forEach(function(x,i){
-        var dl=Math.round(x.s.daysLeft);
-        var out=x.s.left<=0;
-        var critical=dl<=3;
-        var rf=getRefills()[x.m.drug]||{};
-        var _rxInfo=REFILL_RX[(x.m.drug||'').toLowerCase()];
-        var rw=mk('div',{css:'padding:10px 13px;'+(i>0?'border-top:1px solid var(--div);':'')});
-        // Top row: name left, urgency badge right
-        var top=mk('div',{css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;'});
-        top.appendChild(mk('div',{css:'font-size:13px;font-weight:700;color:var(--ink);',txt:x.m.name}));
-        var urgColor='var(--ro)';
-        var urgBg='transparent';
-        var urgTxt=supplyAmountText(x.s,x.m)+' · '+(out?'Out — order now':(dl<=0?'runs out today':'lasts ~'+dl+' day'+(dl===1?'':'s')));
-        var badge=mk('div',{css:'font-size:10px;font-weight:800;color:'+urgColor+';background:'+urgBg+';border-radius:99px;padding:2px 8px;white-space:normal;text-align:right;max-width:190px;'});
-        badge.appendChild(mk('span',{txt:urgTxt}));
-        top.appendChild(badge);
-        rw.appendChild(top);
-        // Refills remaining — ambient info
-        if(rf.refills===0) rw.appendChild(mk('div',{css:'font-size:10px;font-weight:700;color:var(--ro);margin-top:2px;',txt:'No refills \u2014 needs new Rx'}));
-        else if(typeof rf.refills==='number'&&rf.refills>0) rw.appendChild(mk('div',{css:'font-size:10px;color:var(--ink4);margin-top:2px;',txt:rf.refills+' refill'+(rf.refills===1?'':'s')+' remaining'}));
-        card.appendChild(rw);
-      });
-      // CTAs — split by pharmacy
+
+      function sectionLabel(txt){
+        return mk('div',{css:'font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.075em;color:var(--ink4);padding:14px 15px 6px;',txt:txt});
+      }
+      function refillRow(x,mode,isFirst){
+        var m=x.m, s=x.s, rfTxt=refillRxText(x), days=Math.round(s.daysLeft||0);
+        var row=mk('div',{css:'padding:'+(mode==='action'?'13px 15px 15px':'10px 15px')+';'+(!isFirst?'border-top:1px solid var(--div);':'')});
+        var top=mk('div',{css:'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;'});
+        var left=mk('div',{css:'min-width:0;flex:1;'});
+        left.appendChild(mk('div',{css:'font-size:'+(mode==='action'?'15px':'13px')+';font-weight:800;color:var(--ink);line-height:1.2;',txt:m.name}));
+        left.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);line-height:1.35;margin-top:3px;',txt:refillSecondaryText(x)}));
+        if(rfTxt){
+          left.appendChild(mk('div',{css:'font-size:11px;font-weight:'+(mode==='action'?'800':'600')+';color:'+(mode==='action'?'var(--ro)':'var(--ink4)')+';margin-top:4px;',txt:rfTxt}));
+        }
+        top.appendChild(left);
+        var right=mk('div',{css:'flex:0 0 auto;text-align:right;min-width:58px;'});
+        right.appendChild(mk('div',{css:'font-size:'+(mode==='action'?'20px':'15px')+';font-weight:800;color:'+(mode==='action'?'var(--ro)':'var(--ink2)')+';line-height:1;',txt:(days<=0?'0':String(days))}));
+        right.appendChild(mk('div',{css:'font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink4);margin-top:2px;',txt:days===1?'day':'days'}));
+        top.appendChild(right);
+        row.appendChild(top);
+        return row;
+      }
+
+      if(action.length){
+        card.appendChild(sectionLabel('Action needed'));
+        action.forEach(function(x,i){ card.appendChild(refillRow(x,'action',i===0)); });
+      }
+      if(watch.length){
+        card.appendChild(sectionLabel(action.length?'Monitor this week':'Coming up'));
+        watch.forEach(function(x,i){ card.appendChild(refillRow(x,'watch',i===0)); });
+      }
+
       var hasUCHealth=due.some(function(x){ var r=REFILL_RX[(x.m.drug||'').toLowerCase()]; return r&&r.ph==='8773980598'; });
       var hasKS=due.some(function(x){ var r=REFILL_RX[(x.m.drug||'').toLowerCase()]; return r&&r.ph==='3036782443'; });
-      var ctaWrap=mk('div',{css:'border-top:1px solid var(--div);padding:10px 13px;display:flex;flex-direction:column;gap:6px;'});
-      if(hasUCHealth){
-        var r1=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;gap:8px;'});
-        r1.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);',txt:'UCHealth Pharmacy'}));
-        var a1=mk('a',{css:'display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;color:#fff;background:'+('var(--ro)')+';border-radius:99px;padding:5px 11px;text-decoration:none;white-space:nowrap;flex-shrink:0;'});
-        a1.setAttribute('href','tel:8773980598');
-        var ic1=lc('phone',11,'#fff'); if(ic1)a1.appendChild(ic1);
-        a1.appendChild(mk('span',{txt:'877-398-0598'}));
-        r1.appendChild(a1); ctaWrap.appendChild(r1);
+      if(hasUCHealth||hasKS){
+        var ctaWrap=mk('div',{css:'border-top:1px solid var(--div);padding:10px 15px 13px;display:flex;flex-direction:column;gap:7px;background:rgba(255,255,255,.35);'});
+        if(hasUCHealth){
+          var r1=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;gap:10px;'});
+          r1.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);',txt:'UCHealth Pharmacy'}));
+          var a1=mk('a',{css:'min-height:34px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;color:#fff;background:var(--ro);border-radius:99px;padding:6px 12px;text-decoration:none;white-space:nowrap;flex-shrink:0;'});
+          a1.setAttribute('href','tel:8773980598');
+          var ic1=lc('phone',11,'#fff'); if(ic1)a1.appendChild(ic1);
+          a1.appendChild(mk('span',{txt:'877-398-0598'}));
+          r1.appendChild(a1); ctaWrap.appendChild(r1);
+        }
+        if(hasKS){
+          var r2=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;gap:10px;'});
+          r2.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);',txt:'King Soopers Union Station'}));
+          var a2=mk('a',{css:'min-height:34px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;color:#fff;background:var(--ro);border-radius:99px;padding:6px 12px;text-decoration:none;white-space:nowrap;flex-shrink:0;'});
+          a2.setAttribute('href','tel:3036782443');
+          var ic2=lc('phone',11,'#fff'); if(ic2)a2.appendChild(ic2);
+          a2.appendChild(mk('span',{txt:'303-678-2443'}));
+          r2.appendChild(a2); ctaWrap.appendChild(r2);
+        }
+        card.appendChild(ctaWrap);
       }
-      if(hasKS){
-        var r2=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;gap:8px;'});
-        r2.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);',txt:'King Soopers Union Station'}));
-        var a2=mk('a',{css:'display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;color:#fff;background:'+('var(--ro)')+';border-radius:99px;padding:5px 11px;text-decoration:none;white-space:nowrap;flex-shrink:0;'});
-        a2.setAttribute('href','tel:3036782443');
-        var ic2=lc('phone',11,'#fff'); if(ic2)a2.appendChild(ic2);
-        a2.appendChild(mk('span',{txt:'303-678-2443'}));
-        r2.appendChild(a2); ctaWrap.appendChild(r2);
-      }
-      card.appendChild(ctaWrap);
       px.appendChild(card);
     }
   })();
@@ -5386,7 +5442,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.6-refill-card-amounts-weeklyfix'],
+    ['Version','v10.3.7-refill-watch-redesign'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
