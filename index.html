@@ -4470,6 +4470,42 @@ function renderMeds() {
     });
     return n;
   }
+  function scheduledDoseEntries(drug){
+    var out=[];
+    Object.keys(MED_SLOTS).forEach(function(k){
+      MED_SLOTS[k].meds.forEach(function(m){
+        if(m.drug===drug) out.push(m);
+      });
+    });
+    return out;
+  }
+  function scheduledDaysLeftFromInventory(drug, qty, fillTs){
+    var entries=scheduledDoseEntries(drug);
+    if(!entries.length) return null;
+    var allWeekly=entries.every(function(m){return m.daysOfWeek&&m.daysOfWeek.length;});
+    if(!allWeekly) return null;
+    var start=new Date(Math.max(Date.now(), fillTs||0));
+    start.setHours(0,0,0,0);
+    var remaining=qty;
+    for(var d=0; d<=3700; d++){
+      var cur=new Date(start.getTime()+d*86400000);
+      var jsDay=cur.getDay();
+      entries.forEach(function(m){
+        if(remaining>0 && m.daysOfWeek.indexOf(jsDay)>=0) remaining-=(m.perDose||1);
+      });
+      if(remaining<=0) return d;
+    }
+    return null;
+  }
+  function supplyAmountText(s,m){
+    if(!s) return '';
+    var left=Math.max(0,s.left||0);
+    var rounded=(Math.abs(left-Math.round(left))<0.01)?String(Math.round(left)):left.toFixed(1);
+    var unit=(s.unit||m.unit||'unit');
+    if(unit==='mL') return rounded+' mL left';
+    if(unit==='dose') return rounded+' dose'+(rounded==='1'?'':'s')+' left';
+    return rounded+' '+unit+(rounded==='1'?'':'s')+' left';
+  }
   function drugSupply(m){
     var refills=getRefills();
     var rf=refills[m.drug];
@@ -4516,8 +4552,15 @@ function renderMeds() {
     }
     var dailyUnits=schedDosesPerDay(m.drug);
     var left=qty-dailyUnits*daysSince;
-    console.log('[MED SCHEDULE CALC] drug='+m.drug+' fillDate='+rf.fillDate+' daysSince='+daysSince.toFixed(1)+' dailyUnits='+dailyUnits+' calcRemaining='+left.toFixed(1)+' usedTaken=false(S.day.taken not used)');
-    return {left:left,daysLeft:dailyUnits>0?left/dailyUnits:null,unit:m.unit,isPrn:false};
+    var weeklyDaysLeft=scheduledDaysLeftFromInventory(m.drug, qty, fillTs);
+    var daysLeft=(weeklyDaysLeft!==null)?weeklyDaysLeft:(dailyUnits>0?left/dailyUnits:null);
+    if(weeklyDaysLeft!==null){
+      left=qty;
+      console.log('[MED WEEKLY SUPPLY CALC] drug='+m.drug+' fillDate='+rf.fillDate+' qty='+qty+' nextExhaustDays='+weeklyDaysLeft+' usedTaken=false(S.day.taken not used)');
+    } else {
+      console.log('[MED SCHEDULE CALC] drug='+m.drug+' fillDate='+rf.fillDate+' daysSince='+daysSince.toFixed(1)+' dailyUnits='+dailyUnits+' calcRemaining='+left.toFixed(1)+' usedTaken=false(S.day.taken not used)');
+    }
+    return {left:left,daysLeft:daysLeft,unit:m.unit,isPrn:false};
   }
   (function(){
     var seen={}, drugs=[];
@@ -4547,8 +4590,8 @@ function renderMeds() {
         top.appendChild(mk('div',{css:'font-size:13px;font-weight:700;color:var(--ink);',txt:x.m.name}));
         var urgColor='var(--ro)';
         var urgBg='transparent';
-        var urgTxt=out?'Out \u2014 order now':(dl<=0?'Today':'~'+dl+' day'+(dl===1?'':'s'));
-        var badge=mk('div',{css:'font-size:10px;font-weight:800;color:'+urgColor+';background:'+urgBg+';border-radius:99px;padding:2px 8px;white-space:nowrap;'});
+        var urgTxt=supplyAmountText(x.s,x.m)+' · '+(out?'Out — order now':(dl<=0?'runs out today':'lasts ~'+dl+' day'+(dl===1?'':'s')));
+        var badge=mk('div',{css:'font-size:10px;font-weight:800;color:'+urgColor+';background:'+urgBg+';border-radius:99px;padding:2px 8px;white-space:normal;text-align:right;max-width:190px;'});
         badge.appendChild(mk('span',{txt:urgTxt}));
         top.appendChild(badge);
         rw.appendChild(top);
@@ -5343,7 +5386,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3-FINAL-refill-mathfix-20260608'],
+    ['Version','v10.3.6-refill-card-amounts-weeklyfix'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
