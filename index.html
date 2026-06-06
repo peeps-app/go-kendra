@@ -2032,6 +2032,69 @@ function renderWaddlesCard(){
   return wrap;
 }
 
+
+function latestPatchTs(id){
+  var log=getPrnLog();
+  var arr=Array.isArray(log[id])?log[id]:[];
+  return arr.reduce(function(max,t){t=Number(t)||0;return t>max?t:max;},0);
+}
+function patchWatchItems(){
+  var defs=[
+    {id:'scopolamine-prn',name:'Scopolamine',interval:72},
+    {id:'sancuso-prn',name:'Sancuso',interval:168}
+  ];
+  var now=Date.now();
+  var items=[];
+  defs.forEach(function(p){
+    var last=latestPatchTs(p.id);
+    if(!last){
+      items.push({id:p.id,name:p.name,state:'missing',priority:0,title:p.name+' patch timing is not logged',meta:'Log the last change so the app can remind you.'});
+      return;
+    }
+    var due=last+p.interval*3600000;
+    var left=due-now;
+    var hrs=Math.round(left/3600000);
+    var dueDate=new Date(due);
+    var dayName=dueDate.toLocaleDateString('en-US',{weekday:'long'});
+    var timeTxt=dueDate.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    if(left<=0){
+      var overdueH=Math.max(0,Math.round((now-due)/3600000));
+      items.push({id:p.id,name:p.name,state:'overdue',priority:0,title:p.name+' patch is overdue',meta:overdueH<2?'Due now':'Due about '+overdueH+'h ago'});
+    } else if(left<=24*3600000){
+      items.push({id:p.id,name:p.name,state:'due',priority:1,title:p.name+' patch due soon',meta:hrs<=1?'Due within the hour':'Due in about '+hrs+'h'});
+    } else {
+      // Keep comfortable patch timing out of Home; Meds remains the detailed source.
+      items.push({id:p.id,name:p.name,state:'quiet',priority:3,title:p.name+' patch',meta:'Due '+dayName+' at '+timeTxt});
+    }
+  });
+  return items.sort(function(a,b){return a.priority-b.priority;});
+}
+function renderPatchWatch(){
+  if(!(S.role==='patient'||S.role==='care')) return null;
+  var all=patchWatchItems();
+  var visible=all.filter(function(x){return x.state!=='quiet';});
+  if(!visible.length) return null;
+  var strongest=visible.some(function(x){return x.state==='overdue'||x.state==='missing';})?'attention':'soon';
+  var card=mk('button',{css:'width:100%;text-align:left;background:'+(strongest==='attention'?'rgba(214,112,94,.08)':'rgba(221,139,83,.08)')+';border:1px solid '+(strongest==='attention'?'rgba(214,112,94,.28)':'rgba(221,139,83,.24)')+';border-radius:var(--r-md);padding:12px 14px;margin-bottom:12px;display:block;font-family:var(--sans);cursor:pointer;color:var(--ink);'});
+  card.setAttribute('aria-label','Patch check. '+visible.map(function(x){return x.title+'. '+x.meta;}).join(' '));
+  card.addEventListener('click',function(){S.tab='meds';R();});
+  var top=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;gap:12px;'});
+  var left=mk('div',{css:'min-width:0;'});
+  left.appendChild(mk('div',{css:'font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.075em;color:var(--ink4);margin-bottom:3px;',txt:'Patch check'}));
+  left.appendChild(mk('div',{css:'font-size:14px;font-weight:800;color:var(--ink);line-height:1.25;',txt:visible[0].title}));
+  left.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);line-height:1.35;margin-top:3px;',txt:visible[0].meta}));
+  top.appendChild(left);
+  var cue=mk('div',{css:'flex:0 0 auto;font-size:11px;font-weight:800;color:'+(strongest==='attention'?'var(--ro)':'var(--am)')+';white-space:nowrap;',txt:visible.length>1?visible.length+' patches':'Open meds'});
+  top.appendChild(cue);
+  card.appendChild(top);
+  if(visible.length>1){
+    visible.slice(1).forEach(function(x){
+      card.appendChild(mk('div',{css:'border-top:1px solid rgba(83,58,48,.10);margin-top:9px;padding-top:8px;font-size:12px;color:var(--ink3);line-height:1.35;',txt:x.title+' · '+x.meta}));
+    });
+  }
+  return card;
+}
+
 function renderHome() {
   var d = S.day || empty();
   if(S.role==='fam'){
@@ -2157,9 +2220,11 @@ function renderHome() {
     wrap.appendChild(hdr); wrap.appendChild(band);
     var px = mk('div',{cls:'px',css:'padding-top:16px;'});
 
+    var _patchWatch = renderPatchWatch();
     var _skwCard = renderSkaweakyClean();
     var _teethCard = renderTeethClean();
     var _waddlesCard = renderWaddlesCard();
+    if(_patchWatch) px.appendChild(_patchWatch);
     px.appendChild(stats);
     if(_skwCard) px.appendChild(_skwCard);
     if(_teethCard) px.appendChild(_teethCard);
@@ -2168,6 +2233,8 @@ function renderHome() {
     wrap.appendChild(px);
   } else {
     var px2 = mk('div',{cls:'px',css:'padding-top:16px;'});
+    var _patchWatch2 = renderPatchWatch();
+    if(_patchWatch2) px2.appendChild(_patchWatch2);
     px2.appendChild(stats);
     wrap.appendChild(hdr); wrap.appendChild(band); wrap.appendChild(px2);
   }
@@ -5447,7 +5514,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.10-cheers-normalize-backend-shape'],
+    ['Version','v10.3.11-home-patch-watch'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
