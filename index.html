@@ -2033,38 +2033,53 @@ function renderWaddlesCard(){
 }
 
 
+
+
 function latestPatchTs(id){
   var log=getPrnLog();
   var arr=Array.isArray(log[id])?log[id]:[];
   return arr.reduce(function(max,t){t=Number(t)||0;return t>max?t:max;},0);
 }
+function startOfLocalDay(ts){
+  var d=new Date(ts); d.setHours(0,0,0,0); return d.getTime();
+}
+function patchDuePhrase(dueTs){
+  var now=Date.now();
+  var today=startOfLocalDay(now);
+  var dueDay=startOfLocalDay(dueTs);
+  var dayDiff=Math.round((dueDay-today)/86400000);
+  if(dayDiff<0) return 'overdue';
+  if(dayDiff===0) return 'due today';
+  if(dayDiff===1) return 'due tomorrow';
+  if(dayDiff<=6) return 'due '+new Date(dueTs).toLocaleDateString('en-US',{weekday:'long'});
+  return 'due '+new Date(dueTs).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
 function patchWatchItems(){
   var defs=[
-    {id:'scopolamine-prn',name:'Scopolamine',interval:72},
-    {id:'sancuso-prn',name:'Sancuso',interval:168}
+    {id:'scopolamine-prn',name:'Scopolamine',interval:72,windowHrs:24},
+    {id:'sancuso-prn',name:'Sancuso',interval:168,windowHrs:48}
   ];
   var now=Date.now();
   var items=[];
   defs.forEach(function(p){
     var last=latestPatchTs(p.id);
     if(!last){
-      items.push({id:p.id,name:p.name,state:'missing',priority:0,title:p.name+' patch timing is not logged',meta:'Log the last change so the app can remind you.'});
+      items.push({id:p.id,name:p.name,state:'missing',priority:0,title:p.name+' patch timing is not logged',meta:'Log the last change so the app can remind you.',show:true});
       return;
     }
     var due=last+p.interval*3600000;
     var left=due-now;
-    var hrs=Math.round(left/3600000);
-    var dueDate=new Date(due);
-    var dayName=dueDate.toLocaleDateString('en-US',{weekday:'long'});
-    var timeTxt=dueDate.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    var hrsLeft=left/3600000;
+    var phrase=patchDuePhrase(due);
     if(left<=0){
       var overdueH=Math.max(0,Math.round((now-due)/3600000));
-      items.push({id:p.id,name:p.name,state:'overdue',priority:0,title:p.name+' patch is overdue',meta:overdueH<2?'Due now':'Due about '+overdueH+'h ago'});
-    } else if(left<=24*3600000){
-      items.push({id:p.id,name:p.name,state:'due',priority:1,title:p.name+' patch due soon',meta:hrs<=1?'Due within the hour':'Due in about '+hrs+'h'});
+      items.push({id:p.id,name:p.name,state:'overdue',priority:0,title:p.name+' patch is overdue',meta:overdueH<2?'Due now':'Due about '+overdueH+'h ago',show:true,dueTs:due});
+    } else if(startOfLocalDay(due)===startOfLocalDay(now)){
+      items.push({id:p.id,name:p.name,state:'dueToday',priority:1,title:p.name+' patch is due today',meta:'Replace when ready',show:true,dueTs:due});
+    } else if(hrsLeft<=p.windowHrs){
+      items.push({id:p.id,name:p.name,state:'soon',priority:2,title:p.name+' patch '+phrase,meta:'Replacement coming up',show:true,dueTs:due});
     } else {
-      // Keep comfortable patch timing out of Home; Meds remains the detailed source.
-      items.push({id:p.id,name:p.name,state:'quiet',priority:3,title:p.name+' patch',meta:'Due '+dayName+' at '+timeTxt});
+      items.push({id:p.id,name:p.name,state:'quiet',priority:3,title:p.name+' patch '+phrase,meta:'No action needed yet',show:false,dueTs:due});
     }
   });
   return items.sort(function(a,b){return a.priority-b.priority;});
@@ -2072,19 +2087,19 @@ function patchWatchItems(){
 function renderPatchWatch(){
   if(!(S.role==='patient'||S.role==='care')) return null;
   var all=patchWatchItems();
-  var visible=all.filter(function(x){return x.state!=='quiet';});
+  var visible=all.filter(function(x){return x.show;});
   if(!visible.length) return null;
-  var strongest=visible.some(function(x){return x.state==='overdue'||x.state==='missing';})?'attention':'soon';
-  var card=mk('button',{css:'width:100%;text-align:left;background:'+(strongest==='attention'?'rgba(214,112,94,.08)':'rgba(221,139,83,.08)')+';border:1px solid '+(strongest==='attention'?'rgba(214,112,94,.28)':'rgba(221,139,83,.24)')+';border-radius:var(--r-md);padding:12px 14px;margin-bottom:12px;display:block;font-family:var(--sans);cursor:pointer;color:var(--ink);'});
+  var strongest=visible.some(function(x){return x.state==='overdue'||x.state==='missing';})?'attention':(visible.some(function(x){return x.state==='dueToday';})?'today':'soon');
+  var card=mk('button',{css:'width:100%;text-align:left;background:'+(strongest==='attention'?'rgba(214,112,94,.08)':strongest==='today'?'rgba(221,139,83,.10)':'rgba(221,139,83,.06)')+';border:1px solid '+(strongest==='attention'?'rgba(214,112,94,.28)':strongest==='today'?'rgba(221,139,83,.28)':'rgba(221,139,83,.18)')+';border-radius:var(--r-md);padding:12px 14px;margin-bottom:12px;display:block;font-family:var(--sans);cursor:pointer;color:var(--ink);'});
   card.setAttribute('aria-label','Patch check. '+visible.map(function(x){return x.title+'. '+x.meta;}).join(' '));
   card.addEventListener('click',function(){S.tab='meds';R();});
-  var top=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;gap:12px;'});
+  var top=mk('div',{css:'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;'});
   var left=mk('div',{css:'min-width:0;'});
   left.appendChild(mk('div',{css:'font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.075em;color:var(--ink4);margin-bottom:3px;',txt:'Patch check'}));
   left.appendChild(mk('div',{css:'font-size:14px;font-weight:800;color:var(--ink);line-height:1.25;',txt:visible[0].title}));
   left.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);line-height:1.35;margin-top:3px;',txt:visible[0].meta}));
   top.appendChild(left);
-  var cue=mk('div',{css:'flex:0 0 auto;font-size:11px;font-weight:800;color:'+(strongest==='attention'?'var(--ro)':'var(--am)')+';white-space:nowrap;',txt:visible.length>1?visible.length+' patches':'Open meds'});
+  var cue=mk('div',{css:'flex:0 0 auto;font-size:11px;font-weight:800;color:'+(strongest==='attention'?'var(--ro)':'var(--am)')+';white-space:nowrap;',txt:'Open meds'});
   top.appendChild(cue);
   card.appendChild(top);
   if(visible.length>1){
@@ -4268,6 +4283,7 @@ var REFILL_DEFAULTS = {
   dilaudid4:{fillDate:MED_FILL_BASELINE_DATE,qty:36,refills:0},
   dilaudid2:{fillDate:MED_FILL_BASELINE_DATE,qty:105,refills:0},
   scopolamine:{fillDate:MED_FILL_BASELINE_DATE,qty:1,refills:0},
+  sancuso:{fillDate:MED_FILL_BASELINE_DATE,qty:1,refills:0},
   tylenol:{fillDate:MED_FILL_BASELINE_DATE,qty:236},
   bactrim:{fillDate:MED_FILL_BASELINE_DATE,qty:600,refills:5},
   lovenox:{fillDate:MED_FILL_BASELINE_DATE,qty:25,refills:0},
@@ -4276,7 +4292,7 @@ var REFILL_DEFAULTS = {
 };
 var MED_FILL_AUTHORITATIVE = {
   protonix:1,zyprexa:1,vitamind:1,cymbalta:1,pepcid:1,methadone:1,haldol:1,flexeril:1,decadron:1,
-  dilaudid4:1,dilaudid2:1,scopolamine:1,tylenol:1,bactrim:1,lovenox:1
+  dilaudid4:1,dilaudid2:1,scopolamine:1,sancuso:1,tylenol:1,bactrim:1,lovenox:1
 };
 function purgeAuthoritativeMedFillOverrides(){
   try{
@@ -4620,6 +4636,16 @@ function renderMeds() {
     if(days<=7) return 'soon';
     return 'watch';
   }
+  function pendingPatchReplacementCount(id, fillTs){
+    if(!isPatchPrn(id)) return 0;
+    var m=getPrnDef(id)||{}, intervalMs=(Number(m.interval)||0)*3600000;
+    if(!intervalMs) return 0;
+    var log=getPrnLog(), arr=_normPrnArr(log[id]||[]);
+    var last=arr.length?arr[arr.length-1]:null;
+    if(!last || last<fillTs) return 0;
+    var due=last+intervalMs;
+    return Date.now()>=due ? 1 : 0;
+  }
   function drugSupply(m){
     var refills=getRefills();
     var rf=refills[m.drug];
@@ -4658,10 +4684,11 @@ function renderMeds() {
     var daysSince=Math.max(0,(Date.now()-fillTs)/86400000);
     if(isPrn){
       var doses=(getPrnLog()[m.id]||[]).filter(function(t){return t>=fillTs;});
-      var used=doses.length*perDose, left=qty-used;
+      var projected=pendingPatchReplacementCount(m.id, fillTs);
+      var used=doses.length*perDose + projected*perDose, left=qty-used;
       var span=Math.max(3,daysSince), perDay=used/span;
-      var daysLeft=perDay>0?left/perDay:null;
-      console.log('[PRN SUPPLY CALC] id='+m.id+' fillDate='+rf.fillDate+' loggedDoses='+doses.length+' used='+used+' remaining='+left.toFixed(1)+' source=prn-log-ledger');
+      var daysLeft=isPatchPrn(m.id)?(left<=0?0:null):(perDay>0?left/perDay:null);
+      console.log('[PRN SUPPLY CALC] id='+m.id+' fillDate='+rf.fillDate+' loggedDoses='+doses.length+' projected='+projected+' used='+used+' remaining='+left.toFixed(1)+' source=prn-log-ledger');
       return {left:left,daysLeft:daysLeft,unit:m.unit,isPrn:true};
     }
     var dailyUnits=schedDosesPerDay(m.drug);
@@ -4681,7 +4708,13 @@ function renderMeds() {
     Object.keys(MED_SLOTS).forEach(function(k){ MED_SLOTS[k].meds.forEach(function(m){ if(!seen[m.drug]){seen[m.drug]=1;drugs.push(m);} }); });
     MED_PRN.concat(MED_PRN_RARE).forEach(function(m){ if(!seen[m.drug]){seen[m.drug]=1;drugs.push(m);} });
     var due=[];
-    drugs.forEach(function(m){ var s=drugSupply(m); if(s && s.daysLeft!=null && s.daysLeft<=14) due.push({m:m,s:s}); });
+    drugs.forEach(function(m){
+      var s=drugSupply(m);
+      var rf=getRefills()[m.drug]||{};
+      var noRefills=(rf.refills===0);
+      var depleted=(s&&s.left!=null&&s.left<=0);
+      if(s && ((s.daysLeft!=null && s.daysLeft<=14) || (depleted&&noRefills))) due.push({m:m,s:s});
+    });
     due.sort(function(a,b){ return a.s.daysLeft-b.s.daysLeft; });
     if(due.length){
       var action=due.filter(function(x){return refillTone(x)==='action';});
@@ -5514,7 +5547,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.11-home-patch-watch'],
+    ['Version','v10.3.13-patch-refill-deepfix'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
