@@ -2035,8 +2035,30 @@ function renderWaddlesCard(){
 
 
 
+
+function normPrnTsArrayGlobal(arr){
+  if(!Array.isArray(arr)) return [];
+  var seen={}, out=[];
+  arr.forEach(function(ts){
+    ts=Number(ts);
+    if(!isFinite(ts)) return;
+    var k=String(Math.round(ts));
+    if(seen[k]) return;
+    seen[k]=1; out.push(ts);
+  });
+  out.sort(function(a,b){return a-b;});
+  if(out.length>60) out=out.slice(-60);
+  return out;
+}
+function getPrnLogGlobal(){
+  var raw={};
+  try{ raw=JSON.parse(localStorage.getItem('gk-prn-doses')||'{}')||{}; }catch(e){ raw={}; }
+  var out={};
+  Object.keys(raw||{}).forEach(function(k){ out[k]=normPrnTsArrayGlobal(raw[k]); });
+  return out;
+}
 function latestPatchTs(id){
-  var log=getPrnLog();
+  var log=getPrnLogGlobal();
   var arr=Array.isArray(log[id])?log[id]:[];
   return arr.reduce(function(max,t){t=Number(t)||0;return t>max?t:max;},0);
 }
@@ -4640,7 +4662,7 @@ function renderMeds() {
     if(!isPatchPrn(id)) return 0;
     var m=getPrnDef(id)||{}, intervalMs=(Number(m.interval)||0)*3600000;
     if(!intervalMs) return 0;
-    var log=getPrnLog(), arr=_normPrnArr(log[id]||[]);
+    var log=(typeof getPrnLog==='function'?getPrnLog():getPrnLogGlobal()), arr=(typeof _normPrnArr==='function'?_normPrnArr(log[id]||[]):normPrnTsArrayGlobal(log[id]||[]));
     var last=arr.length?arr[arr.length-1]:null;
     if(!last || last<fillTs) return 0;
     var due=last+intervalMs;
@@ -5547,7 +5569,7 @@ function renderMedical(){
   var _verDiv=mk('div',{css:'margin:0 0 20px;background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;'});
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
-    ['Version','v10.3.13-patch-refill-deepfix'],
+    ['Version','v10.3.14-patch-watch-render-fix'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
