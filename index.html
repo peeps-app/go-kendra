@@ -2623,6 +2623,18 @@ function newEventId(){
 function evTypeName(ev){ return (ev&&EV_DISPLAY_NAME[ev.type])||((ev&&ev.type)||'Event'); }
 function evDisplayName(ev){ return (ev&&ev.title&&String(ev.title).trim())?String(ev.title).trim():evTypeName(ev); }
 
+
+function isWilkyEvent(e){
+  var hay=[e&&e.title,e&&e.provider,e&&e.location,e&&e.notes,e&&e.type].join(' ').toLowerCase();
+  return hay.indexOf('wilky')>=0;
+}
+function wilkyStar(){
+  var s=mk('span',{css:'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(221,139,83,.14);color:var(--am);font-size:12px;font-weight:900;line-height:1;flex:0 0 auto;',txt:'★'});
+  s.setAttribute('aria-label','Important Wilky appointment');
+  s.title='Important Wilky appointment';
+  return s;
+}
+
 function renderCal() {
   var wrap = mk('div',{cls:'fi'});
   // Header
@@ -5220,6 +5232,7 @@ function renderMeds() {
 
   var stops=[
     {hour:6,build:function(){return stopBlock(MED_SLOTS['6am']);}},
+    {hour:11,build:function(){return stopBlock(MED_SLOTS['11am']);}},
     {hour:14,build:function(){return stopBlock(MED_SLOTS['2pm']);}},
     {hour:17,build:tpn5pm},
     {hour:18,build:function(){return stopBlock(MED_SLOTS['6pm']);}},
@@ -5663,7 +5676,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.22-rx-patch-inventory-display-fix'],
+    ['Version','v10.3.24-wilky-appointment-star'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
