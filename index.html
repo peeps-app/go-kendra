@@ -4991,6 +4991,10 @@ function renderMeds() {
           o[m.id]={dose:di.value.trim(),note:ni.value.trim()};
           lsSet('med-overrides',o);
           if(fdi.value||qti.value||rli.value){
+            if(MED_FILL_AUTHORITATIVE[m.drug]){
+              toast('Inventory for '+m.name+' is locked to the June 8 count in this build.', 'warn');
+              S_medsEdit=null; R(); return;
+            }
             if(!window._fbDb){
               toast('Inventory changes require Firebase connection. Local-only inventory saves are disabled.', 'warn');
               S_medsEdit=null; R(); return;
@@ -5687,7 +5691,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.29-med-inventory-save-unlocked'],
+    ['Version','v10.3.28-med-inventory-save-fix'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
