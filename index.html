@@ -908,7 +908,7 @@ var BDGS = [
   {ico:"sparkles", color:"#8956FF", n:"Home Sweet Home",      d:"Discharged — week 1 done",         e:false}
 ];
 var DEFP = {poop:true,detail:false,mood:true,sym:true,food:true,wo:true};
-var S = {v:'loading',tab:'home',obs:0,user:null,role:'patient',day:null,medFills:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false,foodQ:'',calQ:'',editingMeds:false,_evOpen:null,_frewHistOpen:false};
+var S = {v:'loading',tab:'home',obs:0,user:null,role:null,day:null,medFills:null,cheers:[],priv:null,bdgs:[],wo:null,lt:'food',cd:null,calD:{},cin:false,cinD:{mood:null,nausea:null,pain:null,energy:null,notes:''},events:[],addingEvent:false,evDate:null,calMonth:null,labSummaries:[],addingLab:false,foodQ:'',calQ:'',editingMeds:false,_evOpen:null,_frewHistOpen:false};
 var selB=null,selT=[];
 function isPt(){ return S.role==='patient'; }
 function pron(s){
@@ -1326,6 +1326,9 @@ function bootLoad(){
     var remembered=loadRememberedUser();
     if(remembered) applyUserSession(remembered);
   }
+  if(!validStoredUser(S.user) || S.role!==S.user.role){
+    S.user=null; S.role=null;
+  }
   S.v = S.user ? 'app' : 'pw';
   setupFirebaseSync(); // wire real-time listeners + initial Firebase pull
   window._bootPhase=false; // Firebase writes now safe
@@ -1675,6 +1678,11 @@ function R() {
   if (S.v === 'loading') { nav.style.display='none'; app.appendChild(renderLoading()); return; }
   if (S.v === 'pw')      { nav.style.display='none'; app.innerHTML=''; renderPw(); return; }
   if (S.v === 'ob')      { nav.style.display='none'; app.appendChild(renderOb());      return; }
+  if (!validStoredUser(S.user) || S.role!==S.user.role) {
+    console.warn('[AUTH GUARD] invalid app session role='+(S.role||'none'));
+    S.user=null; S.role=null; S.v='pw'; S.tab='home';
+    nav.style.display='none'; app.innerHTML=''; renderPw(); return;
+  }
   if (S.role === 'friends' && !['squad','wins','wishlist'].includes(S.tab)) S.tab='squad';
 
   nav.style.display = 'flex';
@@ -4991,10 +4999,6 @@ function renderMeds() {
           o[m.id]={dose:di.value.trim(),note:ni.value.trim()};
           lsSet('med-overrides',o);
           if(fdi.value||qti.value||rli.value){
-            if(MED_FILL_AUTHORITATIVE[m.drug]){
-              toast('Inventory for '+m.name+' is locked to the June 8 count in this build.', 'warn');
-              S_medsEdit=null; R(); return;
-            }
             if(!window._fbDb){
               toast('Inventory changes require Firebase connection. Local-only inventory saves are disabled.', 'warn');
               S_medsEdit=null; R(); return;
@@ -5691,7 +5695,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.28-med-inventory-save-fix'],
+    ['Version','v10.3.30-role-permission-hardening'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
