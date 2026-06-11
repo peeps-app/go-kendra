@@ -1322,6 +1322,10 @@ function bootLoad(){
     });
   }
 
+  if(!S.user){
+    var remembered=loadRememberedUser();
+    if(remembered) applyUserSession(remembered);
+  }
   S.v = S.user ? 'app' : 'pw';
   setupFirebaseSync(); // wire real-time listeners + initial Firebase pull
   window._bootPhase=false; // Firebase writes now safe
@@ -1769,6 +1773,9 @@ function renderPw() {
     +'<div style="font-size:14px;color:var(--ink3);margin-bottom:32px;text-align:center;">Your daily tracker</div>'
     +'<input id="pw-user" type="text" autocapitalize="none" autocorrect="off" placeholder="Your name" onkeydown="if(event.key===\'Enter\')doLogin()" style="width:100%;max-width:320px;height:52px;border-radius:14px;border:1.5px solid var(--div);padding:0 16px;font-size:16px;font-family:var(--sans);outline:none;background:#fff;text-align:center;box-sizing:border-box;margin-bottom:10px;">'
     +'<input id="pw-inp" type="password" placeholder="Password" onkeydown="if(event.key===\'Enter\')doLogin()" style="width:100%;max-width:320px;height:52px;border-radius:14px;border:1.5px solid var(--div);padding:0 16px;font-size:16px;font-family:var(--sans);outline:none;background:#fff;text-align:center;box-sizing:border-box;">'
+    +'<label style="width:100%;max-width:320px;display:flex;align-items:center;gap:9px;margin-top:10px;font-size:12.5px;color:var(--ink3);font-family:var(--sans);justify-content:center;">'
+      +'<input id="pw-remember" type="checkbox" checked style="width:18px;height:18px;accent-color:var(--pu);"> Keep me signed in on this device'
+    +'</label>'
     +'<button onclick="doLogin()" style="margin-top:12px;width:100%;max-width:320px;height:52px;background:var(--ink);color:#fff;border:none;border-radius:26px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--sans);">Enter</button>'
     +'<div id="pw-err" style="margin-top:12px;font-size:13px;color:var(--ro);min-height:20px;text-align:center;"></div>'
     +'</div>';
@@ -4315,9 +4322,18 @@ function renderProcs() {
     var list = mk('div',{css:'background:var(--card);border-radius:var(--r-md);border:1px solid var(--div);overflow:hidden;'});
     todayEvs.forEach(function(ev,i){
       var row = mk('div',{css:'display:flex;align-items:center;gap:10px;padding:10px 14px;'+(i<todayEvs.length-1?'border-bottom:1px solid var(--div)':'')});
-      var dot = mk('div',{css:'width:8px;height:8px;border-radius:50%;background:'+evColor(ev.type)+';flex-shrink:0;'});
+      var dot;
+      if(isWilkyEvent(ev)){
+        dot=mk('div',{css:'width:18px;height:18px;border-radius:999px;background:rgba(221,139,83,.14);color:var(--am);flex-shrink:0;display:flex;align-items:center;justify-content:center;',html:wilkyStarSvg()});
+        dot.setAttribute('aria-label','Important Wilky appointment');
+        dot.title='Important Wilky appointment';
+      } else {
+        dot = mk('div',{css:'width:8px;height:8px;border-radius:50%;background:'+evColorFor(ev)+';flex-shrink:0;'});
+      }
       var inf = mk('div',{css:'flex:1;'});
-      inf.appendChild(mk('div',{css:'font-size:14px;font-weight:600;',txt:ev.title}));
+      var titleLine=mk('div',{css:'display:flex;align-items:center;gap:6px;'});
+      titleLine.appendChild(mk('div',{css:'font-size:14px;font-weight:600;',txt:ev.title}));
+      inf.appendChild(titleLine);
       if(ev.time) inf.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);',txt:fmt12(ev.time)}));
       row.appendChild(dot); row.appendChild(inf);
       var del = mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink4);padding:6px;font-size:16px;',txt:'\u00D7'});
@@ -4361,16 +4377,9 @@ var MED_FILL_AUTHORITATIVE = {
 };
 function purgeAuthoritativeMedFillOverrides(){
   try{
-    // Legacy local override path is retired. Inventory must not be sourced from localStorage.
+    // Retire old pre-Firebase override key only. Do NOT delete gk-med-fills:
+    // care-team inventory edits are now intentional refill updates.
     localStorage.removeItem('gk-med-refills');
-    var raw=localStorage.getItem('gk-med-fills');
-    if(raw){
-      var obj=JSON.parse(raw)||{}, changed=false;
-      Object.keys(MED_FILL_AUTHORITATIVE||{}).forEach(function(k){
-        if(obj&&obj[k]){ delete obj[k]; changed=true; }
-      });
-      if(changed) localStorage.setItem('gk-med-fills',JSON.stringify(obj));
-    }
   }catch(_e){}
 }
 function normalizeMedFills(fills){
@@ -4380,10 +4389,18 @@ function normalizeMedFills(fills){
     var base=REFILL_DEFAULTS[k];
     if(!base||!base.fillDate) return;
     var cur=fills[k];
-    // Monday 2026-06-08 inventory count is authoritative for the listed meds.
-    // This prevents stale localStorage/Firebase med-refill overrides from resurrecting old counts.
-    if(MED_FILL_AUTHORITATIVE[k]||!cur||!cur.fillDate||String(cur.fillDate)<MED_FILL_BASELINE_DATE){
+    // Defaults seed missing/invalid records only. Once a refill is intentionally
+    // saved, its fillDate/qty/refills become the source of truth.
+    if(!cur||typeof cur!=='object'||!cur.fillDate){
       fills[k]=Object.assign({},base);
+    } else {
+      fills[k]=Object.assign({},base,cur);
+      fills[k].qty=parseFloat(fills[k].qty);
+      if(!(fills[k].qty>=0)) fills[k].qty=parseFloat(base.qty)||0;
+      if(cur.refills!==undefined){
+        fills[k].refills=parseInt(cur.refills,10);
+        if(!(fills[k].refills>=0)) fills[k].refills=parseInt(base.refills||0,10)||0;
+      }
     }
   });
   return fills;
@@ -4597,9 +4614,6 @@ function renderMeds() {
   for(var k in REFILL_DEFAULTS) out[k]=REFILL_DEFAULTS[k];
   for(var k3 in firebase_fills) out[k3]=firebase_fills[k3];
   out=normalizeMedFills(out);
-  Object.keys(MED_FILL_AUTHORITATIVE||{}).forEach(function(k){
-    if(REFILL_DEFAULTS[k]) out[k]=Object.assign({},REFILL_DEFAULTS[k]);
-  });
   // Log source per drug for observability
   if(typeof window!=='undefined'&&window._logRefillSource){
     Object.keys(out).forEach(function(drug){
@@ -4977,27 +4991,24 @@ function renderMeds() {
           o[m.id]={dose:di.value.trim(),note:ni.value.trim()};
           lsSet('med-overrides',o);
           if(fdi.value||qti.value||rli.value){
-            if(MED_FILL_AUTHORITATIVE[m.drug]){
-              toast('Inventory for '+m.name+' is locked to the June 8 count in this build.', 'warn');
-              S_medsEdit=null; R(); return;
-            }
             if(!window._fbDb){
               toast('Inventory changes require Firebase connection. Local-only inventory saves are disabled.', 'warn');
               S_medsEdit=null; R(); return;
             }
-            var _fbFill={fillDate:fdi.value||'',qty:parseFloat(qti.value)||0,refills:parseInt(rli.value)||0};
-            window._fbDb.ref('gk/med-fills/'+m.drug).set(_fbFill)
-              .then(function(){
-                if(!S.medFills) S.medFills={};
-                S.medFills[m.drug]=_fbFill;
-                try{ localStorage.setItem('gk-med-fills', JSON.stringify(normalizeMedFills(S.medFills))); }catch(_e){}
-                console.log('[MED FILL SAVE] drug='+m.drug+' fillDate='+_fbFill.fillDate+' qty='+_fbFill.qty+' firebase=OK localStorage=CACHE_ONLY');
-                toast(m.drug+' fill data saved');
-              })
-              .catch(function(e){
-                console.error('[MED FILL SAVE FAILED] drug='+m.drug+' firebase=FAILED error='+e.message);
-                toast('Inventory save failed — Firebase did not confirm it.', 'warn');
-              });
+            var _fbFill={fillDate:fdi.value||'',qty:parseFloat(qti.value),refills:parseInt(rli.value,10)};
+            if(!(_fbFill.qty>=0)){ toast('Enter a valid amount left', 'warn'); return; }
+            if(!(_fbFill.refills>=0)) _fbFill.refills=0;
+            if(!S.medFills) S.medFills={};
+            S.medFills[m.drug]=_fbFill;
+            S.medFills=normalizeMedFills(S.medFills);
+            try{ localStorage.setItem('gk-med-fills', JSON.stringify(S.medFills)); }catch(_e){}
+            var _allFills=Object.assign({},S.medFills);
+            if(!guardedFirebaseSet('med-fills',_allFills,'manual-inventory-save')){
+              toast('Inventory saved on this device only — Firebase write was blocked.', 'warn');
+            } else {
+              console.log('[MED FILL SAVE] drug='+m.drug+' fillDate='+_fbFill.fillDate+' qty='+_fbFill.qty+' firebase=REQUESTED localState=UPDATED');
+              toast(m.drug+' fill data saved');
+            }
           }
           S_medsEdit=null; R();
         });
@@ -5676,7 +5687,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.24-wilky-appointment-star'],
+    ['Version','v10.3.29-med-inventory-save-unlocked'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -5775,8 +5786,42 @@ function renderCarePortal()    { return mk('div',{txt:'Care team portal'}); }
 function renderFriendsPortal() { return mk('div',{txt:'Friends portal'}); }
 
 
+
+function validStoredUser(u){
+  return !!(u&&typeof u==='object'&&/^(patient|care|friends|fam)$/.test(String(u.role||''))&&String(u.name||'').trim());
+}
+function loadRememberedUser(){
+  try{
+    if(localStorage.getItem('gk-remember-session')!=='1') return null;
+    var raw=localStorage.getItem('gk-u');
+    var u=raw?JSON.parse(raw):null;
+    if(typeof u==='string'){ try{u=JSON.parse(u);}catch(_e){} }
+    if(!validStoredUser(u)) return null;
+    return {role:u.role,name:String(u.name||'').trim()};
+  }catch(e){ return null; }
+}
+function saveRememberedUser(u, remember){
+  try{
+    if(remember&&validStoredUser(u)){
+      localStorage.setItem('gk-remember-session','1');
+      localStorage.setItem('gk-u',JSON.stringify({role:u.role,name:u.name}));
+    } else {
+      localStorage.removeItem('gk-remember-session');
+      localStorage.removeItem('gk-u');
+    }
+  }catch(e){}
+}
+function applyUserSession(u){
+  if(!validStoredUser(u)) return false;
+  S.user={role:u.role,name:u.name};
+  S.role=u.role;
+  S.v='app';
+  S.tab=(u.role==='friends')?'squad':'home';
+  return true;
+}
+
 function doLogout(){
-  try{ localStorage.removeItem('gk-u'); }catch(e){}
+  saveRememberedUser(null,false);
   S.user=null; S.role=null; S.v='pw'; S.tab='home';
   R();
 }
@@ -5790,13 +5835,16 @@ function doLogin(){
   // Name must be filled in, but its VALUE is never checked.
   if(!uname){ if(err) err.textContent='Please enter your name'; return; }
   // Password alone decides the view.
-  var matched = false;
-  if(v===PW_PATIENT){ S.user={role:'patient',name:uname}; S.role='patient'; S.v='app'; S.tab='home'; matched=true; }
-  else if(v===PW_CARE){ S.user={role:'care',name:uname}; S.role='care'; S.v='app'; S.tab='home'; matched=true; }
-  else if(v===PW_FRIENDS){ S.user={role:'friends',name:uname}; S.role='friends'; S.v='app'; S.tab='home'; matched=true; }
-    else if(v===PW_FAM){ S.user={role:'fam',name:uname}; S.role='fam'; S.v='app'; S.tab='home'; matched=true; }
+  var matched = false, role=null;
+  if(v===PW_PATIENT){ role='patient'; matched=true; }
+  else if(v===PW_CARE){ role='care'; matched=true; }
+  else if(v===PW_FRIENDS){ role='friends'; matched=true; }
+  else if(v===PW_FAM){ role='fam'; matched=true; }
   if(matched){
-    lsSet('u',JSON.stringify(S.user));
+    var rememberEl=document.getElementById('pw-remember');
+    var remember=rememberEl?!!rememberEl.checked:true;
+    applyUserSession({role:role,name:uname});
+    saveRememberedUser(S.user,remember);
     try{ R(); }catch(e){}
   } else {
     if(err) err.textContent='Incorrect password';
@@ -6804,7 +6852,11 @@ var EV_COLOR_REGISTRY = {
 function evColReg(type){ return EV_COLOR_REGISTRY[type]||'#7B82A0'; }
 
 function evColor(type){ return evColReg(type); }
-function evColorFor(ev){ if(ev&&ev.title&&/telephone/i.test(ev.title)) return EV_COLOR_REGISTRY['phone']||'#08C284'; return evColReg(ev?ev.type:'appt'); }
+function evColorFor(ev){
+  if(isWilkyEvent(ev)) return 'var(--am)';
+  if(ev&&ev.title&&/telephone/i.test(ev.title)) return EV_COLOR_REGISTRY['phone']||'#08C284';
+  return evColReg(ev?ev.type:'appt');
+}
 function evLabel(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].l;}return 'Other';}
 function evIco(type){for(var i=0;i<EV_TYPES.length;i++){if(EV_TYPES[i].id===type)return EV_TYPES[i].ico||'calendar';}return 'calendar';}
 function evIcon(type){
@@ -6827,9 +6879,12 @@ function evIcon(type){
   icons.frew='<svg width="14" height="14" viewBox="72 66 156 166" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" stroke="currentColor" stroke-width="8" stroke-linejoin="round" d="M191.61,228.07l-81.09.03c-.79,0-2.43-.7-2.55-1.33-.57-2.87,6.6-12.85,12.75-15.77-32.18-14.55-49.02-48.62-41.56-82.4,7.3-33.05,37.17-56.92,71.24-56.71,33.81.21,63.21,23.85,70.48,56.86,7.43,33.72-9.68,68.09-41.78,82.26,5.3,2.59,8.64,6.71,11.5,11.67.88,1.52,1.82,2.76,1.02,5.39ZM183.02,169.3c4.42,5.1,3.84,12.07-.87,16.77-3.33,3.32-7.39,5.41-11.74,7.29l.04,15.47c2.08-.05,3.64-.18,5.25-.84,30.87-12.74,48.17-45.2,41.24-77.86-6.69-31.56-35.1-54.43-67.71-54.09-32.29.34-60.31,23.58-66.44,55.37-6.24,32.35,11.24,64.5,42.17,76.84,1.4.56,3.46.59,4.64.23l-.05-15.31c-4.91-1.89-9.29-4.17-12.52-7.99-4.2-4.98-4.07-11.58.38-16.45,13.2-14.45,52.27-14.82,65.61.57ZM164.6,176.68c5.34,2.12,6.49,6.44,5.75,12.12,3.79-1.64,7.09-3.57,9.5-6.33,10.13-11.62-17.82-26.32-46.48-18.17-4.83,1.38-9.33,3.64-12.73,7.04-3.28,3.28-3.42,7.84-.38,11.24,2.46,2.76,5.71,4.73,9.49,6.18-1.16-5.92.73-10.24,6.03-12.25,8.99-3.41,19.6-3.48,28.8.17ZM113.61,223.92h72.79c-3.98-7.75-11.26-11.44-20.06-11.45l-.08-28.84c-.67-1.38-2.38-2.89-3.99-3.45-8.53-2.96-23.22-3.31-28.52,3.11l.02,27.01c0,.87-1.33,2.41-2.12,2.42-7.81.09-14.18,3.98-18.04,11.22Z"/><path fill="currentColor" stroke="currentColor" stroke-width="8" stroke-linejoin="round" d="M183.62,137.75c.65.46.89,2.35.4,2.92s-2.32.82-3,.35l-17.41-12.18c-.55-.38-1.27-1.76-1.07-2.25s.91-1.29,1.45-1.67l17.11-11.92c.75-.52,2.43-.23,2.89.32.55.64.19,2.61-.55,3.12l-15.19,10.58,15.36,10.73Z"/><path fill="currentColor" stroke="currentColor" stroke-width="8" stroke-linejoin="round" d="M119.38,140.73c-.78.55-2.59.94-3.02.4s-.59-1.84-.61-2.93l15.95-11.16-15.3-10.75c-.65-.46-.79-2.47-.3-3.06s2.03-.76,2.82-.2l17.55,12.26c.43.3,1.06,1.4.98,1.86s-.76,1.48-1.25,1.82l-16.83,11.77Z"/></svg>';
   return icons[type]||icons['appt'];
 }
+function wilkyStarSvg(){
+  return '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z"/></svg>';
+}
 function evIconFor(ev){
-  if(ev && ev.type==='frew') return evIcon('frew');
-  if(ev && ev.title && /telephone/i.test(ev.title)) return evIcon('phone');
+  if(isWilkyEvent(ev)) return wilkyStarSvg();
+  if(ev&&ev.title&&/telephone/i.test(ev.title)) return evIcon('phone');
   return evIcon(ev?ev.type:'appt');
 }
 
