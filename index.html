@@ -4488,7 +4488,11 @@ function renderMeds() {
     if(window._fbDb&&!window._bootPhase){
       window._fbDb.ref('gk/prn-doses/'+id).transaction(function(cur){
         var arr=_normPrnArr(cur||[]);
-        if(intervalMs){
+        if(isPatchPrn(id)){
+          for(var i=0;i<arr.length;i++){
+            if(localDayKey(ts)===localDayKey(arr[i])) return;
+          }
+        } else if(intervalMs){
           for(var i=0;i<arr.length;i++){ if(Math.abs(ts-arr[i])<intervalMs) return; }
         }
         if(m.maxDaily){
@@ -4503,7 +4507,7 @@ function renderMeds() {
         if(!committed){
           var arr0=(snap&&Array.isArray(snap.val()))?snap.val():_normPrnArr((getPrnRaw()[id]||[]).filter(function(x){return x!==ts;}));
           _savePrnLocal(id,arr0);
-          if(typeof toast==='function') toast(isPatchPrn(id)?'Patch still locked — not logged':'Dose locked — not logged');
+          if(typeof toast==='function') toast(isPatchPrn(id)?'Patch already logged for selected day — not logged':'Dose locked — not logged');
           if(S.v==='app'&&!window._userTyping) R();
           return;
         }
@@ -5697,7 +5701,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.32-patch-log-any-past-date'],
+    ['Version','v10.3.33-patch-transaction-unlocked'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
