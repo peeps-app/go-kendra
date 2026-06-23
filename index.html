@@ -1403,6 +1403,19 @@ function bootstrapCanonicalData(){
     _wl=sanitizeSupportItems(_wl);
     lsSetLocal('wishlist', _wl);
 
+    // ── 3. MILESTONES — friend-shareable public win seeds ────────────────
+    var _msSeed=lsGet('milestones')||[];
+    var _msIds={}; _msSeed.forEach(function(m){ if(m&&m.id) _msIds[m.id]=m; });
+    var _safeWins=[
+      {id:'ms-share-001',date:'2026-06-01',title:'Every step counts',body:'Kendra has been showing up for herself one tiny step at a time — and those tiny steps matter.',public:true,friendPublic:true},
+      {id:'ms-share-002',date:'2026-06-08',title:'Wrapped in love',body:'The support around Kendra has been felt deeply. Thank you for cheering her on without pressure.',public:true,friendPublic:true}
+    ];
+    _safeWins.forEach(function(ms){
+      if(!_msIds[ms.id]) _msSeed.push(ms);
+      else Object.assign(_msIds[ms.id],ms);
+    });
+    lsSetLocal('milestones',_msSeed);
+
     // ── 3. MILESTONES — handled by seed-milestones-v2 if(true) block below ──
 
     // ── 4. DAY BUCKETS — seed historical care data idempotently ─────────────
@@ -2946,6 +2959,9 @@ function renderSupportMgmt(){
   return wrap;
 }
 
+function isShareableWin(ms){
+  return !!(ms && (ms.friendPublic===true || ms.shareWithFriends===true || ms.public===true));
+}
 function renderWins() {
   var wrap=mk('div',{cls:'fi'});
   var ph=mk('div',{cls:'ph',css:'background:linear-gradient(135deg,#FF8FB1,#F65C8E);padding:20px 110px 30px 16px;position:relative;overflow:visible;'});
@@ -2958,7 +2974,13 @@ function renderWins() {
 
   var px=mk('div',{cls:'px',css:'padding-top:20px;padding-bottom:32px;'});
   var _msList=(S.milestones&&S.milestones.length)?S.milestones:(lsGet('milestones')||[]);
-  var _pubMs=_msList.filter(function(m){return m.public!==false;}).slice().reverse();
+  var _pubMs=_msList.filter(function(m){
+    return S.role==='friends' ? isShareableWin(m) : m.public!==false;
+  }).slice().reverse();
+
+  if(S.role==='friends'){
+    px.appendChild(mk('div',{css:'background:var(--raised);border:1px solid var(--div);border-radius:var(--r-md);padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--ink3);line-height:1.55;',txt:'A little wall of shareable wins — only the updates Kendra and the care team chose to share here.'}));
+  }
 
   if(_pubMs.length){
     _pubMs.forEach(function(ms){
@@ -2974,7 +2996,7 @@ function renderWins() {
     });
     // remove border from last item
   } else {
-    px.appendChild(mk('div',{css:'text-align:center;color:var(--ink3);font-size:13px;padding:60px 20px;font-style:italic;',txt:'Wins incoming.'}));
+    px.appendChild(mk('div',{css:'text-align:center;color:var(--ink3);font-size:13px;padding:60px 20px;font-style:italic;',txt:S.role==='friends'?'Shareable wins incoming.':'Wins incoming.'}));
   }
   wrap.appendChild(px);
   return wrap;
@@ -5701,7 +5723,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.33-patch-transaction-unlocked'],
+    ['Version','v10.3.34-friend-shareable-wins-fix'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -6622,7 +6644,7 @@ function sendCheer(){
 
 function selDay(dt){S.cd=dt;loadCalDay(dt);R();}
 function viewerRoleAllowedTab(tab){
-  if(S.role==='friends') return tab==='squad'||tab==='wishlist';
+  if(S.role==='friends') return tab==='squad'||tab==='wishlist'||tab==='wins';
   if(S.role==='fam') return tab==='squad'||tab==='wishlist'||tab==='medical';
   return true;
 }
