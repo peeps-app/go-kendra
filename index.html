@@ -672,6 +672,7 @@ console.log('BOOT START');
 // -- CONFIG ---------------------------------------------
 var USER_PATIENT = "kendra";   var USER_CARE = "careteam";   var USER_FRIENDS = "peeps";
 // ── AUTH PASSWORDS — single source of truth ─────────────────────────────────
+var AUTH_SESSION_VERSION = 'cheer-lockdown-v2';
 var AUTH_PASSWORDS = {
   kendra:  'Kenny!',    // Kendra view
   care:    'Peeps!',    // Caretaker view
@@ -2179,6 +2180,8 @@ function renderPatchWatch(){
 }
 
 function renderHome() {
+  if(S.role==='friends') return renderSquad();
+
   var d = S.day || empty();
   if(S.role==='fam'){
     var _fw=mk('div',{cls:'fi'});
@@ -2357,6 +2360,8 @@ function logMood(i){
   saveDay(); if(typeof toast==='function')toast('Mood logged — '+ML[i]); R();
 }
 function renderLog() {
+  if(S.role==='friends') return renderSquad();
+
   var wrap = mk('div',{cls:'fi'});
   var lt = S.lt||'home';
   // Sticky header — landing shows minimal; sub-screens show back button + title
@@ -2564,6 +2569,8 @@ function renderFood() {
 }
 
 function renderTrain() {
+  if(S.role==='friends') return renderSquad();
+
   var wrap = mk('div',{cls:'fi'});
   var ph = mk('div',{cls:'ph',css:'padding:16px;'});
   ph.appendChild(mk('div',{css:'font-family:var(--serif);font-size:20px;font-style:italic;',txt:'Train'}));
@@ -2651,6 +2658,8 @@ function wilkyStar(){
 }
 
 function renderCal() {
+  if(S.role==='friends') return renderSquad();
+
   var wrap = mk('div',{cls:'fi'});
   // Header
   if(!S.calMonth){ var now=new Date(); S.calMonth={y:now.getFullYear(),m:now.getMonth()}; }
@@ -4420,6 +4429,8 @@ function normalizeMedFills(fills){
 }
 
 function renderMeds() {
+  if(S.role==='friends') return renderSquad();
+
   // Enable refill source logging on first render so getRefills() logs sources
   if(!window._refillSourceLogged){ window._logRefillSource=true; window._refillSourceLogged=true; }
   else { window._logRefillSource=false; }
@@ -5477,6 +5488,8 @@ function runFirebaseDiagnostic(){
 // ── END DIAGNOSTIC ────────────────────────────────────────────────────────────
 
 function renderMedical(){
+  if(S.role==='friends') return renderSquad();
+
   if(S.role==='care'||S.role==='fam'){
     var _diagBtn=mk('button',{css:'position:fixed;bottom:80px;left:16px;height:32px;padding:0 12px;background:#21262d;color:#58a6ff;border:1px solid #30363d;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);z-index:99;',txt:'DB Diagnostic'});
     _diagBtn.addEventListener('click',runFirebaseDiagnostic);
@@ -5706,7 +5719,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.35-friend-wins-clean'],
+    ['Version','v10.3.37-force-cheer-relogin'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -5809,21 +5822,30 @@ function renderFriendsPortal() { return mk('div',{txt:'Friends portal'}); }
 function validStoredUser(u){
   return !!(u&&typeof u==='object'&&/^(patient|care|friends|fam)$/.test(String(u.role||''))&&String(u.name||'').trim());
 }
+function validAutoRestoreUser(u){
+  // Only the limited cheer-squad role may auto-restore.
+  // Patient/care/fam sessions require password entry every load for privacy.
+  return !!(validStoredUser(u)&&u.role==='friends');
+}
 function loadRememberedUser(){
   try{
     if(localStorage.getItem('gk-remember-session')!=='1') return null;
     var raw=localStorage.getItem('gk-u');
     var u=raw?JSON.parse(raw):null;
     if(typeof u==='string'){ try{u=JSON.parse(u);}catch(_e){} }
-    if(!validStoredUser(u)) return null;
-    return {role:u.role,name:String(u.name||'').trim()};
+    if(!u || u.authVersion!==AUTH_SESSION_VERSION){
+      saveRememberedUser(null,false);
+      return null;
+    }
+    if(!validAutoRestoreUser(u)) return null;
+    return {role:'friends',name:String(u.name||'').trim()};
   }catch(e){ return null; }
 }
 function saveRememberedUser(u, remember){
   try{
-    if(remember&&validStoredUser(u)){
+    if(remember&&validAutoRestoreUser(u)){
       localStorage.setItem('gk-remember-session','1');
-      localStorage.setItem('gk-u',JSON.stringify({role:u.role,name:u.name}));
+      localStorage.setItem('gk-u',JSON.stringify({role:'friends',name:u.name,authVersion:AUTH_SESSION_VERSION}));
     } else {
       localStorage.removeItem('gk-remember-session');
       localStorage.removeItem('gk-u');
@@ -5832,10 +5854,11 @@ function saveRememberedUser(u, remember){
 }
 function applyUserSession(u){
   if(!validStoredUser(u)) return false;
-  S.user={role:u.role,name:u.name};
-  S.role=u.role;
+  var role=String(u.role||'');
+  S.user={role:role,name:u.name};
+  S.role=role;
   S.v='app';
-  S.tab=(u.role==='friends')?'squad':'home';
+  S.tab=(role==='friends')?'squad':'home';
   return true;
 }
 
@@ -5853,11 +5876,12 @@ function doLogin(){
   var err=document.getElementById('pw-err');
   // Name must be filled in, but its VALUE is never checked.
   if(!uname){ if(err) err.textContent='Please enter your name'; return; }
-  // Password alone decides the view.
+  // Password alone decides the view. Cheer password is checked first and can only produce limited friends view.
+  saveRememberedUser(null,false);
   var matched = false, role=null;
-  if(v===PW_PATIENT){ role='patient'; matched=true; }
+  if(v===PW_FRIENDS || v===AUTH_PASSWORDS.cheer){ role='friends'; matched=true; }
+  else if(v===PW_PATIENT){ role='patient'; matched=true; }
   else if(v===PW_CARE){ role='care'; matched=true; }
-  else if(v===PW_FRIENDS){ role='friends'; matched=true; }
   else if(v===PW_FAM){ role='fam'; matched=true; }
   if(matched){
     var rememberEl=document.getElementById('pw-remember');
