@@ -1325,9 +1325,10 @@ function bootLoad(){
 
   if(!S.user){
     var remembered=loadRememberedUser();
-    if(remembered) applyUserSession(remembered);
+    if(remembered && !applyUserSession(remembered)) saveRememberedUser(null,false);
   }
   if(!validStoredUser(S.user) || S.role!==S.user.role){
+    saveRememberedUser(null,false);
     S.user=null; S.role=null;
   }
   S.v = S.user ? 'app' : 'pw';
@@ -5719,7 +5720,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.37-force-cheer-relogin'],
+    ['Version','v10.3.38-kendra-name-gate'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -5822,10 +5823,14 @@ function renderFriendsPortal() { return mk('div',{txt:'Friends portal'}); }
 function validStoredUser(u){
   return !!(u&&typeof u==='object'&&/^(patient|care|friends|fam)$/.test(String(u.role||''))&&String(u.name||'').trim());
 }
+function isKendraLoginName(name){
+  return String(name||'').trim().toLowerCase()==='kendra';
+}
 function validAutoRestoreUser(u){
-  // Only the limited cheer-squad role may auto-restore.
+  // Only newly issued limited cheer-squad sessions may auto-restore.
+  // Existing gokenny sessions without this version are forced to re-login.
   // Patient/care/fam sessions require password entry every load for privacy.
-  return !!(validStoredUser(u)&&u.role==='friends');
+  return !!(validStoredUser(u)&&u.role==='friends'&&u.authVersion===AUTH_SESSION_VERSION);
 }
 function loadRememberedUser(){
   try{
@@ -5838,7 +5843,7 @@ function loadRememberedUser(){
       return null;
     }
     if(!validAutoRestoreUser(u)) return null;
-    return {role:'friends',name:String(u.name||'').trim()};
+    return {role:'friends',name:String(u.name||'').trim(),authVersion:AUTH_SESSION_VERSION};
   }catch(e){ return null; }
 }
 function saveRememberedUser(u, remember){
@@ -5855,7 +5860,9 @@ function saveRememberedUser(u, remember){
 function applyUserSession(u){
   if(!validStoredUser(u)) return false;
   var role=String(u.role||'');
+  if(role==='patient' && !isKendraLoginName(u.name)) return false;
   S.user={role:role,name:u.name};
+  if(role==='friends') S.user.authVersion=AUTH_SESSION_VERSION;
   S.role=role;
   S.v='app';
   S.tab=(role==='friends')?'squad':'home';
@@ -5876,11 +5883,18 @@ function doLogin(){
   var err=document.getElementById('pw-err');
   // Name must be filled in, but its VALUE is never checked.
   if(!uname){ if(err) err.textContent='Please enter your name'; return; }
-  // Password alone decides the view. Cheer password is checked first and can only produce limited friends view.
+  // Password alone decides role, except Kendra view requires BOTH Kendra's password and name Kendra.
+  // Cheer password is checked first and can only produce limited friends view.
   saveRememberedUser(null,false);
   var matched = false, role=null;
   if(v===PW_FRIENDS || v===AUTH_PASSWORDS.cheer){ role='friends'; matched=true; }
-  else if(v===PW_PATIENT){ role='patient'; matched=true; }
+  else if(v===PW_PATIENT){
+    if(!isKendraLoginName(uname)){
+      if(err) err.textContent='Kendra view requires Kendra\'s name and password';
+      return;
+    }
+    role='patient'; matched=true;
+  }
   else if(v===PW_CARE){ role='care'; matched=true; }
   else if(v===PW_FAM){ role='fam'; matched=true; }
   if(matched){
