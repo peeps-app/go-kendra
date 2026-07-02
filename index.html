@@ -821,8 +821,13 @@ var S_prnMore = false;
 var S_vTemp = null;
 var S_vWeight = null;
 var S_vHeight = null;
+var S_vO2 = null;
+var S_vHr = null;
+var S_vActivity = 'resting';
+var S_vReason = 'routine';
+var S_vRespNote = '';
 function vitalsCanSave(){
-  return (S_vWeight!=null&&!isNaN(S_vWeight))||(S_vTemp!=null&&!isNaN(S_vTemp))||S_vHeight!=null;
+  return (S_vWeight!=null&&!isNaN(S_vWeight))||(S_vTemp!=null&&!isNaN(S_vTemp))||S_vHeight!=null||(S_vO2!=null&&!isNaN(S_vO2))||(S_vHr!=null&&!isNaN(S_vHr));
 }
 // ── END DATA CONSTANTS ──────────────────────────────────────────────────────
 
@@ -2633,7 +2638,7 @@ function renderTrain() {
 // ── CALENDAR SCREEN ───────────────────────────────────────────
 // Canonical event display names — overrides stored title for known types
 var EV_DISPLAY_NAME = {
-  chemo:'Chemo',para:'Paracentesis',infusion:'Infusion',
+  chemo:'Chemo',para:'Paracentesis',thoracentesis:'Thoracentesis',infusion:'Infusion',
   infusion_pre:'Pre-Chemo Meds',infusion_other:'Infusion',
   lab:'Lab / Blood Draw',appt:'Appointment',scan:'Scan',
   nurse:'Nurse Visit',tpn:'TPN',proc:'Procedure',
@@ -3477,55 +3482,145 @@ var save = mk('button',{css:'width:100%;height:42px;border-radius:var(--r-md);bo
   wrap.appendChild(mk('div',{css:'height:24px;'}));
   return wrap;
 }
+function vitalActivityLabel(v){
+  var map={resting:'Resting',sitting:'Sitting',walking:'Walking',after_exertion:'After exertion',sleeping:'Sleeping',symptoms:'During symptoms',other:'Other'};
+  return map[v]||v||'';
+}
+function vitalReasonLabel(v){
+  var map={routine:'Routine check',short_breath:'Short of breath',chest:'Chest discomfort',dizzy:'Dizziness',fatigue:'Fatigue',other:'Other'};
+  return map[v]||v||'';
+}
+function vitalRecentLogs(days){
+  var out=[];
+  for(var i=days-1;i>=0;i--){
+    var dk=localDayKey(Date.now()-i*86400000);
+    var bucket=(dk===TODAY)?(S.day||empty()):(lsGet('day-'+dk)||{});
+    (bucket.vitals||[]).forEach(function(v){ if(v&&v.ts) out.push(v); });
+  }
+  out.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+  return out;
+}
+function renderVitalSpark(points,key){
+  var vals=points.map(function(p){return parseFloat(p[key]);}).filter(function(v){return !isNaN(v);});
+  if(!vals.length) return mk('div',{css:'font-size:11px;color:var(--ink4);',txt:'No trend yet'});
+  var w=116,h=30,mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals); if(mx===mn) mx=mn+1;
+  var svgNs='http://www.w3.org/2000/svg', svg=document.createElementNS(svgNs,'svg');
+  svg.setAttribute('width',w); svg.setAttribute('height',h); svg.setAttribute('viewBox','0 0 '+w+' '+h);
+  var step=w/(vals.length-1||1);
+  var pts=vals.map(function(v,i){return [i*step,h-3-((v-mn)/(mx-mn))*(h-8)];});
+  var ln=document.createElementNS(svgNs,'path');
+  ln.setAttribute('d',pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' '));
+  ln.setAttribute('fill','none'); ln.setAttribute('stroke','currentColor'); ln.setAttribute('stroke-width','1.8'); ln.setAttribute('stroke-linecap','round'); ln.setAttribute('stroke-linejoin','round');
+  svg.appendChild(ln);
+  var last=pts[pts.length-1], dot=document.createElementNS(svgNs,'circle'); dot.setAttribute('cx',last[0]); dot.setAttribute('cy',last[1]); dot.setAttribute('r','2.5'); dot.setAttribute('fill','currentColor'); svg.appendChild(dot);
+  return svg;
+}
 function renderVitals(){
+  if(S.role==='friends') return renderSquad();
   var d=S.day||empty();
   if(!Array.isArray(d.vitals)) d.vitals=[];
   var logs=(d.vitals||[]).filter(function(e){return isSameDay(e.ts);});
+  var recent=vitalRecentLogs(14);
+  var resp=recent.filter(function(v){return v.o2!=null||v.hr!=null;});
+  var lastResp=resp.length?resp[resp.length-1]:null;
   var wrap=mk('div');
   wrap.appendChild(mk('div',{css:'font-size:15px;font-weight:700;color:var(--ink);margin-bottom:3px;',txt:'Vitals'}));
-  wrap.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;',txt:'Track weight and temperature. A fever over 100.4\u00B0F should be reported to the care team.'}));
+  wrap.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;',txt:'Track temperature, weight, and respiratory readings. Oxygen and heart rate stay private to Kendra/care team views.'}));
 
-  wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:6px;',txt:'Height (optional)'}));
+  if(lastResp){
+    var summary=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:13px 14px;margin-bottom:16px;'});
+    summary.appendChild(mk('div',{css:'font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink4);margin-bottom:10px;',txt:'Respiratory trend'}));
+    var grid=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;'});
+    function metricTile(label,val,unit,key,icon,col){
+      var tile=mk('div',{css:'background:var(--raised);border-radius:var(--r-md);padding:10px 11px;min-width:0;'});
+      var hd=mk('div',{css:'display:flex;align-items:center;gap:6px;margin-bottom:4px;'});
+      var ic=lc(icon,14,col); if(ic) hd.appendChild(ic);
+      hd.appendChild(mk('div',{css:'font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink4);',txt:label}));
+      tile.appendChild(hd);
+      tile.appendChild(mk('div',{css:'font-size:24px;font-weight:850;color:var(--ink);line-height:1;',txt:(val!=null?String(val):'—')+unit}));
+      var sp=mk('div',{css:'height:32px;color:'+col+';margin-top:6px;display:flex;align-items:center;'});
+      sp.appendChild(renderVitalSpark(resp.filter(function(v){return v[key]!=null;}),key));
+      tile.appendChild(sp);
+      return tile;
+    }
+    grid.appendChild(metricTile('Oxygen',lastResp.o2,'%','o2','lungs','var(--blue)'));
+    grid.appendChild(metricTile('Heart rate',lastResp.hr,' bpm','hr','heart-pulse','var(--ro)'));
+    summary.appendChild(grid);
+    summary.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-top:9px;',txt:'Last: '+vitalActivityLabel(lastResp.activity)+' · '+new Date(lastResp.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}));
+    wrap.appendChild(summary);
+  }
+
+  function label(txt,mt){ wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:'+(mt||0)+'px 0 7px;',txt:txt})); }
+  label('Respiratory',0);
+  var rg=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;'});
+  var oIn=mk('input',{type:'number',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;'});
+  oIn.setAttribute('inputmode','numeric'); oIn.setAttribute('placeholder','SpO₂ %'); oIn.setAttribute('min','50'); oIn.setAttribute('max','100');
+  if(S_vO2!=null) oIn.value=S_vO2;
+  oIn.addEventListener('input',function(){ S_vO2=oIn.value?parseInt(oIn.value,10):null; _updateVitalsSave(); });
+  var hrIn=mk('input',{type:'number',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;'});
+  hrIn.setAttribute('inputmode','numeric'); hrIn.setAttribute('placeholder','HR bpm'); hrIn.setAttribute('min','30'); hrIn.setAttribute('max','220');
+  if(S_vHr!=null) hrIn.value=S_vHr;
+  hrIn.addEventListener('input',function(){ S_vHr=hrIn.value?parseInt(hrIn.value,10):null; _updateVitalsSave(); });
+  rg.appendChild(oIn); rg.appendChild(hrIn); wrap.appendChild(rg);
+
+  label('Activity when taken',4);
+  var actWrap=mk('div',{css:'display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;'});
+  ['resting','sitting','walking','after_exertion','sleeping','symptoms','other'].forEach(function(a){
+    var b=mk('button',{css:'flex:0 0 auto;padding:7px 11px;border-radius:99px;border:1.5px solid '+(S_vActivity===a?'var(--pu)':'var(--div)')+';background:'+(S_vActivity===a?'var(--pus)':'var(--card)')+';color:'+(S_vActivity===a?'var(--pu)':'var(--ink3)')+';font-size:12px;font-weight:700;font-family:var(--sans);',txt:vitalActivityLabel(a)});
+    b.addEventListener('click',(function(x){return function(){S_vActivity=x;R();};})(a));
+    actWrap.appendChild(b);
+  });
+  wrap.appendChild(actWrap);
+
+  label('Reason',4);
+  var rSel=mk('select',{css:'width:100%;height:40px;font-size:13px;margin-bottom:10px;'});
+  ['routine','short_breath','chest','dizzy','fatigue','other'].forEach(function(r){
+    var opt=document.createElement('option'); opt.value=r; opt.textContent=vitalReasonLabel(r); if(S_vReason===r) opt.selected=true; rSel.appendChild(opt);
+  });
+  rSel.addEventListener('change',function(){S_vReason=rSel.value;});
+  wrap.appendChild(rSel);
+  var rn=mk('textarea',{css:'width:100%;height:54px;font-size:13px;resize:none;box-sizing:border-box;padding:8px 10px;margin-bottom:14px;'});
+  rn.setAttribute('placeholder','Optional note');
+  rn.value=S_vRespNote||'';
+  rn.addEventListener('input',function(){S_vRespNote=rn.value;});
+  wrap.appendChild(rn);
+
+  label('Height (optional)',4);
   var hIn=mk('input',{type:'text',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;border:1.5px solid var(--div);border-radius:var(--r-md);background:var(--card);color:var(--ink);margin-bottom:14px;box-sizing:border-box;'});
   hIn.setAttribute('placeholder',"e.g. 5'2\""); hIn.setAttribute('inputmode','text');
   if(S_vHeight!=null) hIn.value=S_vHeight;
   hIn.addEventListener('input',function(){ S_vHeight=hIn.value.trim()||null; _updateVitalsSave(); });
   wrap.appendChild(hIn);
 
-  wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:7px;',txt:'Weight (lbs)'}));
+  label('Weight (lbs)',0);
   var wIn=mk('input',{type:'number',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;'});
   wIn.setAttribute('inputmode','decimal'); wIn.setAttribute('placeholder','e.g. 132.4'); wIn.setAttribute('step','0.1');
   if(S_vWeight!=null) wIn.value=S_vWeight;
   wIn.addEventListener('input',function(){ S_vWeight=wIn.value?parseFloat(wIn.value):null; _updateVitalsSave(); });
   wrap.appendChild(wIn);
 
-  wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:14px 0 7px;',txt:'Temperature (\u00B0F)'}));
+  label('Temperature (°F)',14);
   var tIn=mk('input',{type:'number',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;'});
   tIn.setAttribute('inputmode','decimal'); tIn.setAttribute('placeholder','e.g. 98.6'); tIn.setAttribute('step','0.1');
   if(S_vTemp!=null) tIn.value=S_vTemp;
   tIn.addEventListener('input',function(){ S_vTemp=tIn.value?parseFloat(tIn.value):null; _updateVitalsSave(); });
   wrap.appendChild(tIn);
-  wrap.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink4);margin:6px 0 16px;',txt:'Fever threshold is 100.4\u00B0F \u2014 call the team if reached.'}));
+  wrap.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink4);margin:6px 0 16px;',txt:'Fever threshold is 100.4°F — call the team if reached.'}));
 
   var canSave=vitalsCanSave();
-
-  
-  // Date+time for backlogged entries
   var _dtRowvt=mk('div',{css:'display:flex;gap:10px;margin-bottom:14px;'},[mk('div',{css:'flex:1;'},[mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:6px;',txt:'Date'}),mk('input',{id:'log-date-vt',type:'date',css:'width:100%;height:38px;box-sizing:border-box;padding:0 10px;font-size:13px;font-family:var(--sans);',value:TODAY})]),mk('div',{css:'flex:1;'},[mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:6px;',txt:'Time'}),mk('input',{id:'log-time-vt',type:'time',css:'width:100%;height:38px;box-sizing:border-box;padding:0 10px;font-size:13px;font-family:var(--sans);',value:new Date().toTimeString().slice(0,5)})]) ]);
   wrap.appendChild(_dtRowvt);
-var save=mk('button',{css:'width:100%;height:42px;border-radius:var(--r-md);border:none;background:'+(canSave?'var(--pu)':'var(--div)')+';color:'+(canSave?'#fff':'var(--ink4)')+';font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-bottom:18px;',txt:'Log vitals'});
-  function _updateVitalsSave(){
-    var _cs=vitalsCanSave();
-    save.style.background=_cs?'var(--pu)':'var(--div)';
-    save.style.color=_cs?'#fff':'var(--ink4)';
-  }
+  var save=mk('button',{css:'width:100%;height:42px;border-radius:var(--r-md);border:none;background:'+(canSave?'var(--pu)':'var(--div)')+';color:'+(canSave?'#fff':'var(--ink4)')+';font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-bottom:18px;',txt:'Log vitals'});
+  function _updateVitalsSave(){ var _cs=vitalsCanSave(); save.style.background=_cs?'var(--pu)':'var(--div)'; save.style.color=_cs?'#fff':'var(--ink4)'; }
   save.addEventListener('click',function(){
     var _live=vitalsCanSave();
-    if(!_live){ toast('Enter height, weight, or temperature'); return; }
+    if(!_live){ toast('Enter oxygen, heart rate, height, weight, or temperature'); return; }
+    if(S_vO2!=null&&(S_vO2<50||S_vO2>100)){ toast('Oxygen should be 50–100%'); return; }
+    if(S_vHr!=null&&(S_vHr<30||S_vHr>220)){ toast('Heart rate should be 30–220 bpm'); return; }
     var _vtDate=document.getElementById('log-date-vt'); var _vtTime=document.getElementById('log-time-vt');
     var _vtTs=resolveLogTimestamp(_vtDate?_vtDate.value:TODAY,_vtTime?_vtTime.value:new Date().toTimeString().slice(0,5));
-    createEvent('vitals',_vtTs,{weight:S_vWeight,temp:S_vTemp,height:S_vHeight});
-    S_vWeight=null; S_vTemp=null; S_vHeight=null;
+    createEvent('vitals',_vtTs,{weight:S_vWeight,temp:S_vTemp,height:S_vHeight,o2:S_vO2,hr:S_vHr,activity:S_vActivity,reason:S_vReason,note:S_vRespNote});
+    S_vWeight=null; S_vTemp=null; S_vHeight=null; S_vO2=null; S_vHr=null; S_vActivity='resting'; S_vReason='routine'; S_vRespNote='';
     if(typeof toast==='function')toast('Vitals logged'); R();
   });
   wrap.appendChild(save);
@@ -3537,18 +3632,19 @@ var save=mk('button',{css:'width:100%;height:42px;border-radius:var(--r-md);bord
       var row=mk('div',{css:'display:flex;align-items:center;gap:10px;padding:10px 12px;'+(idx<logs.length-1?'border-bottom:1px solid var(--div)':'')});
       var inf=mk('div',{css:'flex:1;min-width:0;'});
       var chips=mk('div',{css:'display:flex;flex-wrap:wrap;gap:4px;'});
+      if(lg.o2!=null) chips.appendChild(mk('div',{css:'font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:'+(lg.o2<92?'var(--rol)':'var(--raised)')+';color:'+(lg.o2<92?'var(--ro)':'var(--ink3)')+';',txt:lg.o2+'% O₂'}));
+      if(lg.hr!=null) chips.appendChild(mk('div',{css:'font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--raised);color:var(--ink3);',txt:lg.hr+' bpm'}));
       if(lg.weight!=null) chips.appendChild(mk('div',{css:'font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--raised);color:var(--ink3);',txt:lg.weight+' lbs'}));
-      if(lg.temp!=null){
-        var fever=lg.temp>=100.4;
-        chips.appendChild(mk('div',{css:'font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:'+(fever?'var(--rol)':'var(--raised)')+';color:'+(fever?'var(--ro)':'var(--ink3)')+';',txt:lg.temp+'\u00B0F'}));
-      }
+      if(lg.temp!=null){ var fever=lg.temp>=100.4; chips.appendChild(mk('div',{css:'font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:'+(fever?'var(--rol)':'var(--raised)')+';color:'+(fever?'var(--ro)':'var(--ink3)')+';',txt:lg.temp+'°F'})); }
+      if(lg.activity) chips.appendChild(mk('div',{css:'font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--bluel);color:var(--blue);',txt:vitalActivityLabel(lg.activity)}));
       inf.appendChild(chips);
+      var meta=[]; if(lg.reason) meta.push(vitalReasonLabel(lg.reason)); if(lg.note) meta.push(lg.note);
+      if(meta.length) inf.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.35;',txt:meta.join(' · ')}));
       if(lg.ts) inf.appendChild(mk('div',{css:'font-size:10px;color:var(--ink4);margin-top:4px;',txt:new Date(lg.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}));
       row.appendChild(inf);
-      var del=mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink4);padding:4px;font-size:18px;line-height:1;',txt:'\u00D7'});
+      var del=mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink4);padding:4px;font-size:18px;line-height:1;',txt:'×'});
       del.addEventListener('click',(function(ii){return function(){ S.day.vitals.splice(ii,1); saveDay(); toast('Removed'); R(); };})(idx));
-      row.appendChild(del);
-      list.appendChild(row);
+      row.appendChild(del); list.appendChild(row);
     });
     wrap.appendChild(list);
   }
@@ -4088,15 +4184,18 @@ function renderLabs(){
     wrap.appendChild(list);
   }
 
-  // ── Procedure history — paracentesis volumes from events ──
-  var paras=(S.events||[]).filter(function(e){return e.type==='para'&&e.date<=TODAY;}).sort(function(a,b){return a.date<b.date?-1:1;});
-  if(paras.length){
-    wrap.appendChild(mk('div',{css:'font-size:10px;font-weight:700;color:var(--ink4);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;',txt:'Paracentesis history ('+paras.length+')'}));
+  // ── Procedure history — fluid drains from events ──
+  var drains=(S.events||[]).filter(function(e){return (e.type==='para'||e.type==='thoracentesis')&&e.date<=TODAY;}).sort(function(a,b){return a.date<b.date?-1:1;});
+  if(drains.length){
+    wrap.appendChild(mk('div',{css:'font-size:10px;font-weight:700;color:var(--ink4);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;',txt:'Drain history ('+drains.length+')'}));
     var procBox=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:10px;overflow:hidden;margin-bottom:22px;'});
-    paras.forEach(function(p,i){
-      var r=mk('div',{css:'display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;'+(i<paras.length-1?'border-bottom:1px solid var(--div)':'')});
-      r.appendChild(mk('span',{css:'font-size:12.5px;color:var(--ink);',txt:new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}));
-      r.appendChild(mk('span',{css:'font-size:12.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;',txt:p.vol?p.vol+' L':'\u2014'}));
+    drains.forEach(function(p,i){
+      var r=mk('div',{css:'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(i<drains.length-1?'border-bottom:1px solid var(--div)':'')});
+      var left=mk('div',{css:'display:flex;align-items:center;gap:8px;min-width:0;'});
+      var ic=lc(p.type==='thoracentesis'?'lungs':'droplets',14,p.type==='thoracentesis'?'#3B8EA5':'#6366F1'); if(ic) left.appendChild(ic);
+      left.appendChild(mk('span',{css:'font-size:12.5px;color:var(--ink);',txt:(p.type==='thoracentesis'?'Thoracentesis':'Paracentesis')+' · '+new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}));
+      r.appendChild(left);
+      r.appendChild(mk('span',{css:'font-size:12.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;',txt:p.vol?p.vol+' L':'—'}));
       procBox.appendChild(r);
     });
     wrap.appendChild(procBox);
@@ -5720,7 +5819,7 @@ function renderMedical(){
   _verDiv.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin-bottom:8px;',txt:'App Status'}));
   var _rows=[
     ['Viewer write mode',canWriteCareData()?'Care data enabled':'Cheer-only safe mode'],
-    ['Version','v10.3.38-kendra-name-gate'],
+    ['Version','v10.3.39-respiratory-vitals-thoracentesis'],
     ['Setup entered',window._setupSyncEntered?'Yes ✓':'No ✗'],
     ['SDK loaded',typeof firebase!=='undefined'?'Yes ✓':'No ✗'],
     ['DB object',window._fbDb?'Created ✓':'null ✗'],
@@ -6605,7 +6704,7 @@ function writeCareEvent(type,ts,payload){
     _obj.onion.push({id:ts,ts:ts,areas:Array.isArray(_p.areas)?_p.areas.slice():[],intensity:_p.intensity||null});
   } else if(type==='vitals'){
     if(!Array.isArray(_obj.vitals)) _obj.vitals=[];
-    _obj.vitals.push({id:ts,ts:ts,weight:(_p.weight!=null&&!isNaN(_p.weight))?_p.weight:null,temp:(_p.temp!=null&&!isNaN(_p.temp))?_p.temp:null});
+    _obj.vitals.push({id:ts,ts:ts,weight:(_p.weight!=null&&!isNaN(_p.weight))?_p.weight:null,temp:(_p.temp!=null&&!isNaN(_p.temp))?_p.temp:null,height:_p.height||null,o2:(_p.o2!=null&&!isNaN(_p.o2))?_p.o2:null,hr:(_p.hr!=null&&!isNaN(_p.hr))?_p.hr:null,activity:_p.activity||'',reason:_p.reason||'',note:(_p.note||'').trim()});
   } else if(type==='mood'){
     if(!Array.isArray(_obj.moods)) _obj.moods=[];
     _obj.moods.push({id:ts,ts:ts,mood:_p.mood,nausea:_p.nausea,pain:_p.pain,energy:_p.energy,notes:_p.notes||''});
@@ -6755,7 +6854,11 @@ function quickLogProcAt(type,date,time){
   var ev={id:Date.now(),date:date,title:label,type:type,time:time,notes:''};
   S.events=(S.events||[]).concat(ev);
   console.log(new Date().toLocaleTimeString()+' [S.events ADD] user-created type='+ev.type+' id='+ev.id+' total='+S.events.length);
-  if(type==='para'){
+  if(type==='thoracentesis'){
+    var volStr=prompt('How many liters were drained? (e.g. 0.8)','');
+    ev.vol=volStr&&parseFloat(volStr)>0?parseFloat(volStr):null;
+    confetti(); toast('Thoracentesis logged'+(ev.vol?' — '+ev.vol+'L drained':''));
+  } else if(type==='para'){
     var volStr=prompt('How many liters were drained? (e.g. 3.5)','');
     var vol=volStr&&parseFloat(volStr)>0?parseFloat(volStr):null;
     var base=new Date(date+'T12:00:00');
@@ -6894,6 +6997,7 @@ var EV_COLOR_REGISTRY = {
   labs:        '#FF4D80',
   lab:         '#FF4D80',
   para:        '#6366F1',
+  thoracentesis:'#3B8EA5',
   'para-watch':'#6366F1',
   scan:        '#7C5CFC',
   proc:        '#7C5CFC',
@@ -6928,6 +7032,7 @@ function evIcon(type){
     'para-watch':'<svg width="14" height="14" viewBox="42 48 216 216" fill="currentColor"><path d="M228.94,218.69c-16.32,13.67-37.57,12.52-52.85-2.23-29.07-28.05-27.41-87,3.95-111.55,13.31-10.42,30.93-11.27,44.98-1.77,8.84,5.98,15.39,14.37,19.84,24.33,9.81,21.94,9.83,47.52.14,69.51-3.77,8.55-9.02,15.81-16.05,21.71ZM207.57,218.69c15.6-2.22,26.34-16.8,31.27-31.31,7.43-21.92,4.93-49.42-9.54-67.78-11.61-14.73-29.76-18.82-44.59-6.54-8,6.63-13.32,15.67-16.46,25.9,10.05-9.91,24.82-9.06,33.91,1.6,10.49,12.3,10.37,31.73-.25,43.94-9.08,10.43-23.72,11.12-33.64,1.33,5.22,17.83,20.16,35.6,39.31,32.86ZM184.17,137.6c-3.46.22-5.66,3.26-5.28,6.35.36,2.91,2.96,5.08,6.06,4.82s5.43-2.76,5.17-6.12c-.2-2.66-2.63-5.26-5.95-5.05Z"/><path d="M112.22,224.6c-12.63,6.09-26.95,4.46-38.37-3.74-8.4-6.03-14.58-14.2-18.84-23.85-9.7-21.98-9.68-47.61.15-69.54,4.32-9.64,10.57-17.75,18.96-23.73,14.02-9.99,31.99-9.52,45.58,1,8.5,6.58,14.63,15.24,18.74,25.38,7.43,18.34,8.15,38.65,2.48,57.63-4.58,15.32-14.17,29.85-28.69,36.86ZM84.45,216.31c18.3,8.64,35.96-4.38,44.1-22.16,9.1-19.85,9.15-43.28.16-63.19-8.16-18.07-26.03-31.31-44.62-22.33-11.73,5.67-19.48,17.7-23.43,30.34,8.62-8.5,21.18-9.38,30.52-1.74,14.15,11.57,15.02,35.55,1.85,48.66-9.26,9.21-23.09,9.12-32.35-.07,3.95,12.79,11.85,24.86,23.77,30.49ZM76.65,137.59c-3.32.12-5.54,2.97-5.37,5.94.18,3.27,2.98,5.48,6.04,5.27s5.51-2.93,5.24-6.21c-.23-2.78-2.8-5.12-5.91-5Z"/></svg>'
   };
   icons.lab=icons.labs;
+  icons.thoracentesis='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.081 20c1.032 0 2.034-.364 2.821-1.028.788-.664 1.31-1.584 1.47-2.596l.628-3.962V4.5a2.5 2.5 0 0 0-5 0v2.7c0 .7-.3 1.4-.82 1.87A6.72 6.72 0 0 0 3 14v3a3 3 0 0 0 3.081 3Z"/><path d="M17.92 20a3 3 0 0 0 3.08-3v-3a6.72 6.72 0 0 0-2.18-4.93C18.3 8.6 18 7.9 18 7.2V4.5a2.5 2.5 0 0 0-5 0v7.914l.628 3.962c.16 1.012.682 1.932 1.47 2.596A4.35 4.35 0 0 0 17.92 20Z"/></svg>';
   icons.scan='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>';
   icons.proc='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5s-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg>';
   icons.other='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
@@ -7282,7 +7387,11 @@ function saveEvent(){
 
   S.events=(S.events||[]).concat(ev);
   // Paracentesis: auto-create 5-day watch windows (days 3-6 post-procedure)
-  if(f.type==='para'){
+  if(f.type==='thoracentesis'){
+    var volStr=prompt('How many liters were drained? (e.g. 0.8)','');
+    ev.vol=volStr&&parseFloat(volStr)>0?parseFloat(volStr):null;
+    toast('Thoracentesis logged'+(ev.vol?' — '+ev.vol+'L drained':''));
+  } else if(f.type==='para'){
     var base=new Date(f.date+'T12:00:00');
     for(var wi=3;wi<=6;wi++){
       var wd=new Date(base);wd.setDate(wd.getDate()+wi);
@@ -7897,6 +8006,7 @@ var EV_TYPES = [
   {id:'tpn',      l:'TPN delivery',       color:'#0EA5E9', ico:'calendar'},
   {id:'nurse',    l:'Nurse visit',        color:'#F0C808', ico:'heart'},
   {id:'para',     l:'Paracentesis',       color:'#4A7DFF', ico:'droplets'},
+  {id:'thoracentesis',l:'Thoracentesis',   color:'#3B8EA5', ico:'lungs'},
   {id:'appt',     l:'Appointment',        color:'#8956FF', ico:'users'},
   {id:'lab',      l:'Labs / Blood draw',  color:'#FF4D80', ico:'beaker'},
   {id:'scan',     l:'Imaging / Scan',     color:'#3A9E78', ico:'scan'},
