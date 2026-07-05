@@ -3524,6 +3524,16 @@ function renderVitals(){
   var resp=recent.filter(function(v){return v.o2!=null||v.hr!=null;});
   var lastResp=resp.length?resp[resp.length-1]:null;
   var wrap=mk('div');
+  S.vitalsView = S.vitalsView || 'input';
+
+  function vitalsTabs(){
+    return '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+      + '<button onclick="S.vitalsView=\'input\';R()" style="flex:1;padding:8px;border-radius:999px;border:1px solid var(--div);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Input</button>'
+      + '<button onclick="S.vitalsView=\'history\';R()" style="flex:1;padding:8px;border-radius:999px;border:1px solid var(--div);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">History</button>'
+      + '</div>';
+  }
+
+
   wrap.appendChild(mk('div',{css:'font-size:15px;font-weight:700;color:var(--ink);margin-bottom:3px;',txt:'Vitals'}));
   wrap.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;',txt:'Track temperature, weight, and respiratory readings. Oxygen and heart rate stay private to Kendra/care team views.'}));
 
@@ -3649,7 +3659,34 @@ function renderVitals(){
     wrap.appendChild(list);
   }
   wrap.appendChild(mk('div',{css:'height:24px;'}));
-  return wrap;
+  
+  if(S.vitalsView==='history'){
+    var rows=(S.day&&S.day.vitals?S.day.vitals:[]).slice().reverse();
+    var h=mk('div');
+    h.appendChild(mk('div',{css:'font-weight:700;margin-bottom:8px;',txt:'History'}));
+
+    var tbl=document.createElement('table');
+    tbl.style.width='100%';
+    tbl.style.fontSize='12px';
+    tbl.style.borderCollapse='collapse';
+
+    tbl.innerHTML =
+      '<tr><th style="text-align:left">Time</th><th>SpO2</th><th>HR</th><th>Activity</th></tr>'
+      + rows.map(function(v){
+        return '<tr style="border-top:1px solid #eee">'
+          + '<td>'+new Date(v.ts||Date.now()).toLocaleString()+'</td>'
+          + '<td>'+ (v.o2||'') +'</td>'
+          + '<td>'+ (v.hr||'') +'</td>'
+          + '<td>'+ (v.activity||'') +'</td>'
+          + '</tr>';
+      }).join('');
+
+    h.appendChild(tbl);
+    wrap.appendChild(h);
+    return wrap;
+  }
+
+return wrap;
 }
 function renderFrew(){
   var d=S.day||empty();
