@@ -2352,7 +2352,6 @@ function moodFace(i,sz,sel){
 }
 function logMood(i){
   S.day=S.day||empty();
-  S.vitalsTab = S.vitalsTab || 'input';
   if(!Array.isArray(S.day.moods)) S.day.moods=[];
   S.day.moods=S.day.moods.filter(function(e){return !isLegacySeedMood(e);});
   var arr=S.day.moods, now=Date.now();
@@ -3516,92 +3515,42 @@ function renderVitalSpark(points,key){
   var last=pts[pts.length-1], dot=document.createElementNS(svgNs,'circle'); dot.setAttribute('cx',last[0]); dot.setAttribute('cy',last[1]); dot.setAttribute('r','2.5'); dot.setAttribute('fill','currentColor'); svg.appendChild(dot);
   return svg;
 }
-
-function renderVitalsTabs(){
-  var wrap = mk('div',{css:'display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--div);'});
-  var mkBtn = function(name, key){
-    var b = mk('button',{
-      css:'font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--div);background:'+(S.vitalsTab===key?'var(--ink)':'transparent')+';color:'+(S.vitalsTab===key?'#fff':'var(--ink)');
-      txt:name
-    });
-    b.onclick=function(){S.vitalsTab=key;R();};
-    return b;
-  };
-  wrap.appendChild(mkBtn('Input','input'));
-  wrap.appendChild(mkBtn('History','history'));
-  return wrap;
-}
 function renderVitals(){
   if(S.role==='friends') return renderSquad();
-
-  S.vitalsView = S.vitalsView || 'input';
-
-  var wrap = mk('div');
-
-  // tabs
-  var tabs = mk('div',{css:'display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--div);'});
-
-  function tabBtn(id,label){
-    var b = mk('button',{
-      txt: label,
-      css:'flex:1;min-width:0;padding:8px 10px;border-radius:999px;border:1px solid var(--div);background:'+
-      (S.vitalsView===id?'var(--pu)':'#fff')+';color:'+(S.vitalsView===id?'#fff':'var(--ink)')+';font-size:13px;font-weight:700;'
-    });
-    b.onclick=function(){ S.vitalsView=id; R(); };
-    return b;
-  }
-
-  tabs.appendChild(tabBtn('input','Input'));
-  tabs.appendChild(tabBtn('history','History'));
-  wrap.appendChild(tabs);
-
-  if(S.vitalsView==='history'){
-    var recent = vitalRecentLogs(30).slice().reverse();
-    var table = mk('div',{css:'padding:10px;overflow:auto;'});
-
-    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
-      + '<thead><tr style="text-align:left;color:var(--ink3)">'
-      + '<th>Date</th><th>SpO₂</th><th>HR</th><th>Activity</th><th>O₂</th>'
-      + '</tr></thead><tbody>';
-
-    recent.forEach(function(v){
-      html += '<tr style="border-top:1px solid var(--div)">'
-        + '<td>'+ new Date(v.ts||Date.now()).toLocaleString() +'</td>'
-        + '<td>'+ (v.spo2??'-') +'</td>'
-        + '<td>'+ (v.hr??'-') +'</td>'
-        + '<td>'+ (v.activity??'-') +'</td>'
-        + '<td>'+ (v.o2??'room air') +'</td>'
-        + '</tr>';
-    });
-
-    html += '</tbody></table>';
-    table.innerHTML = html;
-    wrap.appendChild(table);
-    return wrap;
-  }
-
   var d=S.day||empty();
   if(!Array.isArray(d.vitals)) d.vitals=[];
   var logs=(d.vitals||[]).filter(function(e){return isSameDay(e.ts);});
   var recent=vitalRecentLogs(14);
   var resp=recent.filter(function(v){return v.o2!=null||v.hr!=null;});
   var lastResp=resp.length?resp[resp.length-1]:null;
-
+  var wrap=mk('div');
   wrap.appendChild(mk('div',{css:'font-size:15px;font-weight:700;color:var(--ink);margin-bottom:3px;',txt:'Vitals'}));
   wrap.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;',txt:'Track temperature, weight, and respiratory readings. Oxygen and heart rate stay private to Kendra/care team views.'}));
 
   if(lastResp){
     var summary=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:13px 14px;margin-bottom:16px;'});
     summary.appendChild(mk('div',{css:'font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink4);margin-bottom:10px;',txt:'Respiratory trend'}));
-
+    var grid=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;'});
+    function metricTile(label,val,unit,key,icon,col){
+      var tile=mk('div',{css:'background:var(--raised);border-radius:var(--r-md);padding:10px 11px;min-width:0;'});
+      var hd=mk('div',{css:'display:flex;align-items:center;gap:6px;margin-bottom:4px;'});
+      var ic=lc(icon,14,col); if(ic) hd.appendChild(ic);
+      hd.appendChild(mk('div',{css:'font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink4);',txt:label}));
+      tile.appendChild(hd);
+      tile.appendChild(mk('div',{css:'font-size:24px;font-weight:850;color:var(--ink);line-height:1;',txt:(val!=null?String(val):'—')+unit}));
+      var sp=mk('div',{css:'height:32px;color:'+col+';margin-top:6px;display:flex;align-items:center;'});
+      sp.appendChild(renderVitalSpark(resp.filter(function(v){return v[key]!=null;}),key));
+      tile.appendChild(sp);
+      return tile;
+    }
+    grid.appendChild(metricTile('Oxygen',lastResp.o2,'%','o2','lungs','var(--blue)'));
+    grid.appendChild(metricTile('Heart rate',lastResp.hr,' bpm','hr','heart-pulse','var(--ro)'));
+    summary.appendChild(grid);
+    summary.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);margin-top:9px;',txt:'Last: '+vitalActivityLabel(lastResp.activity)+' · '+new Date(lastResp.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}));
     wrap.appendChild(summary);
   }
 
-  // (rest unchanged below - preserved original function structure)
-
-  return wrap;
-}
-function label(txt,mt){ wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:'+(mt||0)+'px 0 7px;',txt:txt})); }
+  function label(txt,mt){ wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:'+(mt||0)+'px 0 7px;',txt:txt})); }
   label('Respiratory',0);
   var rg=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;'});
   var oIn=mk('input',{type:'number',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;'});
