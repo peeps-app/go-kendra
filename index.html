@@ -2352,7 +2352,6 @@ function moodFace(i,sz,sel){
 }
 function logMood(i){
   S.day=S.day||empty();
-  S.vitalsTab = S.vitalsTab || 'input';
   if(!Array.isArray(S.day.moods)) S.day.moods=[];
   S.day.moods=S.day.moods.filter(function(e){return !isLegacySeedMood(e);});
   var arr=S.day.moods, now=Date.now();
@@ -3516,21 +3515,6 @@ function renderVitalSpark(points,key){
   var last=pts[pts.length-1], dot=document.createElementNS(svgNs,'circle'); dot.setAttribute('cx',last[0]); dot.setAttribute('cy',last[1]); dot.setAttribute('r','2.5'); dot.setAttribute('fill','currentColor'); svg.appendChild(dot);
   return svg;
 }
-
-function renderVitalsTabs(){
-  var wrap = mk('div',{css:'display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--div);'});
-  var mkBtn = function(name, key){
-    var b = mk('button',{
-      css:'font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--div);background:'+(S.vitalsTab===key?'var(--ink)':'transparent')+';color:'+(S.vitalsTab===key?'#fff':'var(--ink)');
-      txt:name
-    });
-    b.onclick=function(){S.vitalsTab=key;R();};
-    return b;
-  };
-  wrap.appendChild(mkBtn('Input','input'));
-  wrap.appendChild(mkBtn('History','history'));
-  return wrap;
-}
 function renderVitals(){
   if(S.role==='friends') return renderSquad();
   var d=S.day||empty();
@@ -3541,7 +3525,42 @@ function renderVitals(){
   var lastResp=resp.length?resp[resp.length-1]:null;
   var wrap=mk('div');
   wrap.appendChild(mk('div',{css:'font-size:15px;font-weight:700;color:var(--ink);margin-bottom:3px;',txt:'Vitals'}));
-  wrap.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;',txt:'Track temperature, weight, and respiratory readings. Oxygen and heart rate stay private to Kendra/care team views.'}));
+  
+
+  // --- Vitals Tabs ---
+  if(typeof S.vitalsTab === 'undefined') S.vitalsTab = 'input';
+
+  var tabBar = mk('div',{css:'display:flex;gap:10px;margin:10px 0 12px 0;'});
+
+  var btnInput = mk('button',{txt:'Input', on:{click:function(){S.vitalsTab='input';R();}}});
+  var btnHist = mk('button',{txt:'History', on:{click:function(){S.vitalsTab='history';R();}}});
+
+  tabBar.appendChild(btnInput);
+  tabBar.appendChild(btnHist);
+  wrap.appendChild(tabBar);
+
+  if(S.vitalsTab==='history'){
+    var all = vitalRecentLogs(365);
+    var table = mk('div',{css:'overflow:auto'});
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+      + '<tr><th>Date</th><th>SpO2</th><th>HR</th><th>Activity</th><th>O2</th></tr>';
+
+    for(var i=all.length-1;i>=0;i--){
+      var v = all[i];
+      html += '<tr style="border-top:1px solid #eee">'
+        + '<td>'+new Date(v.ts).toLocaleString()+'</td>'
+        + '<td>'+(v.spo2||'-')+'</td>'
+        + '<td>'+(v.hr||'-')+'</td>'
+        + '<td>'+(v.activity||'-')+'</td>'
+        + '<td>'+(v.o2||'-')+'</td>'
+        + '</tr>';
+    }
+    html+='</table>';
+    table.innerHTML = html;
+    wrap.appendChild(table);
+    return wrap;
+  }
+wrap.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;',txt:'Track temperature, weight, and respiratory readings. Oxygen and heart rate stay private to Kendra/care team views.'}));
 
   if(lastResp){
     var summary=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:13px 14px;margin-bottom:16px;'});
@@ -3566,27 +3585,7 @@ function renderVitals(){
     wrap.appendChild(summary);
   }
 
-  
-  if(S.vitalsTab==='history'){
-    var hist = vitalRecentLogs(90).slice().reverse();
-    var tbl = mk('div',{css:'padding:10px;overflow:auto;'});
-    var html = '<table style="width:100%;font-size:12px;border-collapse:collapse;">'
-      + '<tr style="text-align:left;opacity:.6"><th>Time</th><th>SpO2</th><th>HR</th><th>Activity</th><th>O2</th></tr>';
-    hist.forEach(function(v){
-      html += '<tr style="border-top:1px solid #eee">'
-        + '<td>'+new Date(v.ts).toLocaleString()+'</td>'
-        + '<td>'+ (v.o2||'-') +'</td>'
-        + '<td>'+ (v.hr||'-') +'</td>'
-        + '<td>'+ (v.activity||'-') +'</td>'
-        + '<td>'+ (v.oxygen||'room air') +'</td>'
-        + '</tr>';
-    });
-    html += '</table>';
-    tbl.innerHTML = html;
-    wrap.appendChild(tbl);
-    return wrap;
-  }
-function label(txt,mt){ wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:'+(mt||0)+'px 0 7px;',txt:txt})); }
+  function label(txt,mt){ wrap.appendChild(mk('div',{css:'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:'+(mt||0)+'px 0 7px;',txt:txt})); }
   label('Respiratory',0);
   var rg=mk('div',{css:'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;'});
   var oIn=mk('input',{type:'number',css:'width:100%;height:44px;font-size:16px;text-align:center;font-weight:700;'});
