@@ -2124,7 +2124,7 @@ function kennyReconcileWaddleToday(){
   var prior=d.kennyWaddleTier||0;
   var target=kennyWaddleTierMinutes(feetTotal);
   if(target>prior){
-    kennyAward(target-prior,'waddle','Waddle milestone \u2014 '+feetTotal+'ft',Date.now());
+    kennyAward(target-prior,'waddle','Waddle',Date.now());
     d.kennyWaddleTier=target;
     mergeSDay(d); saveDay();
   }
@@ -7048,7 +7048,7 @@ function writeCareEvent(type,ts,payload){
     var _priorTier=_obj.kennyWaddleTier||0;
     var _newTier=kennyWaddleTierMinutes(_feetTotal);
     if(_newTier>_priorTier){
-      kennyAward(_newTier-_priorTier,'waddle','Waddle milestone \u2014 '+_feetTotal+'ft',ts);
+      kennyAward(_newTier-_priorTier,'waddle','Waddle',ts);
       _obj.kennyWaddleTier=_newTier;
     }
   }
