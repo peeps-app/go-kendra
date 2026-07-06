@@ -2092,7 +2092,7 @@ function renderWaddlesCard(){
 // ── KENNY POINTS — massage-minute rewards bank ──────────────────
 // Relative weighting per Naur: waddles least, teeth middle, showers most (hardest for her).
 // Waddle thresholds mirror the existing waddle tier badges above (801ft / 1201ft).
-var KENNY_WADDLE_TIERS=[{feet:1201,minutes:8},{feet:801,minutes:5}]; // checked high → low
+var KENNY_WADDLE_TIERS=[{feet:1200,minutes:8},{feet:800,minutes:5}]; // checked high → low
 var KENNY_TEETH_MINUTES=10;
 var KENNY_SHOWER_MINUTES=20;
 function kennyWaddleTierMinutes(feet){
@@ -2117,8 +2117,21 @@ function kennyRedeem(minutes,label){
   kennySaveLedger(ledger);
   return true;
 }
+function kennyReconcileWaddleToday(){
+  if(!(S&&(S.role==='patient'||S.role==='care'))) return;
+  var d=S.day; if(!d) return;
+  var feetTotal=normMove(d.move).feet;
+  var prior=d.kennyWaddleTier||0;
+  var target=kennyWaddleTierMinutes(feetTotal);
+  if(target>prior){
+    kennyAward(target-prior,'waddle','Waddle milestone \u2014 '+feetTotal+'ft',Date.now());
+    d.kennyWaddleTier=target;
+    mergeSDay(d); saveDay();
+  }
+}
 function renderKennyPointsCard(){
   if(S.role==='friends') return null;
+  kennyReconcileWaddleToday();
   var bal=kennyBalance();
   var ledger=kennyLedger().slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});
   var recent=ledger.slice(0,4);
