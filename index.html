@@ -817,6 +817,8 @@ var S_medsEdit = null;
 var S_addMedOpen = false;
 var S_pillOverviewOpen = false;
 var S_foodApprovedOpen = false;
+var S_kafAddOpen = false;
+var S_kafEditId = null;
 var S_addMedType = 'scheduled';
 var S_medsExpand = null;
 var S_onionInt = null;
@@ -2616,6 +2618,7 @@ function renderLog() {
 
 // ── FOOD TAB ──────────────────────────────────────────────────
 function renderFood() {
+  if(S.role==='friends') return renderSquad();
   var d = S.day||empty();
   if(!Array.isArray(d.food)) d.food=[];
   if(S_foodApprovedOpen) return renderKennyApprovedFoods();
@@ -2629,7 +2632,7 @@ function renderFood() {
   kafBtn.appendChild(kafIcW);
   var kafTxt=mk('div',{css:'flex:1;min-width:0;'});
   kafTxt.appendChild(mk('div',{css:'font-size:13px;font-weight:800;color:var(--pu);',txt:'Kenny Approved Foods'}));
-  kafTxt.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);margin-top:1px;',txt:'Her whole list, by meal \u2014 for grocery runs'}));
+  kafTxt.appendChild(mk('div',{css:'font-size:10.5px;color:var(--ink3);margin-top:1px;',txt:'What she likes, and how she likes it prepped'}));
   kafBtn.appendChild(kafTxt);
   var kafChev=lc('chevron-right',16,'var(--pu)'); if(kafChev) kafBtn.appendChild(kafChev);
   kafBtn.addEventListener('click',function(){ S_foodApprovedOpen=true; R(); });
@@ -2771,101 +2774,110 @@ function renderKennyApprovedFoods(){
   var hdRow=mk('div',{css:'display:flex;align-items:center;gap:6px;margin-bottom:4px;'});
   var back=mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;display:flex;align-items:center;flex-shrink:0;'});
   var backIc=lc('chevron-left',20,'var(--ink3)'); if(backIc) back.appendChild(backIc);
-  back.addEventListener('click',function(){ S_foodApprovedOpen=false; R(); });
+  back.addEventListener('click',function(){ S_foodApprovedOpen=false; S_kafAddOpen=false; S_kafEditId=null; R(); });
   hdRow.appendChild(back);
   hdRow.appendChild(mk('div',{css:'font-size:16px;font-weight:800;color:var(--ink);',txt:'Kenny Approved Foods'}));
   wrap.appendChild(hdRow);
-  wrap.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);line-height:1.5;margin-bottom:16px;',txt:'Everything logged, grouped by meal and sorted by what she actually keeps down.'}));
-
-  var LOOKBACK_DAYS=400;
-  var DRINK_WORDS=['water','juice','shake','smoothie','tea','coffee','soda','gatorade','milk','broth','ensure','boost','electrolyte','lemonade','sprite','ginger ale','pedialyte','kombucha','latte'];
-
-  var items={};
-  for(var i=LOOKBACK_DAYS-1;i>=0;i--){
-    var dk=localDayKey(Date.now()-i*86400000);
-    var bucket=(dk===TODAY)?(S.day||empty()):(lsGet('day-'+dk)||{});
-    (bucket.food||[]).forEach(function(e){
-      if(!e||!e.item) return;
-      var key=e.item.trim().toLowerCase();
-      if(!key) return;
-      if(!items[key]) items[key]={display:e.item.trim(),count:0,kept:0,lost:0,meals:{},lastTs:0};
-      var it=items[key];
-      it.count++;
-      if(e.kd===true) it.kept++;
-      else if(e.kd===false) it.lost++;
-      var mealKey=e.meal||'snack';
-      it.meals[mealKey]=(it.meals[mealKey]||0)+1;
-      if((e.ts||0)>it.lastTs) it.lastTs=e.ts||0;
-    });
-  }
-
-  var keys=Object.keys(items);
-  if(!keys.length){
-    wrap.appendChild(mk('div',{css:'font-size:12px;color:var(--ink4);text-align:center;padding:24px 0;',txt:'No food logged yet.'}));
-    wrap.appendChild(mk('div',{css:'height:24px;'}));
-    return wrap;
-  }
-
-  keys.forEach(function(k){
-    var it=items[k];
-    var bestMeal='snack', bestCount=-1;
-    Object.keys(it.meals).forEach(function(mkey){ if(it.meals[mkey]>bestCount){ bestCount=it.meals[mkey]; bestMeal=mkey; } });
-    var looksLikeDrink=DRINK_WORDS.some(function(w){ return k.indexOf(w)>=0; });
-    it.category=looksLikeDrink?'drink':bestMeal;
-    if(it.kept>0 && it.lost===0) it.tier='approved';
-    else if(it.kept>0 && it.lost>0) it.tier='mixed';
-    else if(it.lost>0 && it.kept===0) it.tier='avoid';
-    else it.tier='untracked';
-  });
+  wrap.appendChild(mk('div',{css:'font-size:12px;color:var(--ink3);line-height:1.5;margin-bottom:16px;',txt:'Our own running list \u2014 what she likes and how she likes it prepped, for grocery runs.'}));
 
   var CATS=[{id:'breakfast',l:'Breakfast'},{id:'lunch',l:'Lunch'},{id:'dinner',l:'Dinner'},{id:'snack',l:'Snack'},{id:'drink',l:'Drinks'}];
-  var anyShown=false;
+  function getList(){ return lsGet('kenny-approved-foods')||[]; }
+  function saveList(arr){ lsSet('kenny-approved-foods',arr); }
+
+  function buildForm(existing){
+    var card=mk('div',{css:'background:var(--card);border:1.5px solid var(--pu);border-radius:var(--r-md);padding:14px;margin-bottom:16px;'});
+    card.appendChild(mk('div',{css:'font-size:13px;font-weight:800;color:var(--ink);margin-bottom:10px;',txt:existing?'Edit food':'Add food'}));
+
+    function field(label){
+      var w=mk('div',{css:'margin-bottom:8px;'});
+      w.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;',txt:label}));
+      return w;
+    }
+    var nameW=field('Food'); var nameI=mk('input',{type:'text',css:'width:100%;height:38px;font-size:13px;box-sizing:border-box;padding:0 10px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);'});
+    if(existing) nameI.value=existing.name;
+    nameW.appendChild(nameI); card.appendChild(nameW);
+
+    var mealW=field('Meal');
+    var mealSel=mk('select',{css:'width:100%;height:38px;font-size:13px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);'});
+    CATS.forEach(function(c){ var opt=mk('option',{txt:c.l}); opt.value=c.id; if(existing&&existing.meal===c.id) opt.selected=true; mealSel.appendChild(opt); });
+    mealW.appendChild(mealSel); card.appendChild(mealW);
+
+    var notesW=field('How she likes it prepped');
+    var notesI=mk('textarea',{css:'width:100%;height:56px;resize:none;font-size:12px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);',placeholder:'e.g. extra crispy, no sauce, room temp not cold\u2026'});
+    if(existing) notesI.value=existing.notes||'';
+    notesW.appendChild(notesI); card.appendChild(notesW);
+
+    var btnRow=mk('div',{css:'display:flex;gap:8px;margin-top:4px;'});
+    var saveBtn=mk('button',{css:'flex:1;height:40px;background:var(--pu);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);',txt:'Save'});
+    saveBtn.addEventListener('click',function(){
+      var name=nameI.value.trim();
+      if(!name){ toast('Enter a food name'); return; }
+      var list=getList();
+      if(existing){
+        var idx=list.findIndex(function(x){return x.id===existing.id;});
+        if(idx>=0){ list[idx]={id:existing.id,name:name,meal:mealSel.value,notes:notesI.value.trim(),ts:existing.ts}; }
+      } else {
+        list.push({id:'kaf-'+Date.now()+Math.round(Math.random()*1e6),name:name,meal:mealSel.value,notes:notesI.value.trim(),ts:Date.now()});
+      }
+      saveList(list);
+      S_kafAddOpen=false; S_kafEditId=null;
+      toast(name+' saved');
+      R();
+    });
+    var cancelBtn=mk('button',{css:'height:40px;padding:0 16px;background:var(--raised);border:1.5px solid var(--div);border-radius:9px;font-size:13px;cursor:pointer;color:var(--ink2);font-family:var(--sans);',txt:'Cancel'});
+    cancelBtn.addEventListener('click',function(){ S_kafAddOpen=false; S_kafEditId=null; R(); });
+    btnRow.appendChild(saveBtn); btnRow.appendChild(cancelBtn);
+    card.appendChild(btnRow);
+    return card;
+  }
+
+  var list=getList();
+  var editing=S_kafEditId?list.find(function(x){return x.id===S_kafEditId;}):null;
+
+  if(S_kafAddOpen || editing){
+    wrap.appendChild(buildForm(editing));
+  } else {
+    var addBtn=mk('button',{css:'width:100%;display:flex;align-items:center;justify-content:center;gap:6px;height:42px;border:1.5px dashed var(--div);border-radius:var(--r-md);background:transparent;color:var(--pu);font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;margin-bottom:16px;'});
+    var addIc=lc('plus',15,'var(--pu)'); if(addIc) addBtn.appendChild(addIc);
+    addBtn.appendChild(mk('span',{txt:'Add food'}));
+    addBtn.addEventListener('click',function(){ S_kafAddOpen=true; R(); });
+    wrap.appendChild(addBtn);
+  }
+
+  if(!list.length){
+    wrap.appendChild(mk('div',{css:'font-size:12px;color:var(--ink4);text-align:center;padding:24px 0;',txt:'Nothing added yet. Start with what she\u2019s been asking for lately.'}));
+  }
+
   CATS.forEach(function(c){
-    var list=keys.filter(function(k){ return items[k].category===c.id && items[k].tier!=='avoid'; });
-    if(!list.length) return;
-    anyShown=true;
-    list.sort(function(a,b){ return items[b].count-items[a].count; });
+    var items=list.filter(function(x){return x.meal===c.id;});
+    if(!items.length) return;
+    items.sort(function(a,b){return a.name.localeCompare(b.name);});
     wrap.appendChild(mk('div',{css:'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--pu);background:var(--pus);border-radius:8px;padding:8px 13px;margin:14px 0 8px;',txt:c.l}));
     var listCard=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);overflow:hidden;'});
-    list.forEach(function(k,idx){
-      var it=items[k];
-      var row=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;padding:9px 13px;gap:10px;'+(idx>0?'border-top:1px solid var(--div);':'')});
-      var left=mk('div',{css:'display:flex;align-items:center;gap:8px;min-width:0;'});
-      var badge=mk('div',{css:'width:18px;height:18px;border-radius:99px;flex-shrink:0;display:flex;align-items:center;justify-content:center;'});
-      if(it.tier==='approved'){
-        badge.style.background='var(--tel)';
-        var okIc=lc('check',12,'var(--tes)'); if(okIc) badge.appendChild(okIc);
-      } else if(it.tier==='mixed'){
-        badge.style.background='var(--aml)';
-        var mxIc=lc('shuffle',11,'var(--am)'); if(mxIc) badge.appendChild(mxIc);
-      }
-      left.appendChild(badge);
-      left.appendChild(mk('div',{css:'font-size:13.5px;font-weight:700;color:var(--ink);',txt:it.display}));
-      row.appendChild(left);
-      row.appendChild(mk('div',{css:'font-size:11px;font-weight:700;color:var(--ink4);flex-shrink:0;',txt:it.count+'\u00d7'}));
+    items.forEach(function(it,idx){
+      var row=mk('div',{css:'padding:10px 13px;'+(idx>0?'border-top:1px solid var(--div);':'')});
+      var top=mk('div',{css:'display:flex;align-items:flex-start;justify-content:space-between;gap:10px;'});
+      var left=mk('div',{css:'min-width:0;flex:1;'});
+      left.appendChild(mk('div',{css:'font-size:13.5px;font-weight:700;color:var(--ink);',txt:it.name}));
+      if(it.notes) left.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);margin-top:2px;line-height:1.4;',txt:it.notes}));
+      top.appendChild(left);
+      var actions=mk('div',{css:'display:flex;gap:4px;flex-shrink:0;'});
+      var editBtn=mk('button',{css:'width:26px;height:26px;border:none;background:transparent;cursor:pointer;color:var(--ink4);display:flex;align-items:center;justify-content:center;padding:0;'});
+      var editIc=lc('pencil',13); if(editIc) editBtn.appendChild(editIc);
+      editBtn.addEventListener('click',(function(id){return function(){ S_kafEditId=id; S_kafAddOpen=false; R(); };})(it.id));
+      var delBtn=mk('button',{css:'width:26px;height:26px;border:none;background:transparent;cursor:pointer;color:var(--ink4);display:flex;align-items:center;justify-content:center;padding:0;'});
+      var delIc=lc('trash-2',13); if(delIc) delBtn.appendChild(delIc);
+      delBtn.addEventListener('click',(function(id,name){return function(){
+        saveList(getList().filter(function(x){return x.id!==id;}));
+        toast(name+' removed'); R();
+      };})(it.id,it.name));
+      actions.appendChild(editBtn); actions.appendChild(delBtn);
+      top.appendChild(actions);
+      row.appendChild(top);
       listCard.appendChild(row);
     });
     wrap.appendChild(listCard);
   });
-
-  if(!anyShown){
-    wrap.appendChild(mk('div',{css:'font-size:12px;color:var(--ink4);text-align:center;padding:24px 0;',txt:'No food logged yet.'}));
-  }
-
-  var avoidKeys=keys.filter(function(k){ return items[k].tier==='avoid'; });
-  if(avoidKeys.length){
-    avoidKeys.sort(function(a,b){ return items[b].count-items[a].count; });
-    wrap.appendChild(mk('div',{css:'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ro);background:var(--rol);border-radius:8px;padding:8px 13px;margin:18px 0 8px;',txt:'Skip these \u2014 always rejected'}));
-    var avoidCard=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);overflow:hidden;'});
-    avoidKeys.forEach(function(k,idx){
-      var it=items[k];
-      var row=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;padding:9px 13px;'+(idx>0?'border-top:1px solid var(--div);':'')+'opacity:.65;'});
-      row.appendChild(mk('div',{css:'font-size:13px;font-weight:600;color:var(--ink3);text-decoration:line-through;',txt:it.display}));
-      row.appendChild(mk('div',{css:'font-size:11px;font-weight:700;color:var(--ink4);',txt:it.count+'\u00d7'}));
-      avoidCard.appendChild(row);
-    });
-    wrap.appendChild(avoidCard);
-  }
 
   wrap.appendChild(mk('div',{css:'height:24px;'}));
   return wrap;
@@ -5296,6 +5308,19 @@ function renderMeds() {
     return true;
   }
   function logPrn(id,name){ if(S&&(S.role==='fam'||S.role==='friends')){ if(typeof toast==='function')toast('Medication logging is locked.'); return; } var ts=Date.now(); if(_appendPrnDose(id,name,ts)){ if(typeof toast==='function')toast(name+' logged · '+fmtClock(ts)); R(); } }
+  function deletePrnDoseAt(id,ts){
+    if(S&&(S.role==='fam'||S.role==='friends')){ if(typeof toast==='function')toast('Medication logging is locked.'); return false; }
+    var l=getPrnRaw();
+    if(!(l[id]&&l[id].length)) return false;
+    var arr=_normPrnArr(l[id]).filter(function(x){ return x!==ts; });
+    l[id]=arr; _savePrnLocal(id,arr);
+    if(window._fbDb&&!window._bootPhase){
+      window._fbDb.ref('gk/prn-doses/'+id).transaction(function(cur){
+        return _normPrnArr(cur||[]).filter(function(x){ return x!==ts; });
+      });
+    }
+    return true;
+  }
   function undoPrn(id){
     if(typeof toast==='function')toast('PRN logs are locked. Add a corrected date/time entry instead of undoing.');
     return;
@@ -5737,14 +5762,26 @@ function renderMeds() {
       panel.appendChild(slotPickSel);
     }
     if(isPrn){
-      var dl=(getPrnLog()[m.id]||[]);
-      if(dl.length){
-        var ur=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:8px;padding:7px 9px;margin-bottom:10px;'});
-        ur.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);',txt:'Last logged '+fmtClock(dl[dl.length-1])}));
-        var ub=mk('button',{css:'font-size:11px;font-weight:700;color:var(--ro);background:none;border:none;cursor:pointer;font-family:var(--sans);',txt:'Undo last dose'});
-        ub.addEventListener('click',(function(id){return function(){undoPrn(id);};})(m.id));
-        ur.appendChild(ub);
-        panel.appendChild(ur);
+      var rawLog=(getPrnRaw()[m.id]||[]).slice().sort(function(a,b){return b-a;});
+      if(rawLog.length){
+        panel.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;',txt:'Recent doses'}));
+        var recentWrap=mk('div',{css:'background:var(--card);border-radius:8px;overflow:hidden;margin-bottom:10px;'});
+        rawLog.slice(0,5).forEach(function(ts,idx){
+          var dk=localDayKey(ts);
+          var dayTxt=dk===TODAY?'Today':(function(){
+            var yest=new Date(); yest.setDate(yest.getDate()-1);
+            return dk===localDayKey(yest.getTime())?'Yesterday':new Date(dk+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+          })();
+          var lr=mk('div',{css:'display:flex;align-items:center;justify-content:space-between;padding:7px 9px;'+(idx>0?'border-top:1px solid var(--div);':'')});
+          lr.appendChild(mk('div',{css:'font-size:11px;color:var(--ink3);',txt:dayTxt+' \u00b7 '+fmtClock(ts)}));
+          var delB=mk('button',{css:'font-size:11px;font-weight:700;color:var(--ro);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:2px 4px;',txt:'Remove'});
+          delB.addEventListener('click',(function(id,tsVal){return function(){
+            if(deletePrnDoseAt(id,tsVal)){ toast('Dose removed'); R(); }
+          };})(m.id,ts));
+          lr.appendChild(delB);
+          recentWrap.appendChild(lr);
+        });
+        panel.appendChild(recentWrap);
       }
     }
     panel.appendChild(mk('div',{css:'font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;',txt:'Dose'}));
