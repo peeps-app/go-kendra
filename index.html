@@ -2797,10 +2797,65 @@ function renderKennyApprovedFoods(){
     if(existing) nameI.value=existing.name;
     nameW.appendChild(nameI); card.appendChild(nameW);
 
+    // ── Quick-pick from her existing food log (new entries only) ──
+    if(!existing){
+      var freq=lsGet('food-freq')||{};
+      var already={};
+      getList().forEach(function(x){ already[x.name.trim().toLowerCase()]=true; });
+      var loggedNames=Object.keys(freq).filter(function(n){ return n && !already[n.trim().toLowerCase()]; });
+      loggedNames.sort(function(a,b){ return (freq[b]||0)-(freq[a]||0); });
+      if(loggedNames.length){
+        var pickW=field('Or pick from what she\u2019s already logged');
+        var chipSearch=mk('input',{type:'text',placeholder:'Search her food log\u2026',css:'width:100%;height:32px;font-size:12px;box-sizing:border-box;padding:0 9px;border:1px solid var(--div);border-radius:7px;font-family:var(--sans);background:var(--card);color:var(--ink);margin-bottom:7px;'});
+        pickW.appendChild(chipSearch);
+        var chipWrap=mk('div',{css:'display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;'});
+        function renderChips(filterTxt){
+          chipWrap.innerHTML='';
+          var ft=(filterTxt||'').trim().toLowerCase();
+          var shown=loggedNames.filter(function(n){ return !ft || n.toLowerCase().indexOf(ft)>=0; }).slice(0,40);
+          shown.forEach(function(n){
+            var chip=mk('button',{css:'padding:5px 10px;border-radius:99px;border:1.5px solid var(--div);background:var(--raised);color:var(--ink2);font-size:11.5px;font-weight:600;font-family:var(--sans);cursor:pointer;'});
+            chip.textContent=n;
+            chip.addEventListener('click',function(){ nameI.value=n; nameI.focus(); });
+            chipWrap.appendChild(chip);
+          });
+          if(!shown.length){ chipWrap.appendChild(mk('div',{css:'font-size:11px;color:var(--ink4);padding:4px 0;',txt:'No matches'})); }
+        }
+        renderChips('');
+        chipSearch.addEventListener('input',function(){ renderChips(chipSearch.value); });
+        pickW.appendChild(chipWrap);
+        card.appendChild(pickW);
+      }
+    }
+
     var mealW=field('Meal');
     var mealSel=mk('select',{css:'width:100%;height:38px;font-size:13px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);'});
     CATS.forEach(function(c){ var opt=mk('option',{txt:c.l}); opt.value=c.id; if(existing&&existing.meal===c.id) opt.selected=true; mealSel.appendChild(opt); });
     mealW.appendChild(mealSel); card.appendChild(mealW);
+
+    var ratingW=field('Rating');
+    var ratingRow=mk('div',{css:'display:flex;gap:4px;'});
+    var ratingVal={v:existing?(existing.rating||0):0};
+    var starEls=[];
+    function refreshStars(){
+      starEls.forEach(function(s,idx){
+        var filled=(idx+1)<=ratingVal.v;
+        s.innerHTML='';
+        var ic=lc('star',22,filled?'var(--am)':'var(--div)');
+        if(ic){ if(filled){ ic.style.fill='var(--am)'; } s.appendChild(ic); }
+      });
+    }
+    for(var si=0;si<5;si++){
+      (function(starIdx){
+        var s=mk('button',{css:'background:none;border:none;cursor:pointer;padding:2px;display:flex;'});
+        s.addEventListener('click',function(){ ratingVal.v=(ratingVal.v===starIdx+1)?0:starIdx+1; refreshStars(); });
+        starEls.push(s);
+        ratingRow.appendChild(s);
+      })(si);
+    }
+    refreshStars();
+    ratingW.appendChild(ratingRow);
+    card.appendChild(ratingW);
 
     var notesW=field('How she likes it prepped');
     var notesI=mk('textarea',{css:'width:100%;height:56px;resize:none;font-size:12px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--div);border-radius:8px;font-family:var(--sans);background:var(--card);color:var(--ink);',placeholder:'e.g. extra crispy, no sauce, room temp not cold\u2026'});
@@ -2815,9 +2870,9 @@ function renderKennyApprovedFoods(){
       var list=getList();
       if(existing){
         var idx=list.findIndex(function(x){return x.id===existing.id;});
-        if(idx>=0){ list[idx]={id:existing.id,name:name,meal:mealSel.value,notes:notesI.value.trim(),ts:existing.ts}; }
+        if(idx>=0){ list[idx]={id:existing.id,name:name,meal:mealSel.value,rating:ratingVal.v,notes:notesI.value.trim(),ts:existing.ts}; }
       } else {
-        list.push({id:'kaf-'+Date.now()+Math.round(Math.random()*1e6),name:name,meal:mealSel.value,notes:notesI.value.trim(),ts:Date.now()});
+        list.push({id:'kaf-'+Date.now()+Math.round(Math.random()*1e6),name:name,meal:mealSel.value,rating:ratingVal.v,notes:notesI.value.trim(),ts:Date.now()});
       }
       saveList(list);
       S_kafAddOpen=false; S_kafEditId=null;
@@ -2851,7 +2906,7 @@ function renderKennyApprovedFoods(){
   CATS.forEach(function(c){
     var items=list.filter(function(x){return x.meal===c.id;});
     if(!items.length) return;
-    items.sort(function(a,b){return a.name.localeCompare(b.name);});
+    items.sort(function(a,b){ return (b.rating||0)-(a.rating||0) || a.name.localeCompare(b.name); });
     wrap.appendChild(mk('div',{css:'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--pu);background:var(--pus);border-radius:8px;padding:8px 13px;margin:14px 0 8px;',txt:c.l}));
     var listCard=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);overflow:hidden;'});
     items.forEach(function(it,idx){
@@ -2859,7 +2914,16 @@ function renderKennyApprovedFoods(){
       var top=mk('div',{css:'display:flex;align-items:flex-start;justify-content:space-between;gap:10px;'});
       var left=mk('div',{css:'min-width:0;flex:1;'});
       left.appendChild(mk('div',{css:'font-size:13.5px;font-weight:700;color:var(--ink);',txt:it.name}));
-      if(it.notes) left.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);margin-top:2px;line-height:1.4;',txt:it.notes}));
+      if(it.rating){
+        var starRow=mk('div',{css:'display:flex;gap:1px;margin-top:3px;'});
+        for(var ri=0;ri<5;ri++){
+          var filled=ri<it.rating;
+          var sIc=lc('star',11,filled?'var(--am)':'var(--div)');
+          if(sIc){ if(filled) sIc.style.fill='var(--am)'; starRow.appendChild(sIc); }
+        }
+        left.appendChild(starRow);
+      }
+      if(it.notes) left.appendChild(mk('div',{css:'font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.4;',txt:it.notes}));
       top.appendChild(left);
       var actions=mk('div',{css:'display:flex;gap:4px;flex-shrink:0;'});
       var editBtn=mk('button',{css:'width:26px;height:26px;border:none;background:transparent;cursor:pointer;color:var(--ink4);display:flex;align-items:center;justify-content:center;padding:0;'});
