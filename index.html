@@ -702,7 +702,7 @@ var MED_SLOTS = {
     {id:'methadone-am',drug:'methadone',unit:'tablet',perDose:3,name:'Methadone',generic:'dolophine',dose:'15mg \u00b7 3 \u00d7 5mg tablets',note:'Main long-acting pain med. MUST be on strict schedule \u2014 builds up to prevent pain spikes. Also targets nerve burning pain. Do not skip or shift timing.',strict:true},
     {id:'haldol-am',drug:'haldol',unit:'tablet',perDose:1,name:'Haldol',generic:'haloperidol',dose:'0.5mg tablet',note:'Anti-nausea that works on brain signals. Spaced through the day.',strict:false},
     {id:'protonix-am',drug:'protonix',unit:'tablet',perDose:1,name:'Protonix',generic:'pantoprazole',dose:'40mg tablet',note:'Stronger acid blocker \u2014 protects against ulcers caused by the steroid.',strict:false},
-    {id:'pepcid-am',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'40mg tablet',note:'Reduces stomach acid. Protects stomach lining from all the medications.',strict:false},    {id:'prednisone-am',drug:'prednisone',unit:'tablet',perDose:4,name:'Deltasone',generic:'prednisone',dose:'40mg total \u00b7 4 \u00d7 10mg tablets',note:'Steroid that reduces inflammation. Never stop suddenly \u2014 must be tapered under medical guidance.',strict:false},
+    {id:'pepcid-am',drug:'pepcid',unit:'tablet',perDose:1,name:'Pepcid',generic:'famotidine',dose:'40mg tablet',note:'Reduces stomach acid. Protects stomach lining from all the medications.',strict:false},
     {id:'cymbalta-am',drug:'cymbalta',unit:'capsule',perDose:1,name:'Cymbalta',generic:'duloxetine',dose:'20mg capsule',note:'For nerve pain \u2014 burning/shooting from cancer pressing on nerves. Works differently than opioids.',strict:false},  ]},
   '2pm':{key:'2pm',label:'2 PM · Afternoon',hour:14,win:[11,17],meds:[
     {id:'methadone-2pm',drug:'methadone',unit:'tablet',perDose:3,name:'Methadone',generic:'dolophine',dose:'15mg \u00b7 3 \u00d7 5mg tablets',note:'Second of three strictly timed doses. Keeps long-acting pain coverage continuous throughout the day.',strict:true},
@@ -768,7 +768,7 @@ var MED_PURPOSE = {
   dulcolax:    'Constipation (suppository)',
 };
 
-var MED_STOPPED = ['Morphine extended release','Celebrex (celecoxib)','Robaxin (methocarbamol)','Bactrim (sulfamethoxazole-trimethoprim)','Decadron (dexamethasone)'];
+var MED_STOPPED = ['Morphine extended release','Celebrex (celecoxib)','Robaxin (methocarbamol)','Bactrim (sulfamethoxazole-trimethoprim)','Decadron (dexamethasone)','Deltasone (prednisone)'];
 var MED_UNITS = {tablet:'tablets',mL:'mL',patch:'patches',capsule:'capsules',packet:'packets',supp:'suppositories',gummy:'gummies'};
 var PILL_IMGS = {};
 var PILL_IMG = {
@@ -818,260 +818,6 @@ var S_addMedOpen = false;
 var S_pillOverviewOpen = false;
 var S_foodApprovedOpen = false;
 var S_teadesOpen = false;
-var TEADES_PREP_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TEADES Prep — Kendra</title>
-<style>
-  :root {
-    --ink: #1c2530;
-    --ink-soft: #4a5563;
-    --paper: #f7f5f0;
-    --card: #ffffff;
-    --line: #e3ddd2;
-    --teal: #0f6e6e;
-    --teal-soft: #e4f0ef;
-    --amber: #b06f0d;
-    --amber-soft: #faf0dd;
-    --rose: #a8324a;
-    --rose-soft: #f9e4e8;
-    --green: #2f7d4f;
-    --green-soft: #e6f2ea;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--paper);
-    color: var(--ink);
-    line-height: 1.5;
-    padding: 0 0 80px;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 820px; margin: 0 auto; padding: 0 20px; }
-
-  /* Header */
-  header {
-    background: var(--ink);
-    color: #fff;
-    padding: 32px 0 28px;
-    margin-bottom: 28px;
-  }
-  header .wrap { display: block; }
-  .eyebrow {
-    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: #9db4b4; font-weight: 600; margin-bottom: 8px;
-  }
-  header h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 14px; }
-  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: #c9d4d4; }
-  .meta-row b { color: #fff; font-weight: 600; }
-
-  /* Section titles */
-  h2 {
-    font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--teal); font-weight: 700;
-    margin: 34px 0 14px; padding-bottom: 8px;
-    border-bottom: 2px solid var(--line);
-  }
-
-  /* Hurdles hero */
-  .hurdles {
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 14px; padding: 22px 24px; margin-bottom: 8px;
-    box-shadow: 0 1px 3px rgba(28,37,48,0.04);
-  }
-  .hurdles .lede { font-size: 14px; color: var(--ink-soft); margin-bottom: 16px; }
-  .hurdle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 560px){ .hurdle-grid { grid-template-columns: 1fr; } }
-  .hurdle {
-    display: flex; gap: 11px; align-items: flex-start;
-    background: var(--rose-soft); border-radius: 9px; padding: 12px 14px;
-  }
-  .hurdle .n {
-    flex: none; width: 22px; height: 22px; border-radius: 50%;
-    background: var(--rose); color: #fff; font-size: 12px; font-weight: 700;
-    display: grid; place-items: center; margin-top: 1px;
-  }
-  .hurdle .t { font-size: 13.5px; }
-  .hurdle .t b { display: block; font-weight: 700; color: var(--ink); margin-bottom: 1px; }
-  .hurdle .t span { color: var(--ink-soft); font-size: 12.5px; }
-
-  /* Legend */
-  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 14px 0 4px; font-size: 12.5px; }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); }
-  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
-  .dot.g { background: var(--green); }
-  .dot.a { background: var(--amber); }
-  .dot.r { background: var(--rose); }
-
-  /* Criteria cards */
-  .crit {
-    background: var(--card); border: 1px solid var(--line); border-left-width: 4px;
-    border-radius: 10px; padding: 13px 16px; margin-bottom: 9px;
-    display: flex; gap: 13px; align-items: flex-start;
-  }
-  .crit.g { border-left-color: var(--green); }
-  .crit.a { border-left-color: var(--amber); }
-  .crit.r { border-left-color: var(--rose); }
-  .crit .tag {
-    flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em;
-    text-transform: uppercase; padding: 3px 8px; border-radius: 20px; margin-top: 1px;
-    white-space: nowrap;
-  }
-  .crit.g .tag { background: var(--green-soft); color: var(--green); }
-  .crit.a .tag { background: var(--amber-soft); color: var(--amber); }
-  .crit.r .tag { background: var(--rose-soft); color: var(--rose); }
-  .crit .body { font-size: 13.5px; }
-  .crit .body b { color: var(--ink); }
-  .crit .body .note { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 12.5px; font-style: italic; }
-
-  /* Simple info cards */
-  .card {
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 12px; padding: 18px 20px; margin-bottom: 10px;
-  }
-  .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--ink); }
-  .card ul { list-style: none; }
-  .card li { position: relative; padding-left: 20px; margin-bottom: 9px; font-size: 13.5px; color: var(--ink-soft); }
-  .card li:last-child { margin-bottom: 0; }
-  .card li b { color: var(--ink); font-weight: 600; }
-  .card li::before {
-    content: ""; position: absolute; left: 2px; top: 8px;
-    width: 6px; height: 6px; border-radius: 50%; background: var(--teal);
-  }
-  .card li.ask::before { background: var(--amber); }
-
-  .callout {
-    background: var(--teal-soft); border-radius: 12px; padding: 16px 20px;
-    margin-bottom: 10px; font-size: 13.5px; color: #0c4f4f;
-  }
-  .callout b { color: #093c3c; }
-
-  .foot { margin-top: 30px; font-size: 12px; color: #9a958a; text-align: center; }
-
-  @media print {
-    body { background: #fff; }
-    header { background: #1c2530 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .crit, .card, .hurdle, .callout, .hurdles { -webkit-print-color-adjust: exact; print-color-adjust: exact; break-inside: avoid; }
-  }
-</style>
-</head>
-<body>
-
-<header>
-  <div class="wrap">
-    <div class="eyebrow">Clinical Trial Prep · Kendra</div>
-    <h1>TEADES / ODM-212 Eligibility &amp; Wilky Prep</h1>
-    <div class="meta-row">
-      <div><b>Trial</b> NCT06725758 · Orion Pharma</div>
-      <div><b>Contact</b> Dr. Vinod Ravi, MD Anderson</div>
-      <div><b>Houston</b> Aug 19</div>
-      <div><b>Book Wilky</b> ~Aug 12, fresh labs</div>
-    </div>
-  </div>
-</header>
-
-<div class="wrap">
-
-  <!-- HERO: the hurdles -->
-  <h2>The 6 hurdles to work toward</h2>
-  <div class="hurdles">
-    <p class="lede">These are the criteria she doesn't clearly meet yet. Most interconnect and trace back to getting her stabilized, off steroids, eating, and her supportive meds adjusted.</p>
-    <div class="hurdle-grid">
-      <div class="hurdle"><div class="n">1</div><div class="t"><b>ECOG 0–1</b><span>More upright &amp; active. Likely near 2 now.</span></div></div>
-      <div class="hurdle"><div class="n">2</div><div class="t"><b>Off steroids</b><span>The prednisone taper; no Decadron.</span></div></div>
-      <div class="hurdle"><div class="n">3</div><div class="t"><b>Nausea controlled</b><span>So she can take &amp; absorb an oral drug.</span></div></div>
-      <div class="hurdle"><div class="n">4</div><div class="t"><b>Native hemoglobin ≥10</b><span>Transfused Hgb doesn't count. Hers bounces 9–10.</span></div></div>
-      <div class="hurdle"><div class="n">5</div><div class="t"><b>QTc-prolonging meds</b><span>Methadone especially. Needs ECG + swaps.</span></div></div>
-      <div class="hurdle"><div class="n">6</div><div class="t"><b>Albumin &gt;3.0</b><span>Hers runs 2.3–2.6 — below cutoff. Tougher one.</span></div></div>
-    </div>
-  </div>
-
-  <!-- ASKS -->
-  <h2>Asks for Wilky</h2>
-  <div class="card">
-    <ul>
-      <li class="ask"><b>Talk to Dr. Ravi directly</b> about Kendra — they communicate regularly, smaller ask than it feels.</li>
-      <li class="ask"><b>Be creative on bridging</b> — she's young and otherwise healthy.</li>
-      <li class="ask"><b>Reconcile stop-chemo vs. gemcitabine bridge.</b> July 22 leaned toward stopping for a clean washout; the foundation contact recommends gemcitabine as a bridge that protects hemoglobin. Which is right given Aug 19 timing + the 2-week washout?</li>
-      <li class="ask"><b>Protect hemoglobin</b> as an explicit goal — ≥10 is a hard gate.</li>
-      <li class="ask"><b>Clarify the ambiguous exclusions:</b> is albumin ≤3.0 disqualifying or discretionary (it's ascites-driven)? Does the anticoagulation exclusion apply to her Lovenox (clots, not arrhythmia)? Is she Part 1 or Part 2, and is her disease RECIST-measurable?</li>
-      <li class="ask"><b>No new drugs/chemo before Ravi/screening</b> without checking eligibility &amp; lab impact.</li>
-    </ul>
-  </div>
-
-  <!-- CRITERIA -->
-  <h2>Full criteria — circle what she misses</h2>
-  <div class="legend">
-    <span><i class="dot g"></i> Meets</span>
-    <span><i class="dot a"></i> Check / clarify</span>
-    <span><i class="dot r"></i> Hurdle</span>
-  </div>
-
-  <p style="font-size:12.5px;color:var(--ink-soft);margin:12px 0 14px;font-style:italic;">Inclusion — she needs to meet all of these.</p>
-
-  <div class="crit g"><span class="tag">Meets</span><div class="body"><b>Age ≥18</b> and <b>EHE diagnosis</b> (explicitly listed), needs systemic treatment, progressed on standard therapy, life expectancy &gt;12 weeks.</div></div>
-  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Measurable disease by RECIST (Part 2 only).</b><span class="note">Her disease is largely effusions/ascites/lymphangitic — confirm Part 1 vs 2 and whether it's measurable.</span></div></div>
-  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Tumor tissue sample ≤1 year (Part 2 only).</b><span class="note">Confirm biopsy timing &amp; availability.</span></div></div>
-  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>ECOG performance status 0–1.</b><span class="note">The main functional gate. Work toward it.</span></div></div>
-
-  <p style="font-size:12.5px;color:var(--ink-soft);margin:18px 0 14px;font-style:italic;">Exclusion — any one of these can disqualify.</p>
-
-  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Steroids &gt;10 mg/day prednisone equivalent within 2 weeks of dosing.</b><span class="note">Why she's tapering off prednisone now, no Decadron. Must be under 10mg (ideally off) ≥2 weeks before dosing.</span></div></div>
-  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Uncontrolled nausea / vomiting / diarrhea that impairs oral absorption.</b><span class="note">It's an oral drug — nausea control maps directly here.</span></div></div>
-  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>QTc-prolonging concomitant meds, or QTcF/B &gt;470 ms on ECG.</b><span class="note">Methadone, haloperidol, olanzapine all prolong QTc. Needs screening ECG + likely med swaps. Sort out early.</span></div></div>
-  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Hepatic: albumin ≤30 g/L (≤3.0), bilirubin ≥1.5× ULN, or AST/ALT ≥5× ULN (with liver mets).</b><span class="note">Her albumin runs 2.3–2.6 — below the 3.0 cutoff. Recent ALT (146) &amp; bilirubin (0.9) also trending up. The albumin is the real flag.</span></div></div>
-  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Hemoglobin &lt;10 g/dL</b> (transfusion within 7 days doesn't count); ANC &lt;1500; platelets &lt;100,000.<span class="note">Native Hgb ≥10 is the goal — hers bounces 9–10. ANC &amp; platelets generally fine.</span></div></div>
-  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Kidney: urine albumin/creatinine ratio ≥3 mg/mmol, or eGFR &lt;60.</b><span class="note">Her creatinine/GFR are excellent, but the urine albumin/creatinine ratio is a specific test worth checking given low albumin.</span></div></div>
-  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Cardiac arrhythmia requiring treatment "including oral anticoagulation" within 6 months.</b><span class="note">She's on Lovenox (injectable) for clots, not an arrhythmia — likely doesn't apply, but confirm the wording.</span></div></div>
-  <div class="crit g"><span class="tag">Meets</span><div class="body"><b>Coagulation OK on anticoagulants</b> as long as levels are therapeutic. <b>No prior TEAD inhibitor</b> (she's had none). <b>Alopecia is exempted</b> — her hair loss won't count against her.</div></div>
-  <div class="crit g"><span class="tag">Meets</span><div class="body"><b>2-week chemo washout</b> required before dosing; sirolimus already cleared (level &lt;2.0). No brain mets, no HIV/active infection, no recent major surgery.</div></div>
-
-  <!-- WAIVERS -->
-  <div class="callout" style="margin-top:24px;">
-    <b>On waivers:</b> if she misses a criterion narrowly, leniency is <b>Orion's (the sponsor's) call, not MD Anderson's</b>. The medical monitor requests it from the sponsor — no one at the site can wave it through. Aim to <b>meet</b> the criteria, don't count on a waiver.
-  </div>
-
-  <!-- BRIDGING + TRAVEL -->
-  <h2>Bridging &amp; logistics</h2>
-  <div class="card">
-    <h3>Bridging options (from foundation call)</h3>
-    <ul>
-      <li><b>Gemcitabine</b> — preferred bridge; effective without wrecking hemoglobin.</li>
-      <li>Backups: <b>trametinib</b>, <b>nab-sirolimus (IV)</b>, <b>pazopanib</b>.</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h3>Travel</h3>
-    <ul>
-      <li>Book <b>round trip</b> — arrive a few days early, plan a few days after, keep return flexible.</li>
-      <li>Expect an <b>initial consult, then a separate screening visit.</b></li>
-      <li><b>Don't relocate.</b> Wilky in Denver stays the ongoing-care home base; go to Houston only when the trial requires. The back-and-forth is the hardest part — plan around it.</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h3>Bring to Aug 19</h3>
-    <ul>
-      <li>This sheet (circled) + the full printed ClinicalTrials.gov criteria</li>
-      <li>Recent scans, pathology, freshest labs — send ahead if possible</li>
-      <li>Her full medication list</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h3>If turned away</h3>
-    <ul>
-      <li>Reconsideration ~a month later is unlikely but has happened.</li>
-      <li>Leave with a clear read: what to fix to reapply, or which route to pivot to (trametinib / nab-sirolimus / pazopanib).</li>
-    </ul>
-  </div>
-
-  <p class="foot">Criteria from ClinicalTrials.gov NCT06725758 · record last updated 2026-05-07. Re-check the live listing right before the Houston visit in case it changed.</p>
-
-</div>
-</body>
-</html>
-`;
 var S_kafAddOpen = false;
 var S_kafEditId = null;
 var S_addMedType = 'scheduled';
@@ -2788,26 +2534,203 @@ function renderTeadesBanner(){
 
 function renderTeadesPrep(){
   var wrap=mk('div',{cls:'fi'});
-  var hdRow=mk('div',{css:'display:flex;align-items:center;gap:6px;padding:14px 16px 0;'});
-  var back=mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;display:flex;align-items:center;flex-shrink:0;'});
-  var backIc=lc('chevron-left',20,'var(--ink3)'); if(backIc) back.appendChild(backIc);
-  back.addEventListener('click',function(){ S_teadesOpen=false; R(); });
-  hdRow.appendChild(back);
-  hdRow.appendChild(mk('div',{css:'font-size:15px;font-weight:800;color:var(--ink);',txt:'TEADES Trial Prep'}));
-  wrap.appendChild(hdRow);
 
-  var frame=mk('iframe',{css:'width:100%;border:none;display:block;margin-top:8px;'});
-  frame.setAttribute('srcdoc',TEADES_PREP_HTML);
-  frame.setAttribute('title','TEADES Trial Prep');
-  frame.style.height='600px';
-  frame.addEventListener('load',function(){
-    try{
-      var h=frame.contentWindow.document.documentElement.scrollHeight;
-      if(h) frame.style.height=(h+30)+'px';
-    }catch(_e){}
+  // ── Dark hero header ──────────────────────────────────────────
+  var hero=mk('div',{css:'background:var(--ink);color:#fff;padding:14px 16px 22px;'});
+  var backRow=mk('div',{css:'display:flex;align-items:center;gap:6px;margin-bottom:16px;'});
+  var back=mk('button',{css:'background:none;border:none;cursor:pointer;color:rgba(255,255,255,.85);padding:2px;display:flex;align-items:center;flex-shrink:0;'});
+  var backIc=lc('chevron-left',20,'rgba(255,255,255,.85)'); if(backIc) back.appendChild(backIc);
+  back.addEventListener('click',function(){ S_teadesOpen=false; R(); });
+  backRow.appendChild(back);
+  hero.appendChild(backRow);
+  hero.appendChild(mk('div',{css:'font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#9db4b4;font-weight:700;margin-bottom:7px;',txt:'Clinical Trial Prep \u00b7 Kendra'}));
+  hero.appendChild(mk('div',{css:'font-family:var(--serif);font-size:21px;font-style:italic;color:#fff;margin-bottom:14px;line-height:1.25;',txt:'TEADES / ODM-212 Eligibility & Wilky Prep'}));
+  var metaWrap=mk('div',{css:'display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#c9d4d4;'});
+  [['Trial','NCT06725758 \u00b7 Orion Pharma'],['Contact','Dr. Vinod Ravi, MD Anderson'],['Houston','Aug 19'],['Book Wilky','~Aug 12, fresh labs']].forEach(function(pair){
+    var row=mk('div',{});
+    row.appendChild(mk('span',{css:'font-weight:700;color:#fff;',txt:pair[0]+'  '}));
+    row.appendChild(mk('span',{txt:pair[1]}));
+    metaWrap.appendChild(row);
   });
-  wrap.appendChild(frame);
-  wrap.appendChild(mk('div',{css:'height:24px;'}));
+  hero.appendChild(metaWrap);
+  wrap.appendChild(hero);
+
+  var px=mk('div',{cls:'px',css:'padding-top:20px;padding-bottom:32px;'});
+
+  function h2(t){ px.appendChild(mk('div',{css:'font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--pu);margin:24px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--div);',txt:t})); }
+  function infoCard(){ return mk('div',{css:'background:var(--card);border:1px solid var(--div);border-radius:var(--r-md);padding:16px;margin-bottom:10px;box-shadow:var(--sh-sm);'}); }
+
+  var TIER={
+    r:{bg:'#FFE3E3',dot:'#E5484D',tag:'Hurdle',tagBg:'#FFD4D4',tagText:'#B42318'},
+    a:{bg:'#FFF4D6',dot:'#B7791F',tag:'Check',tagBg:'#FBE7B0',tagText:'#92400E'},
+    g:{bg:'#DCF5E6',dot:'#1A9B58',tag:'Meets',tagBg:'#BCEBD1',tagText:'#166A3F'}
+  };
+
+  // ── The 6 hurdles ────────────────────────────────────────────
+  h2('The 6 hurdles to work toward');
+  var hurdlesCard=infoCard();
+  hurdlesCard.appendChild(mk('div',{css:'font-size:13px;color:var(--ink3);line-height:1.55;margin-bottom:13px;',txt:'These are the criteria she doesn\u2019t clearly meet yet. Most interconnect and trace back to getting her stabilized, off steroids, eating, and her supportive meds adjusted.'}));
+
+  var HURDLES=[
+    {n:1,tier:'r',title:'ECOG 0\u20131',sub:'More upright & active. Likely near 2 now.',explain:'ECOG Performance Status is the standard 0\u20134 scale doctors use to describe day-to-day function: 0 = fully active, 1 = restricted in strenuous activity but up and about, 2 = up more than half the day but can\u2019t work, 3 = limited self-care, in bed/chair more than half the day, 4 = fully disabled. The trial needs 0\u20131. This is the main functional gate \u2014 work toward it.'},
+    {n:2,tier:'g',title:'Off steroids',sub:'Steroid-free \u2014 taper complete, no longer on Deltasone.',explain:'Trials often exclude high-dose steroids because they can suppress the immune response, mask side effects, or interact with the drug being tested. The taper is complete \u2014 she\u2019s off Deltasone entirely now. The rule is under 10mg/day for at least 2 weeks before dosing, so this hurdle is on track to clear itself as that 2-week window runs out.'},
+    {n:3,tier:'a',title:'Nausea controlled',sub:'Not severe \u2014 comes and goes, not constant.',explain:'ODM-212 is an oral drug. If nausea, vomiting, or diarrhea isn\u2019t controlled, the body may not absorb an oral medication properly \u2014 so uncontrolled GI symptoms that impair absorption are an exclusion criterion. Right now it\u2019s not severe \u2014 it comes and goes rather than being constant. That\u2019s a good sign, but worth keeping an eye on so it doesn\u2019t become the thing that blocks eligibility.'},
+    {n:4,tier:'r',title:'Native hemoglobin \u226510',sub:'Transfused Hgb doesn\u2019t count. Hers bounces 9\u201310.',explain:'\u201cNative\u201d means her own body\u2019s level \u2014 not a level propped up by a recent blood transfusion. Transfused hemoglobin doesn\u2019t count toward this cutoff. Her levels bounce between 9\u201310, so this is about getting her body genuinely producing at that level, not just topped up.'},
+    {n:5,tier:'r',title:'QTc-prolonging meds',sub:'Methadone especially. Needs ECG + swaps.',explain:'QTc is measured on an ECG \u2014 it reflects how long the heart\u2019s electrical system takes to reset between beats. Certain drugs (methadone, haloperidol, olanzapine among them) can lengthen this and raise the risk of dangerous heart rhythms. The trial needs a screening ECG and likely swaps for any of these meds before dosing can start.'},
+    {n:6,tier:'r',title:'Albumin >3.0',sub:'Hers runs 2.3\u20132.6 \u2014 below cutoff. Tougher one.',explain:'Albumin is a protein made by the liver. Low albumin often reflects poor nutrition, liver stress, or fluid shifts \u2014 like ascites pulling protein out of the bloodstream \u2014 and it\u2019s used as a marker of how well the body could handle a new drug. Hers runs 2.3\u20132.6, below the 3.0 cutoff, and it\u2019s ascites-driven: fluid is currently building up roughly every 2 days, uncomfortable enough that it\u2019s affecting her appetite. That fluid cycle is likely a big part of why this is the toughest hurdle on the list.'}
+  ];
+
+  var hurdleGrid=mk('div',{css:'display:flex;flex-direction:column;gap:8px;'});
+  HURDLES.forEach(function(h){
+    var tc=TIER[h.tier];
+    var card=mk('div',{css:'background:'+tc.bg+';border-radius:9px;padding:12px 14px;cursor:pointer;'});
+    var row=mk('div',{css:'display:flex;gap:11px;align-items:flex-start;'});
+    row.appendChild(mk('div',{css:'flex-shrink:0;width:22px;height:22px;border-radius:50%;background:'+tc.dot+';color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;',txt:String(h.n)}));
+    var textCol=mk('div',{css:'flex:1;min-width:0;'});
+    textCol.appendChild(mk('div',{css:'font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:1px;',txt:h.title}));
+    textCol.appendChild(mk('div',{css:'font-size:12.5px;color:var(--ink3);',txt:h.sub}));
+    row.appendChild(textCol);
+    var chev=lc('chevron-right',14,tc.dot);
+    if(chev){ chev.style.flexShrink='0'; chev.style.marginTop='4px'; chev.style.transition='transform .2s'; row.appendChild(chev); }
+    card.appendChild(row);
+
+    var detail=mk('div',{css:'display:none;margin-top:10px;background:var(--card);border-left:4px solid '+tc.dot+';border-radius:9px;padding:12px 14px;font-size:13px;color:var(--ink2);line-height:1.55;'});
+    detail.appendChild(mk('div',{css:'font-weight:700;color:var(--ink);margin-bottom:5px;',txt:h.title}));
+    detail.appendChild(mk('div',{txt:h.explain}));
+    card.appendChild(detail);
+
+    card.addEventListener('click',function(){
+      var isOpen=detail.style.display==='block';
+      Array.prototype.forEach.call(hurdleGrid.children,function(sibCard){
+        var sibDetail=sibCard.lastChild;
+        if(sibDetail && sibDetail!==detail) sibDetail.style.display='none';
+      });
+      detail.style.display=isOpen?'none':'block';
+      if(chev) chev.style.transform=isOpen?'':'rotate(90deg)';
+    });
+    hurdleGrid.appendChild(card);
+  });
+  hurdlesCard.appendChild(hurdleGrid);
+  px.appendChild(hurdlesCard);
+
+  // ── Asks for Wilky ───────────────────────────────────────────
+  h2('Asks for Wilky');
+  var asksCard=infoCard();
+  var asksList=mk('ul',{css:'list-style:none;'});
+  [
+    ['Talk to Dr. Ravi directly','about Kendra \u2014 they communicate regularly, smaller ask than it feels.'],
+    ['Be creative on bridging','she\u2019s young and otherwise healthy.'],
+    ['Reconcile stop-chemo vs. gemcitabine bridge.','July 22 leaned toward stopping for a clean washout; the foundation contact recommends gemcitabine as a bridge that protects hemoglobin. Which is right given Aug 19 timing + the 2-week washout?'],
+    ['Protect hemoglobin','as an explicit goal \u2014 \u226510 is a hard gate.'],
+    ['Clarify the ambiguous exclusions:','is albumin \u22643.0 disqualifying or discretionary (it\u2019s ascites-driven)? Does the anticoagulation exclusion apply to her Lovenox (clots, not arrhythmia)? Is she Part 1 or Part 2, and is her disease RECIST-measurable?'],
+    ['No new drugs/chemo before Ravi/screening','without checking eligibility & lab impact.']
+  ].forEach(function(item){
+    var li=mk('li',{css:'position:relative;padding-left:20px;margin-bottom:10px;font-size:13.5px;color:var(--ink3);line-height:1.5;'});
+    li.appendChild(mk('div',{css:'position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--am);'}));
+    li.appendChild(mk('b',{css:'color:var(--ink);font-weight:700;',txt:item[0]+' '}));
+    li.appendChild(mk('span',{txt:item[1]}));
+    asksList.appendChild(li);
+  });
+  asksCard.appendChild(asksList);
+  px.appendChild(asksCard);
+
+  // ── Full criteria ────────────────────────────────────────────
+  h2('Full criteria \u2014 circle what she misses');
+  var legend=mk('div',{css:'display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:12px;font-size:12.5px;'});
+  [['g','Meets'],['a','Check / clarify'],['r','Hurdle']].forEach(function(pair){
+    var item=mk('span',{css:'display:inline-flex;align-items:center;gap:6px;color:var(--ink3);'});
+    item.appendChild(mk('span',{css:'width:11px;height:11px;border-radius:50%;background:'+TIER[pair[0]].dot+';flex-shrink:0;'}));
+    item.appendChild(mk('span',{txt:pair[1]}));
+    legend.appendChild(item);
+  });
+  px.appendChild(legend);
+
+  px.appendChild(mk('div',{css:'font-size:12.5px;color:var(--ink3);margin:12px 0 12px;font-style:italic;',txt:'Inclusion \u2014 she needs to meet all of these.'}));
+
+  function critRow(tier,segments,note){
+    var tc=TIER[tier];
+    var card=mk('div',{css:'background:var(--card);border:1px solid var(--div);border-left:4px solid '+tc.dot+';border-radius:10px;padding:13px 16px;margin-bottom:9px;display:flex;gap:13px;align-items:flex-start;'});
+    var tag=mk('span',{css:'flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:20px;margin-top:1px;white-space:nowrap;background:'+tc.tagBg+';color:'+tc.tagText+';',txt:tc.tag});
+    card.appendChild(tag);
+    var body=mk('div',{css:'font-size:13.5px;color:var(--ink2);line-height:1.5;'});
+    var line=mk('div',{});
+    segments.forEach(function(seg){
+      if(seg.b) line.appendChild(mk('b',{css:'color:var(--ink);font-weight:700;',txt:seg.b}));
+      else line.appendChild(mk('span',{txt:seg.t}));
+    });
+    body.appendChild(line);
+    if(note) body.appendChild(mk('div',{css:'margin-top:4px;color:var(--ink3);font-size:12.5px;font-style:italic;',txt:note}));
+    card.appendChild(body);
+    px.appendChild(card);
+  }
+
+  critRow('g',[{b:'Age \u226518'},{t:' and '},{b:'EHE diagnosis'},{t:' (explicitly listed), needs systemic treatment, progressed on standard therapy, life expectancy >12 weeks.'}]);
+  critRow('a',[{b:'Measurable disease by RECIST (Part 2 only).'}],'Her disease is largely effusions/ascites/lymphangitic \u2014 confirm Part 1 vs 2 and whether it\u2019s measurable.');
+  critRow('a',[{b:'Tumor tissue sample \u22641 year (Part 2 only).'}],'Confirm biopsy timing & availability.');
+  critRow('r',[{b:'ECOG performance status 0\u20131.'}],'The main functional gate. Work toward it.');
+
+  px.appendChild(mk('div',{css:'font-size:12.5px;color:var(--ink3);margin:18px 0 12px;font-style:italic;',txt:'Exclusion \u2014 any one of these can disqualify.'}));
+
+  critRow('r',[{b:'Steroids >10 mg/day prednisone equivalent within 2 weeks of dosing.'}],'Why she\u2019s tapering off prednisone now, no Decadron. Must be under 10mg (ideally off) \u22652 weeks before dosing.');
+  critRow('r',[{b:'Uncontrolled nausea / vomiting / diarrhea that impairs oral absorption.'}],'It\u2019s an oral drug \u2014 nausea control maps directly here.');
+  critRow('r',[{b:'QTc-prolonging concomitant meds, or QTcF/B >470 ms on ECG.'}],'Methadone, haloperidol, olanzapine all prolong QTc. Needs screening ECG + likely med swaps. Sort out early.');
+  critRow('r',[{b:'Hepatic: albumin \u226430 g/L (\u22643.0), bilirubin \u22651.5\u00d7 ULN, or AST/ALT \u22655\u00d7 ULN (with liver mets).'}],'Her albumin runs 2.3\u20132.6 \u2014 below the 3.0 cutoff. Recent ALT (146) & bilirubin (0.9) also trending up. The albumin is the real flag.');
+  critRow('r',[{b:'Hemoglobin <10 g/dL'},{t:' (transfusion within 7 days doesn\u2019t count); ANC <1500; platelets <100,000.'}],'Native Hgb \u226510 is the goal \u2014 hers bounces 9\u201310. ANC & platelets generally fine.');
+  critRow('a',[{b:'Kidney: urine albumin/creatinine ratio \u22653 mg/mmol, or eGFR <60.'}],'Her creatinine/GFR are excellent, but the urine albumin/creatinine ratio is a specific test worth checking given low albumin.');
+  critRow('a',[{b:'Cardiac arrhythmia requiring treatment \u201cincluding oral anticoagulation\u201d within 6 months.'}],'She\u2019s on Lovenox (injectable) for clots, not an arrhythmia \u2014 likely doesn\u2019t apply, but confirm the wording.');
+  critRow('g',[{b:'Coagulation OK on anticoagulants'},{t:' as long as levels are therapeutic. '},{b:'No prior TEAD inhibitor'},{t:' (she\u2019s had none). '},{b:'Alopecia is exempted'},{t:' \u2014 her hair loss won\u2019t count against her.'}]);
+  critRow('g',[{b:'2-week chemo washout'},{t:' required before dosing; sirolimus already cleared (level <2.0). No brain mets, no HIV/active infection, no recent major surgery.'}]);
+
+  // ── Waivers callout ──────────────────────────────────────────
+  var waiverCard=mk('div',{css:'background:var(--pus);border-radius:12px;padding:16px 18px;margin:20px 0 10px;font-size:13.5px;color:var(--ink2);line-height:1.55;'});
+  waiverCard.appendChild(mk('b',{css:'color:var(--ink);font-weight:700;',txt:'On waivers: '}));
+  waiverCard.appendChild(mk('span',{txt:'if she misses a criterion narrowly, leniency is '}));
+  waiverCard.appendChild(mk('b',{css:'color:var(--ink);font-weight:700;',txt:'Orion\u2019s (the sponsor\u2019s) call, not MD Anderson\u2019s'}));
+  waiverCard.appendChild(mk('span',{txt:'. The medical monitor requests it from the sponsor \u2014 no one at the site can wave it through. Aim to '}));
+  waiverCard.appendChild(mk('b',{css:'color:var(--ink);font-weight:700;',txt:'meet'}));
+  waiverCard.appendChild(mk('span',{txt:' the criteria, don\u2019t count on a waiver.'}));
+  px.appendChild(waiverCard);
+
+  // ── Bridging & logistics ─────────────────────────────────────
+  h2('Bridging & logistics');
+
+  function bulletCard(title,items){
+    var card=infoCard();
+    card.appendChild(mk('div',{css:'font-size:15px;font-weight:700;color:var(--ink);margin-bottom:10px;',txt:title}));
+    var ul=mk('ul',{css:'list-style:none;'});
+    items.forEach(function(item){
+      var li=mk('li',{css:'position:relative;padding-left:20px;margin-bottom:9px;font-size:13.5px;color:var(--ink3);line-height:1.5;'});
+      li.appendChild(mk('div',{css:'position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--pu);'}));
+      if(item.b) li.appendChild(mk('b',{css:'color:var(--ink);font-weight:700;',txt:item.b+' '}));
+      li.appendChild(mk('span',{txt:item.t}));
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+    return card;
+  }
+
+  px.appendChild(bulletCard('Bridging options (from foundation call)',[
+    {b:'Gemcitabine',t:'\u2014 preferred bridge; effective without wrecking hemoglobin.'},
+    {t:'Backups: trametinib, nab-sirolimus (IV), pazopanib.'}
+  ]));
+  px.appendChild(bulletCard('Travel',[
+    {b:'Book round trip',t:'\u2014 arrive a few days early, plan a few days after, keep return flexible.'},
+    {t:'Expect an initial consult, then a separate screening visit.'},
+    {b:'Don\u2019t relocate.',t:'Wilky in Denver stays the ongoing-care home base; go to Houston only when the trial requires. The back-and-forth is the hardest part \u2014 plan around it.'}
+  ]));
+  px.appendChild(bulletCard('Bring to Aug 19',[
+    {t:'This sheet (circled) + the full printed ClinicalTrials.gov criteria'},
+    {t:'Recent scans, pathology, freshest labs \u2014 send ahead if possible'},
+    {t:'Her full medication list'}
+  ]));
+  px.appendChild(bulletCard('If turned away',[
+    {t:'Reconsideration ~a month later is unlikely but has happened.'},
+    {t:'Leave with a clear read: what to fix to reapply, or which route to pivot to (trametinib / nab-sirolimus / pazopanib).'}
+  ]));
+
+  px.appendChild(mk('div',{css:'font-size:12px;color:var(--ink4);text-align:center;margin-top:20px;line-height:1.5;',txt:'Criteria from ClinicalTrials.gov NCT06725758 \u00b7 record last updated 2026-05-07. Re-check the live listing right before the Houston visit in case it changed.'}));
+
+  wrap.appendChild(px);
   return wrap;
 }
 
@@ -5350,7 +5273,6 @@ var REFILL_DEFAULTS = {
   methadone:{fillDate:MED_FILL_UPDATE_DATE,qty:5},
   haldol:{fillDate:MED_FILL_UPDATE_DATE,qty:96},
   flexeril:{fillDate:MED_FILL_BASELINE_DATE,qty:15,refills:4},
-  prednisone:{fillDate:MED_FILL_UPDATE_DATE,qty:16},
   dapsone:{fillDate:MED_FILL_UPDATE_DATE,qty:16},
   dilaudid4:{fillDate:MED_FILL_BASELINE_DATE,qty:36,refills:0},
   dilaudid2:{fillDate:MED_FILL_BASELINE_DATE,qty:105,refills:0},
@@ -5362,7 +5284,7 @@ var REFILL_DEFAULTS = {
   gummysleep:{fillDate:'2026-06-01',qty:9}
 };
 var MED_FILL_AUTHORITATIVE = {
-  protonix:1,zyprexa:1,vitamind:1,cymbalta:1,pepcid:1,methadone:1,haldol:1,flexeril:1,prednisone:1,dapsone:1,
+  protonix:1,zyprexa:1,vitamind:1,cymbalta:1,pepcid:1,methadone:1,haldol:1,flexeril:1,dapsone:1,
   dilaudid4:1,dilaudid2:1,scopolamine:1,sancuso:1,tylenol:1,lovenox:1
 };
 function purgeAuthoritativeMedFillOverrides(){
