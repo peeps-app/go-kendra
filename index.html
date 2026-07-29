@@ -817,6 +817,261 @@ var S_medsEdit = null;
 var S_addMedOpen = false;
 var S_pillOverviewOpen = false;
 var S_foodApprovedOpen = false;
+var S_teadesOpen = false;
+var TEADES_PREP_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEADES Prep — Kendra</title>
+<style>
+  :root {
+    --ink: #1c2530;
+    --ink-soft: #4a5563;
+    --paper: #f7f5f0;
+    --card: #ffffff;
+    --line: #e3ddd2;
+    --teal: #0f6e6e;
+    --teal-soft: #e4f0ef;
+    --amber: #b06f0d;
+    --amber-soft: #faf0dd;
+    --rose: #a8324a;
+    --rose-soft: #f9e4e8;
+    --green: #2f7d4f;
+    --green-soft: #e6f2ea;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    padding: 0 0 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 0 20px; }
+
+  /* Header */
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 32px 0 28px;
+    margin-bottom: 28px;
+  }
+  header .wrap { display: block; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #9db4b4; font-weight: 600; margin-bottom: 8px;
+  }
+  header h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 14px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: #c9d4d4; }
+  .meta-row b { color: #fff; font-weight: 600; }
+
+  /* Section titles */
+  h2 {
+    font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--teal); font-weight: 700;
+    margin: 34px 0 14px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--line);
+  }
+
+  /* Hurdles hero */
+  .hurdles {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px 24px; margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(28,37,48,0.04);
+  }
+  .hurdles .lede { font-size: 14px; color: var(--ink-soft); margin-bottom: 16px; }
+  .hurdle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px){ .hurdle-grid { grid-template-columns: 1fr; } }
+  .hurdle {
+    display: flex; gap: 11px; align-items: flex-start;
+    background: var(--rose-soft); border-radius: 9px; padding: 12px 14px;
+  }
+  .hurdle .n {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--rose); color: #fff; font-size: 12px; font-weight: 700;
+    display: grid; place-items: center; margin-top: 1px;
+  }
+  .hurdle .t { font-size: 13.5px; }
+  .hurdle .t b { display: block; font-weight: 700; color: var(--ink); margin-bottom: 1px; }
+  .hurdle .t span { color: var(--ink-soft); font-size: 12.5px; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 14px 0 4px; font-size: 12.5px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  .dot.g { background: var(--green); }
+  .dot.a { background: var(--amber); }
+  .dot.r { background: var(--rose); }
+
+  /* Criteria cards */
+  .crit {
+    background: var(--card); border: 1px solid var(--line); border-left-width: 4px;
+    border-radius: 10px; padding: 13px 16px; margin-bottom: 9px;
+    display: flex; gap: 13px; align-items: flex-start;
+  }
+  .crit.g { border-left-color: var(--green); }
+  .crit.a { border-left-color: var(--amber); }
+  .crit.r { border-left-color: var(--rose); }
+  .crit .tag {
+    flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 20px; margin-top: 1px;
+    white-space: nowrap;
+  }
+  .crit.g .tag { background: var(--green-soft); color: var(--green); }
+  .crit.a .tag { background: var(--amber-soft); color: var(--amber); }
+  .crit.r .tag { background: var(--rose-soft); color: var(--rose); }
+  .crit .body { font-size: 13.5px; }
+  .crit .body b { color: var(--ink); }
+  .crit .body .note { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 12.5px; font-style: italic; }
+
+  /* Simple info cards */
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 10px;
+  }
+  .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--ink); }
+  .card ul { list-style: none; }
+  .card li { position: relative; padding-left: 20px; margin-bottom: 9px; font-size: 13.5px; color: var(--ink-soft); }
+  .card li:last-child { margin-bottom: 0; }
+  .card li b { color: var(--ink); font-weight: 600; }
+  .card li::before {
+    content: ""; position: absolute; left: 2px; top: 8px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--teal);
+  }
+  .card li.ask::before { background: var(--amber); }
+
+  .callout {
+    background: var(--teal-soft); border-radius: 12px; padding: 16px 20px;
+    margin-bottom: 10px; font-size: 13.5px; color: #0c4f4f;
+  }
+  .callout b { color: #093c3c; }
+
+  .foot { margin-top: 30px; font-size: 12px; color: #9a958a; text-align: center; }
+
+  @media print {
+    body { background: #fff; }
+    header { background: #1c2530 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .crit, .card, .hurdle, .callout, .hurdles { -webkit-print-color-adjust: exact; print-color-adjust: exact; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Clinical Trial Prep · Kendra</div>
+    <h1>TEADES / ODM-212 Eligibility &amp; Wilky Prep</h1>
+    <div class="meta-row">
+      <div><b>Trial</b> NCT06725758 · Orion Pharma</div>
+      <div><b>Contact</b> Dr. Vinod Ravi, MD Anderson</div>
+      <div><b>Houston</b> Aug 19</div>
+      <div><b>Book Wilky</b> ~Aug 12, fresh labs</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- HERO: the hurdles -->
+  <h2>The 6 hurdles to work toward</h2>
+  <div class="hurdles">
+    <p class="lede">These are the criteria she doesn't clearly meet yet. Most interconnect and trace back to getting her stabilized, off steroids, eating, and her supportive meds adjusted.</p>
+    <div class="hurdle-grid">
+      <div class="hurdle"><div class="n">1</div><div class="t"><b>ECOG 0–1</b><span>More upright &amp; active. Likely near 2 now.</span></div></div>
+      <div class="hurdle"><div class="n">2</div><div class="t"><b>Off steroids</b><span>The prednisone taper; no Decadron.</span></div></div>
+      <div class="hurdle"><div class="n">3</div><div class="t"><b>Nausea controlled</b><span>So she can take &amp; absorb an oral drug.</span></div></div>
+      <div class="hurdle"><div class="n">4</div><div class="t"><b>Native hemoglobin ≥10</b><span>Transfused Hgb doesn't count. Hers bounces 9–10.</span></div></div>
+      <div class="hurdle"><div class="n">5</div><div class="t"><b>QTc-prolonging meds</b><span>Methadone especially. Needs ECG + swaps.</span></div></div>
+      <div class="hurdle"><div class="n">6</div><div class="t"><b>Albumin &gt;3.0</b><span>Hers runs 2.3–2.6 — below cutoff. Tougher one.</span></div></div>
+    </div>
+  </div>
+
+  <!-- ASKS -->
+  <h2>Asks for Wilky</h2>
+  <div class="card">
+    <ul>
+      <li class="ask"><b>Talk to Dr. Ravi directly</b> about Kendra — they communicate regularly, smaller ask than it feels.</li>
+      <li class="ask"><b>Be creative on bridging</b> — she's young and otherwise healthy.</li>
+      <li class="ask"><b>Reconcile stop-chemo vs. gemcitabine bridge.</b> July 22 leaned toward stopping for a clean washout; the foundation contact recommends gemcitabine as a bridge that protects hemoglobin. Which is right given Aug 19 timing + the 2-week washout?</li>
+      <li class="ask"><b>Protect hemoglobin</b> as an explicit goal — ≥10 is a hard gate.</li>
+      <li class="ask"><b>Clarify the ambiguous exclusions:</b> is albumin ≤3.0 disqualifying or discretionary (it's ascites-driven)? Does the anticoagulation exclusion apply to her Lovenox (clots, not arrhythmia)? Is she Part 1 or Part 2, and is her disease RECIST-measurable?</li>
+      <li class="ask"><b>No new drugs/chemo before Ravi/screening</b> without checking eligibility &amp; lab impact.</li>
+    </ul>
+  </div>
+
+  <!-- CRITERIA -->
+  <h2>Full criteria — circle what she misses</h2>
+  <div class="legend">
+    <span><i class="dot g"></i> Meets</span>
+    <span><i class="dot a"></i> Check / clarify</span>
+    <span><i class="dot r"></i> Hurdle</span>
+  </div>
+
+  <p style="font-size:12.5px;color:var(--ink-soft);margin:12px 0 14px;font-style:italic;">Inclusion — she needs to meet all of these.</p>
+
+  <div class="crit g"><span class="tag">Meets</span><div class="body"><b>Age ≥18</b> and <b>EHE diagnosis</b> (explicitly listed), needs systemic treatment, progressed on standard therapy, life expectancy &gt;12 weeks.</div></div>
+  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Measurable disease by RECIST (Part 2 only).</b><span class="note">Her disease is largely effusions/ascites/lymphangitic — confirm Part 1 vs 2 and whether it's measurable.</span></div></div>
+  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Tumor tissue sample ≤1 year (Part 2 only).</b><span class="note">Confirm biopsy timing &amp; availability.</span></div></div>
+  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>ECOG performance status 0–1.</b><span class="note">The main functional gate. Work toward it.</span></div></div>
+
+  <p style="font-size:12.5px;color:var(--ink-soft);margin:18px 0 14px;font-style:italic;">Exclusion — any one of these can disqualify.</p>
+
+  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Steroids &gt;10 mg/day prednisone equivalent within 2 weeks of dosing.</b><span class="note">Why she's tapering off prednisone now, no Decadron. Must be under 10mg (ideally off) ≥2 weeks before dosing.</span></div></div>
+  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Uncontrolled nausea / vomiting / diarrhea that impairs oral absorption.</b><span class="note">It's an oral drug — nausea control maps directly here.</span></div></div>
+  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>QTc-prolonging concomitant meds, or QTcF/B &gt;470 ms on ECG.</b><span class="note">Methadone, haloperidol, olanzapine all prolong QTc. Needs screening ECG + likely med swaps. Sort out early.</span></div></div>
+  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Hepatic: albumin ≤30 g/L (≤3.0), bilirubin ≥1.5× ULN, or AST/ALT ≥5× ULN (with liver mets).</b><span class="note">Her albumin runs 2.3–2.6 — below the 3.0 cutoff. Recent ALT (146) &amp; bilirubin (0.9) also trending up. The albumin is the real flag.</span></div></div>
+  <div class="crit r"><span class="tag">Hurdle</span><div class="body"><b>Hemoglobin &lt;10 g/dL</b> (transfusion within 7 days doesn't count); ANC &lt;1500; platelets &lt;100,000.<span class="note">Native Hgb ≥10 is the goal — hers bounces 9–10. ANC &amp; platelets generally fine.</span></div></div>
+  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Kidney: urine albumin/creatinine ratio ≥3 mg/mmol, or eGFR &lt;60.</b><span class="note">Her creatinine/GFR are excellent, but the urine albumin/creatinine ratio is a specific test worth checking given low albumin.</span></div></div>
+  <div class="crit a"><span class="tag">Check</span><div class="body"><b>Cardiac arrhythmia requiring treatment "including oral anticoagulation" within 6 months.</b><span class="note">She's on Lovenox (injectable) for clots, not an arrhythmia — likely doesn't apply, but confirm the wording.</span></div></div>
+  <div class="crit g"><span class="tag">Meets</span><div class="body"><b>Coagulation OK on anticoagulants</b> as long as levels are therapeutic. <b>No prior TEAD inhibitor</b> (she's had none). <b>Alopecia is exempted</b> — her hair loss won't count against her.</div></div>
+  <div class="crit g"><span class="tag">Meets</span><div class="body"><b>2-week chemo washout</b> required before dosing; sirolimus already cleared (level &lt;2.0). No brain mets, no HIV/active infection, no recent major surgery.</div></div>
+
+  <!-- WAIVERS -->
+  <div class="callout" style="margin-top:24px;">
+    <b>On waivers:</b> if she misses a criterion narrowly, leniency is <b>Orion's (the sponsor's) call, not MD Anderson's</b>. The medical monitor requests it from the sponsor — no one at the site can wave it through. Aim to <b>meet</b> the criteria, don't count on a waiver.
+  </div>
+
+  <!-- BRIDGING + TRAVEL -->
+  <h2>Bridging &amp; logistics</h2>
+  <div class="card">
+    <h3>Bridging options (from foundation call)</h3>
+    <ul>
+      <li><b>Gemcitabine</b> — preferred bridge; effective without wrecking hemoglobin.</li>
+      <li>Backups: <b>trametinib</b>, <b>nab-sirolimus (IV)</b>, <b>pazopanib</b>.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Travel</h3>
+    <ul>
+      <li>Book <b>round trip</b> — arrive a few days early, plan a few days after, keep return flexible.</li>
+      <li>Expect an <b>initial consult, then a separate screening visit.</b></li>
+      <li><b>Don't relocate.</b> Wilky in Denver stays the ongoing-care home base; go to Houston only when the trial requires. The back-and-forth is the hardest part — plan around it.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Bring to Aug 19</h3>
+    <ul>
+      <li>This sheet (circled) + the full printed ClinicalTrials.gov criteria</li>
+      <li>Recent scans, pathology, freshest labs — send ahead if possible</li>
+      <li>Her full medication list</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>If turned away</h3>
+    <ul>
+      <li>Reconsideration ~a month later is unlikely but has happened.</li>
+      <li>Leave with a clear read: what to fix to reapply, or which route to pivot to (trametinib / nab-sirolimus / pazopanib).</li>
+    </ul>
+  </div>
+
+  <p class="foot">Criteria from ClinicalTrials.gov NCT06725758 · record last updated 2026-05-07. Re-check the live listing right before the Houston visit in case it changed.</p>
+
+</div>
+</body>
+</html>
+`;
 var S_kafAddOpen = false;
 var S_kafEditId = null;
 var S_addMedType = 'scheduled';
@@ -1626,7 +1881,7 @@ function tx(text) { return document.createTextNode(String(text || '')); }
 // ── BOUNDARY GATEWAYS — only valid entry points to raw state ────────────────
 function getEventsSnapshot(){ return Array.isArray(S.events)?S.events:[]; }
 function getDaySnapshot(){ return S.day||{}; }
-function getDayBucket(dk){ try{return lsGet('day-'+dk)||null;}catch(e){return null;} }
+function getDayBucket(dk){ try{ if(dk===TODAY) return S.day||null; return lsGet('day-'+dk)||null; }catch(e){return null;} }
 // ── END BOUNDARY GATEWAYS ─────────────────────────────────────────────────────
 
 function recomputeCycleDates(){
@@ -2363,6 +2618,7 @@ function renderPatchWatch(){
 
 function renderHome() {
   if(S.role==='friends') return renderSquad();
+  if(S_teadesOpen && S.role==='patient') return renderTeadesPrep();
 
   var d = S.day || empty();
   if(S.role==='fam'){
@@ -2493,6 +2749,7 @@ function renderHome() {
     var _teethCard = renderTeethClean();
     var _waddlesCard = renderWaddlesCard();
     var _kennyCard = renderKennyPointsCard();
+    if(S.role==='patient') px.appendChild(renderTeadesBanner());
     if(_patchWatch) px.appendChild(_patchWatch);
     px.appendChild(stats);
     if(_kennyCard) px.appendChild(_kennyCard);
@@ -2505,6 +2762,7 @@ function renderHome() {
     var px2 = mk('div',{cls:'px',css:'padding-top:16px;'});
     var _patchWatch2 = renderPatchWatch();
     var _kennyCard2 = renderKennyPointsCard();
+    if(S.role==='patient') px2.appendChild(renderTeadesBanner());
     if(_patchWatch2) px2.appendChild(_patchWatch2);
     px2.appendChild(stats);
     if(_kennyCard2) px2.appendChild(_kennyCard2);
@@ -2512,6 +2770,45 @@ function renderHome() {
   }
   
     return wrap;
+}
+
+function renderTeadesBanner(){
+  var btn=mk('button',{css:'width:100%;display:flex;align-items:center;gap:10px;background:var(--ink);border:none;border-radius:var(--r-md);padding:13px 14px;margin-bottom:14px;cursor:pointer;text-align:left;'});
+  var icW=mk('div',{css:'width:34px;height:34px;flex-shrink:0;border-radius:9px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;'});
+  var ic=lc('flask-conical',17,'#fff'); if(ic) icW.appendChild(ic);
+  btn.appendChild(icW);
+  var txt=mk('div',{css:'flex:1;min-width:0;'});
+  txt.appendChild(mk('div',{css:'font-size:13px;font-weight:800;color:#fff;',txt:'TEADES Trial Prep'}));
+  txt.appendChild(mk('div',{css:'font-size:10.5px;color:rgba(255,255,255,.7);margin-top:1px;',txt:'Eligibility, hurdles, and Wilky prep for Aug 19'}));
+  btn.appendChild(txt);
+  var chev=lc('chevron-right',16,'rgba(255,255,255,.7)'); if(chev) btn.appendChild(chev);
+  btn.addEventListener('click',function(){ S_teadesOpen=true; R(); });
+  return btn;
+}
+
+function renderTeadesPrep(){
+  var wrap=mk('div',{cls:'fi'});
+  var hdRow=mk('div',{css:'display:flex;align-items:center;gap:6px;padding:14px 16px 0;'});
+  var back=mk('button',{css:'background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;display:flex;align-items:center;flex-shrink:0;'});
+  var backIc=lc('chevron-left',20,'var(--ink3)'); if(backIc) back.appendChild(backIc);
+  back.addEventListener('click',function(){ S_teadesOpen=false; R(); });
+  hdRow.appendChild(back);
+  hdRow.appendChild(mk('div',{css:'font-size:15px;font-weight:800;color:var(--ink);',txt:'TEADES Trial Prep'}));
+  wrap.appendChild(hdRow);
+
+  var frame=mk('iframe',{css:'width:100%;border:none;display:block;margin-top:8px;'});
+  frame.setAttribute('srcdoc',TEADES_PREP_HTML);
+  frame.setAttribute('title','TEADES Trial Prep');
+  frame.style.height='600px';
+  frame.addEventListener('load',function(){
+    try{
+      var h=frame.contentWindow.document.documentElement.scrollHeight;
+      if(h) frame.style.height=(h+30)+'px';
+    }catch(_e){}
+  });
+  wrap.appendChild(frame);
+  wrap.appendChild(mk('div',{css:'height:24px;'}));
+  return wrap;
 }
 
 // ── LOG SCREEN ────────────────────────────────────────────────
