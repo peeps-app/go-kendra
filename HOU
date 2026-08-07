@@ -1,0 +1,507 @@
+import React, { useState, useEffect, useRef } from "react";
+
+// ---- palette + type: warm-modern / 70s editorial -------------------------
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..500&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');`;
+
+const CSS = `
+:root{
+  --paper:#F3ECDC; --surface:#FBF6EA; --ink:#2A231C; --ink-soft:#6D5F4E;
+  --line:#E3D7BF; --marigold:#BE852B; --marigold-tint:#F0E4C6;
+  --pine:#3B5A4D; --pine-tint:#DCE6DE; --brick:#A8442A;
+}
+*{box-sizing:border-box;}
+.wrap{background:var(--paper);color:var(--ink);min-height:100vh;
+  font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;}
+.shell{max-width:940px;margin:0 auto;padding:0 20px 96px;}
+.eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);}
+.serif{font-family:'Fraunces',Georgia,serif;font-weight:500;letter-spacing:-.01em;}
+a.tel{color:inherit;text-decoration:none;border-bottom:1.5px solid var(--marigold);
+  font-family:'Space Mono',monospace;white-space:nowrap;}
+a.tel:hover{background:var(--marigold-tint);}
+a.link{color:var(--pine);text-decoration:none;border-bottom:1px solid var(--pine-tint);}
+a.link:hover{border-bottom-color:var(--pine);}
+
+/* hero */
+.hero{padding:64px 0 40px;border-bottom:1px solid var(--line);}
+.hero h1{font-size:clamp(38px,7vw,66px);line-height:1.02;margin:14px 0 0;}
+.route{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-top:26px;
+  font-family:'Space Mono',monospace;font-size:15px;}
+.route b{font-weight:700;} .route .arrow{color:var(--marigold);}
+.lede{font-size:18px;max-width:60ch;margin:22px 0 0;color:var(--ink-soft);}
+.howto{margin-top:26px;padding:14px 18px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;font-size:14.5px;color:var(--ink-soft);}
+.howto b{color:var(--ink);}
+
+/* section scaffolding */
+.sec{padding:52px 0 0;}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px;}
+.sec-num{font-family:'Space Mono',monospace;font-size:13px;color:var(--marigold);}
+.sec h2{font-size:clamp(26px,4vw,34px);margin:0;}
+.sec-sub{color:var(--ink-soft);font-size:16px;margin:6px 0 26px;max-width:64ch;}
+
+/* call board */
+.board{display:grid;gap:12px;}
+.callcard{background:var(--surface);border:1px solid var(--line);border-radius:15px;
+  padding:18px 18px 16px;transition:opacity .25s ease,border-color .2s ease;}
+.callcard.done{opacity:.52;border-color:var(--pine);}
+.cc-top{display:flex;gap:14px;align-items:flex-start;}
+.cc-rank{font-family:'Space Mono',monospace;font-size:13px;color:var(--marigold);
+  border:1px solid var(--marigold);border-radius:8px;padding:3px 8px;flex:none;margin-top:2px;}
+.cc-body{flex:1;min-width:0;}
+.cc-name{font-family:'Fraunces',serif;font-size:20px;line-height:1.2;}
+.cc-why{color:var(--ink-soft);font-size:14.5px;margin-top:4px;}
+.cc-nums{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;align-items:center;}
+.cc-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;
+  padding-top:13px;border-top:1px dashed var(--line);}
+.who{flex:1;min-width:150px;background:var(--paper);border:1px solid var(--line);
+  border-radius:9px;padding:8px 11px;font-family:inherit;font-size:14px;color:var(--ink);}
+.who::placeholder{color:#a9997f;} .who:focus{outline:none;border-color:var(--marigold);}
+.donebtn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:1.5px solid var(--pine);
+  background:transparent;color:var(--pine);border-radius:9px;padding:8px 13px;font-family:inherit;
+  font-size:13.5px;font-weight:600;transition:background .15s ease,color .15s ease;}
+.donebtn.on{background:var(--pine);color:#fff;}
+.box{width:15px;height:15px;border:1.5px solid currentColor;border-radius:4px;
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
+.boardnote{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-top:14px;font-size:13px;color:var(--ink-soft);}
+.reset{background:none;border:none;color:var(--brick);font-family:inherit;font-size:13px;cursor:pointer;text-decoration:underline;padding:0;}
+
+/* RV plan blocks */
+.plan{display:grid;gap:20px;}
+.pblock{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 22px 18px;}
+.pblock .ph{font-family:'Fraunces',serif;font-size:21px;margin:0;}
+.pblock .psub{font-size:13.5px;color:var(--ink-soft);margin:4px 0 14px;}
+.pcard{padding:15px 0;border-top:1px solid var(--line);}
+.pcard:first-of-type{border-top:none;}
+.pcard-h{display:flex;flex-wrap:wrap;align-items:center;gap:9px;}
+.pcard-h .pn{font-weight:700;font-size:16px;}
+.pcard-loc{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+.pcard-note{font-size:14px;color:var(--ink-soft);margin-top:6px;}
+.pricetag{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.02em;
+  background:#EFE7D3;color:#6a4e18;padding:2px 7px;border-radius:6px;white-space:nowrap;}
+.tag2{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 8px;border-radius:20px;background:var(--pine);color:#fff;}
+.tag2.alt{background:var(--marigold-tint);color:#8a5f16;}
+.tag2.gray{background:#E7DFCD;color:var(--ink-soft);}
+.gen{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.04em;padding:2px 8px;border-radius:6px;white-space:nowrap;}
+.gen.free{background:var(--pine-tint);color:var(--pine);}
+.gen.meter{background:#EAD9D2;color:var(--brick);}
+.gen.vary{background:var(--marigold-tint);color:#8a5f16;}
+.meta{display:flex;flex-wrap:wrap;gap:7px 14px;margin:8px 0 2px;align-items:center;font-size:13px;}
+
+/* warning block */
+.warn{background:#F4E2DB;border:1px solid #E3B9AB;border-left:5px solid var(--brick);border-radius:14px;padding:18px 20px;}
+.warn .wt{font-family:'Fraunces',serif;font-size:19px;color:var(--brick);margin:0 0 4px;}
+.warn .wl{font-size:13px;color:var(--brick);margin:0 0 12px;font-family:'Space Mono',monospace;letter-spacing:.04em;text-transform:uppercase;}
+.warn ul{margin:0;padding-left:18px;} .warn li{margin:9px 0;font-size:14.5px;color:var(--ink);line-height:1.5;}
+.warn b{color:var(--brick);}
+
+/* timeline */
+.tl-item{display:grid;grid-template-columns:104px 1fr;gap:14px;padding:13px 0;}
+.tl-item + .tl-item{border-top:1px dashed var(--line);}
+.tl-date{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--marigold);padding-top:2px;}
+.tl-body .tll{font-weight:700;font-size:15.5px;}
+.tl-body .tlm{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+.tl-body .tls{font-size:13.5px;color:var(--ink-soft);margin-top:5px;}
+.tl-item.hi .tl-date, .tl-item.hi .tll{color:var(--brick);}
+@media(max-width:560px){.tl-item{grid-template-columns:86px 1fr;gap:10px;}}
+.callout{background:var(--marigold-tint);border-radius:10px;padding:12px 15px;font-size:13.5px;color:var(--ink);margin-top:16px;}
+.callout b{color:var(--ink);}
+
+/* cost breakdown */
+.cb-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;color:var(--ink-soft);}
+.cb-row:first-child{border-top:none;}
+.cb-row .cbv{font-family:'Space Mono',monospace;white-space:nowrap;color:var(--ink);}
+.cb-row.total{border-top:2px solid var(--ink);font-weight:700;color:var(--ink);margin-top:2px;padding-top:11px;}
+.cb-row.total .cbv{color:var(--brick);}
+
+/* logistics accordions */
+.acc{border-bottom:1px solid var(--line);}
+.acc-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:none;border:none;cursor:pointer;padding:19px 4px;font-family:inherit;color:inherit;text-align:left;}
+.acc-btn .at{font-family:'Fraunces',serif;font-size:19px;}
+.chev{transition:transform .3s ease;color:var(--ink-soft);flex:none;}
+.chev.open{transform:rotate(180deg);}
+.exp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s ease;}
+.exp.open{grid-template-rows:1fr;} .exp>div{overflow:hidden;}
+.acc-inner{padding:0 4px 20px;font-size:15px;color:var(--ink-soft);}
+.acc-inner p{margin:0 0 11px;} .acc-inner b{color:var(--ink);}
+.acc-inner ul{margin:0 0 11px;padding-left:20px;} .acc-inner li{margin:6px 0;}
+
+/* caveats + footer */
+.cav{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px 26px 10px;}
+.cav li{margin:0 0 14px;font-size:14.5px;color:var(--ink-soft);line-height:1.5;}
+.cav b{color:var(--ink);}
+.foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-soft);}
+
+.rise{animation:rise .6s cubic-bezier(.2,.7,.3,1) both;}
+@keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+`;
+
+// ---- data ----------------------------------------------------------------
+const CALLS = [
+  { id: "rv", rank: "01", name: "Reserve the RV", why: "Get a quote from El Monte (Louviers) for a C25 or C30 for about Aug 14 to 27, and confirm their free unlimited generator. In parallel, search Outdoorsy and RVshare for a Denver rig that lists a big inverter plus lithium batteries, the only setup that powers her gear while driving without running a generator.", nums: [], web: "https://www.elmonterv.com/rv-rental-locations/denver-colorado" },
+  { id: "houbase", rank: "02", name: "Book the Houston base", why: "Reserve South Main RV Park for about Aug 17 to 24. Confirm the free weekday MD Anderson shuttle and ask for the weekly rate.", nums: [{ label: "South Main", v: "713-667-0120" }], web: "https://southmainrv.com" },
+  { id: "care", rank: "03", name: "Her care team + TPN pharmacy", why: "Confirm she's cleared for a multi-day drive, get a physician letter listing her oxygen and TPN supplies, confirm the exact fridge temp her TPN needs, and line up enough TPN for the round trip.", nums: [] },
+  { id: "power", rank: "04", name: "Buy the backup power kit", why: "Order a portable lithium power station (roughly 1,000 to 2,000Wh, pure sine) to run her oxygen and TPN pump during fuel stops and generator gaps, plus a medical-grade 12V cooler that holds ~40°F for the TPN bags. The RV fridge only reaches ~60°F, too warm for TPN.", nums: [] },
+  { id: "route", rank: "05", name: "Route overnight parks", why: "Reserve your two stops each way: Amarillo (night 1) and Wichita Falls (night 2). Full hookups so she has shore power overnight.", nums: [{ label: "Amarillo By Morning", v: "806-373-1431" }, { label: "Crossroads WF", v: "940-239-3664" }] },
+  { id: "car", rank: "06", name: "Book the Houston errand car", why: "Reserve a cheap economy car through Enterprise at the Texas Medical Center for about Aug 17 to 24. Book through MD Anderson Patient Travel Services and give the patient discount reference ID.", nums: [{ label: "MD Anderson travel", v: "888-848-9992" }, { label: "Enterprise TMC", v: "713-520-5558" }] },
+];
+
+const POWER = [
+  "No standard rental Class C has an inverter, so the 120V wall outlets are DEAD while driving unless the onboard generator is running. Plan to run the generator the whole time you're on the road.",
+  "The generator shuts off at 1/4 tank and must be off while refueling, so there WILL be short power gaps. Bridge them with a portable lithium power station (1,000 to 2,000Wh, pure sine) for her oxygen concentrator and TPN pump.",
+  "The RV fridge only cools to about 60°F, too warm for TPN. Keep TPN in a dedicated medical-grade 12V cooler at ~40°F, not the RV fridge.",
+  "At full-hookup parks you're fine: 30-amp shore power runs the concentrator, pump, and fridge indefinitely. Confirm each rig comes with the right shore cord and adapters.",
+];
+
+const RENTALS = [
+  { nm: "El Monte RV", loc: "Denver depot, Louviers CO (~21 mi from downtown)", price: "~$3,100–$3,500 all-in", gen: { k: "free", t: "generator: free + unlimited" }, tag: "best value + power", meta: [{ l: "elmonterv.com", u: "https://www.elmonterv.com/rv-rental-locations/denver-colorado" }], note: "The only major fleet with free unlimited generator use, which is exactly what running oxygen and a TPN pump for hours needs, and it undercuts Cruise America on total cost. C25 sleeps ~5, C30 sleeps more. Per-mile charge (~$0.35 to $0.39); ask if extending to 14 nights unlocks their all-inclusive unlimited-mileage rate. Still no inverter, so see the power note above." },
+  { nm: "Peer-to-peer (Outdoorsy / RVshare / RVezy)", loc: "Private owners across the Denver metro", price: "~$3,000–$4,200 all-in", gen: { k: "vary", t: "generator: varies by owner" }, tag: "best IF rig is upgraded", meta: [{ l: "outdoorsy.com", u: "https://www.outdoorsy.com" }], note: "The only realistic way to power her devices WHILE DRIVING without a running generator: some private rigs have big pure-sine inverters, lithium batteries, and solar. Filter for 'inverter,' 'lithium,' or 'solar' and ask the owner point-blank if it runs a 120V oxygen concentrator and infusion pump continuously and holds the fridge near 40°F. Many listings include unlimited miles, which matters over 2,000+ miles. Round-trip return to Denver, which you're doing." },
+  { nm: "Cruise America", loc: "8950 Federal Blvd, Federal Heights CO (also Frederick)", price: "~$4,300–$5,300 all-in", gen: { k: "meter", t: "generator: $3.50/hr (ask for ~$8/day)" }, tag: "fallback", meta: [{ t: "303-482-1120" }, { l: "cruiseamerica.com", u: "https://www.cruiseamerica.com" }], note: "Fine as a fallback, but the generator is metered at $3.50/hour, which gets expensive when you must run it for hours of medical power. Insist on their prepaid ~$8/day unlimited generator rate instead. C25 sleeps 5, C30 sleeps 7. ~100 mi/night included, $0.38/mile over." },
+  { nm: "Road Bear RV", loc: "7685 Dahlia St, Commerce City CO", price: "~$5,000–$6,500+ all-in", gen: { k: "vary", t: "generator: standard" }, tag: "pricier, newer", meta: [{ l: "roadbearrv.com", u: "https://www.roadbearrv.com" }], note: "Newer, nicer interiors if her comfort is the priority and the budget allows, but noticeably pricier with no generator-cost advantage over El Monte." },
+];
+
+const RENTALS_NOTE = "Also worth a quote but no real advantage here: Apollo (3280 Chambers Rd, Aurora) and Britz (Commerce City), both same parent company as Road Bear and El Monte. Skip for this trip: Escape Campervans and roadsurfer (van conversions with no generator and batteries that can't hold medical loads off shore power), and local dealers B&B RV, Windish, and Camping World, which have largely exited short-term rentals.";
+
+const ITINERARY = [
+  { date: "Fri Aug 15", tll: "Denver → Amarillo, TX", tlm: "~425 mi · ~7 hr", tls: "Overnight: Amarillo By Morning RV Park (806-373-1431), or AOK Camper Park for a cheaper basic stop." },
+  { date: "Sat Aug 16", tll: "Amarillo → Wichita Falls, TX", tlm: "~220 mi · ~3.5 hr, easy day", tls: "Overnight: Crossroads Luxury RV Park (940-239-3664). Concrete pads, gated, well reviewed." },
+  { date: "Sun Aug 17", tll: "Wichita Falls → Houston", tlm: "~430 mi · ~6.5 hr", tls: "Arrive your Houston base. If that leg feels too long for her, split it with a night near Dallas or Huntsville." },
+  { date: "Mon Aug 18", tll: "Rest and settle in Houston", tlm: "buffer day", tls: "Get set up on shore power, rest her before the appointment." },
+  { date: "Tue Aug 19", tll: "MD Anderson appointment", tlm: "", tls: "Take the South Main shuttle, or drive the errand car in.", hi: true },
+  { date: "~Sun Aug 24", tll: "Head home to Colorado", tlm: "reverse route, 2–3 gentle days", tls: "Same overnight stops back to Denver. Return the RV around Aug 27." },
+];
+
+const HOU_PARKS = [
+  { nm: "South Main RV Park", tag: "top pick", price: "~$46–$60/night", meta: [{ t: "713-667-0120" }, { l: "southmainrv.com", u: "https://southmainrv.com" }], note: "Free weekday shuttle right to the Texas Medical Center with MD Anderson stops, so she doesn't have to be loaded into the rig for every visit. About 3 miles to TMC, shaded, full hookups, and staff used to MD Anderson families (they'll even do after-hours runs for a small fee). Book Aug 17 to 24 and ask for the weekly rate." },
+  { nm: "Medical Center RV Resort", tag: "closest", price: "~$57–$84/night", meta: [{ t: "713-561-5335" }], note: "The closest of the bunch, very clean, wheelchair-friendly, free shuttle, 30 and 50-amp full hookups, with daily, weekly, and monthly rates." },
+  { nm: "Houston / Med Center KOA Holiday", tag: "backup", price: "KOA rates", meta: [{ t: "713-804-7840" }], note: "A KOA with shuttle service, gym and laundry, and a team used to long medical stays. Good if the other two are full." },
+];
+
+const HOU_CAR = {
+  nm: "Enterprise — Texas Medical Center",
+  loc: "6829 Greenbriar St, Houston TX 77030 (minutes from MD Anderson)",
+  price: "~$250–$400/week economy",
+  meta: [{ t: "713-520-5558" }, { t: "888-848-9992" }],
+  note: "Book through MD Anderson Patient Travel Services (888-848-9992) with reference ID #06C2863 for the patient discount (5% off base rates plus access to patient rates, which can beat the plain 5%). Pick up and return at the same Medical Center branch, so it's just for errands during the stay. Renters 21+; a debit card works with conditions; extra driver $15/day (spouse free).",
+  alt: "Cheaper-looking daily rates live at the airports (Dollar, Thrifty), but those are 20 to 30 minutes away and not worth it for daily errands. Turo can deliver a car near the Medical Center (~$63/day and up), but the Enterprise patient discount usually wins.",
+};
+
+const RV_COSTS = [
+  { label: "RV rental (El Monte C25, ~13 nights in Aug)", v: "~$3,100–$3,500" },
+  { label: "Fuel (~2,050 mi + generator hours, 8–10 mpg)", v: "~$700–$900" },
+  { label: "Houston park (~7 nights)", v: "~$400–$590" },
+  { label: "Route parks (4 nights, both ways)", v: "~$150–$220" },
+  { label: "Houston errand car (~1 week economy)", v: "~$250–$400" },
+  { label: "Backup lithium power station + cooler", v: "~$300–$600" },
+  { label: "All in", v: "~$5,000–$6,500", total: true },
+];
+
+const LOGISTICS = [
+  {
+    id: "power", t: "Power for her gear on the road",
+    body: (
+      <>
+        <p><b>At the parks:</b> every stop on the plan has full hookups, so 30-amp shore power runs her oxygen concentrator, the TPN pump, and a cooler overnight with no fuss.</p>
+        <p><b>While driving:</b> fleet rigs have no inverter, so the outlets only work with the generator running. Run it the whole drive, and lean on the backup lithium power station during fuel stops (the generator and engine must be off to refuel). Carry a full set of spare POC batteries too.</p>
+      </>
+    ),
+  },
+  {
+    id: "tpn", t: "TPN in the RV",
+    body: (
+      <>
+        <ul>
+          <li>Do NOT rely on the RV fridge for TPN. It only reaches about 60°F. Use a dedicated medical-grade 12V cooler at ~40°F, and confirm the exact temperature range with her pharmacy.</li>
+          <li>Carry a physician letter listing every supply (pump, bags, collapsible IV pole, lines, needles, vitamin vials). The Oley Foundation (oley.org) has sample travel letters.</li>
+          <li>Ask the home-infusion pharmacy for enough for the round trip, and have them ship refills to the Houston park if the stay runs long.</li>
+          <li>Keep flushing supplies and a sharps container within easy reach, not buried in storage.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "lodging", t: "Lodging backup (if you're not all in the RV)",
+    body: (
+      <>
+        <p>The RV covers her lodging, but if a companion wants a bed off the rig: <b>ACS Hope Lodge Houston</b> (6801 Ardmore St) is free with no income test for a patient in active treatment plus one caregiver. Call 713-848-8905.</p>
+        <p>MD Anderson's <b>Jesse H. Jones Rotary House</b> offers a discounted medical rate and accessible rooms. Guest relations 713-794-4750.</p>
+      </>
+    ),
+  },
+  {
+    id: "money", t: "Financial & travel grants",
+    body: (
+      <>
+        <p><b>National:</b> Family Reach (transportation grants during active treatment), Patient Advocate Foundation, and Good Days (travel assistance) can offset fuel and campground costs.</p>
+        <p><b>Colorado:</b> Ray of Hope Cancer Foundation (rayofhopecolorado.org) offers gas and travel grants for CO patients. Cancer League of Colorado helps with travel when treatment isn't available locally.</p>
+      </>
+    ),
+  },
+];
+
+const CAVEATS = [
+  ["Nail down the power before anything else.", " Fleet rigs have no inverter, so plan to run the generator while driving and bring a lithium power station for the gaps. If you can find a peer-to-peer rig with a big inverter and lithium batteries, that's the quietest, safest way to keep her gear running on the move."],
+  ["The RV fridge is too warm for TPN.", " It only cools to ~60°F. A medical-grade cooler at ~40°F is not optional. Confirm her TPN's temperature range with the pharmacy."],
+  ["Book now, it's peak August.", " El Monte and the medical-center RV spots both fill up. Reserve the RV and South Main before the rest of the list."],
+  ["Plan gentle legs for her.", " The last leg into Houston is the longest. Split it with a Dallas or Huntsville night if it's too much. You have a full buffer day (the 18th) before the appointment."],
+  ["Prices are estimates.", " RV rates swing with August demand and fees stack (generator, mileage, insurance, kit). Get the all-in quote in writing, and ask peer-to-peer hosts about unlimited mileage."],
+  ["Oxygen and fuel don't mix.", " Turn the generator and engine off when refueling, and handle her oxygen equipment carefully at fuel stops."],
+];
+
+// ---- small pieces --------------------------------------------------------
+function Chev({ open }) {
+  return (
+    <svg className={"chev" + (open ? " open" : "")} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+  );
+}
+function telHref(v) { return "tel:+1" + v.replace(/[^0-9]/g, ""); }
+function Meta({ meta }) {
+  if (!meta || meta.length === 0) return null;
+  return (
+    <div className="meta">
+      {meta.map((m, i) => m.u
+        ? <a key={i} className="link" href={m.u} target="_blank" rel="noreferrer">{m.l} ↗</a>
+        : <a key={i} className="tel" href={telHref(m.t)}>{m.t}</a>)}
+    </div>
+  );
+}
+
+// ---- app -----------------------------------------------------------------
+export default function App() {
+  const [openAcc, setOpenAcc] = useState({ power: true });
+  const [board, setBoard] = useState({});
+  const [loaded, setLoaded] = useState(false);
+  const saveTimer = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await window.storage.get("callboard-v4", true);
+        if (alive && r && r.value) setBoard(JSON.parse(r.value));
+      } catch (e) { /* first run or storage off */ }
+      if (alive) setLoaded(true);
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const persist = (next) => {
+    setBoard(next);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try { await window.storage.set("callboard-v4", JSON.stringify(next), true); } catch (e) { /* keep local */ }
+    }, 550);
+  };
+  const setWho = (id, v) => persist({ ...board, [id]: { ...board[id], who: v } });
+  const toggleDone = (id) => persist({ ...board, [id]: { ...board[id], done: !board[id]?.done } });
+  const resetBoard = () => persist({});
+  const toggleAcc = (id) => setOpenAcc((s) => ({ ...s, [id]: !s[id] }));
+  const doneCount = Object.values(board).filter((x) => x?.done).length;
+
+  return (
+    <div className="wrap">
+      <style>{FONTS + CSS}</style>
+      <div className="shell">
+
+        {/* hero */}
+        <header className="hero rise">
+          <div className="eyebrow">Kendra's RV plan · shared</div>
+          <h1 className="serif">Getting her to Houston.</h1>
+          <div className="route">
+            <span><b>Denver, CO</b></span>
+            <span className="arrow">———›</span>
+            <span><b>MD Anderson</b>, Houston</span>
+            <span style={{ color: "var(--marigold)" }}>·</span>
+            <span>Aug 19, 2026</span>
+          </div>
+          <p className="lede">We're taking an RV: our own quiet room on wheels, a bed she can lie on her side in, power and cooling for her gear, and space for all four of us. Below is where to rent it near Denver, how to keep her oxygen and TPN powered, and where to park minutes from her appointment.</p>
+          <div className="howto"><b>How to use this:</b> the calls in section 1 are the plan. Put your name on the ones you'll take and mark them done, so nobody double-dials and everyone sees where things stand. It syncs for anyone with the link.</div>
+        </header>
+
+        {/* call board */}
+        <section className="sec">
+          <div className="sec-head"><span className="sec-num">01</span><h2 className="serif">Day 1 calls</h2></div>
+          <p className="sec-sub">In order. Claim the ones you'll take. Tap a number to dial from your phone.</p>
+          <div className="board">
+            {CALLS.map((c) => {
+              const st = board[c.id] || {};
+              return (
+                <div key={c.id} className={"callcard" + (st.done ? " done" : "")}>
+                  <div className="cc-top">
+                    <span className="cc-rank">{c.rank}</span>
+                    <div className="cc-body">
+                      <div className="cc-name serif">{c.name}</div>
+                      <div className="cc-why">{c.why}</div>
+                      {(c.nums.length > 0 || c.web) && (
+                        <div className="cc-nums">
+                          {c.nums.map((n) => (
+                            <span key={n.v} style={{ fontSize: 13 }}>
+                              <span className="eyebrow" style={{ marginRight: 6 }}>{n.label}</span>
+                              <a className="tel" href={telHref(n.v)}>{n.v}</a>
+                            </span>
+                          ))}
+                          {c.web && (<a className="link" href={c.web} target="_blank" rel="noreferrer">website ↗</a>)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="cc-ctrl">
+                    <input className="who" placeholder="Who's on it?" value={st.who || ""} onChange={(e) => setWho(c.id, e.target.value)} disabled={!loaded} />
+                    <button className={"donebtn" + (st.done ? " on" : "")} onClick={() => toggleDone(c.id)}>
+                      <span className="box">{st.done ? "✓" : ""}</span>{st.done ? "Done" : "Mark done"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="boardnote">
+            <span>{loaded ? `${doneCount} of ${CALLS.length} done` : "syncing…"}</span>
+            <span>·</span><span>Shared with everyone who has the link.</span>
+            {doneCount > 0 && (<><span>·</span><button className="reset" onClick={resetBoard}>Reset board</button></>)}
+          </div>
+        </section>
+
+        {/* RV game plan */}
+        <section className="sec">
+          <div className="sec-head"><span className="sec-num">02</span><h2 className="serif">The RV plan</h2></div>
+          <p className="sec-sub">Rent it near Denver, keep her gear powered, drive down in gentle legs, and park minutes from MD Anderson. Leave the 15th, appointment the 19th, home around the 24th.</p>
+          <div className="plan">
+
+            {/* power warning first, it's the whole ballgame */}
+            <div className="warn">
+              <div className="wt serif">Read this first: powering her oxygen &amp; TPN</div>
+              <div className="wl">the one thing that makes or breaks the trip</div>
+              <ul>
+                {POWER.map((p, i) => <li key={i} dangerouslySetInnerHTML={{ __html: p.replace(/DEAD/g, "<b>DEAD</b>").replace(/60°F/g, "<b>60°F</b>") }} />)}
+              </ul>
+            </div>
+
+            {/* rent */}
+            <div className="pblock">
+              <div className="ph serif">Rent it, near Denver</div>
+              <div className="psub">Ranked for this trip. The generator matters more than the sticker price, because she needs hours of power a day.</div>
+              {RENTALS.map((r) => (
+                <div key={r.nm} className="pcard">
+                  <div className="pcard-h">
+                    <span className="pn">{r.nm}</span>
+                    <span className={"tag2" + (r.tag.includes("best value") ? "" : r.tag.includes("fallback") || r.tag.includes("pricier") ? " gray" : " alt")}>{r.tag}</span>
+                    <span className="pricetag">{r.price}</span>
+                    <span className={"gen " + r.gen.k}>{r.gen.t}</span>
+                  </div>
+                  <div className="pcard-loc">{r.loc}</div>
+                  <Meta meta={r.meta} />
+                  <div className="pcard-note">{r.note}</div>
+                </div>
+              ))}
+              <div className="callout">{RENTALS_NOTE}</div>
+            </div>
+
+            {/* drive */}
+            <div className="pblock">
+              <div className="ph serif">The drive down</div>
+              <div className="psub">About 1,030 miles each way, split into easy days with power at every stop.</div>
+              <div className="tl">
+                {ITINERARY.map((d, i) => (
+                  <div key={i} className={"tl-item" + (d.hi ? " hi" : "")}>
+                    <div className="tl-date">{d.date}</div>
+                    <div className="tl-body">
+                      <div className="tll">{d.tll}</div>
+                      {d.tlm && <div className="tlm">{d.tlm}</div>}
+                      <div className="tls">{d.tls}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* base */}
+            <div className="pblock">
+              <div className="ph serif">Base near MD Anderson</div>
+              <div className="psub">Full-hookup parks by the Texas Medical Center, most with a free shuttle to the door.</div>
+              {HOU_PARKS.map((p) => (
+                <div key={p.nm} className="pcard">
+                  <div className="pcard-h">
+                    <span className="pn">{p.nm}</span>
+                    <span className={"tag2" + (p.tag === "top pick" ? "" : p.tag === "backup" ? " gray" : " alt")}>{p.tag}</span>
+                    <span className="pricetag">{p.price}</span>
+                  </div>
+                  <Meta meta={p.meta} />
+                  <div className="pcard-note">{p.note}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* errand car */}
+            <div className="pblock">
+              <div className="ph serif">A cheap errand car in Houston</div>
+              <div className="psub">So you're not moving the whole rig for a grocery run.</div>
+              <div className="pcard">
+                <div className="pcard-h">
+                  <span className="pn">{HOU_CAR.nm}</span>
+                  <span className="tag2">patient discount</span>
+                  <span className="pricetag">{HOU_CAR.price}</span>
+                </div>
+                <div className="pcard-loc">{HOU_CAR.loc}</div>
+                <Meta meta={HOU_CAR.meta} />
+                <div className="pcard-note">{HOU_CAR.note}</div>
+                <div className="pcard-note" style={{ marginTop: 8 }}>{HOU_CAR.alt}</div>
+              </div>
+            </div>
+
+            {/* cost */}
+            <div className="pblock">
+              <div className="ph serif">What it runs</div>
+              <div className="psub">A ballpark for the full round trip. Get the all-in rental quote in writing.</div>
+              {RV_COSTS.map((c, i) => (
+                <div key={i} className={"cb-row" + (c.total ? " total" : "")}>
+                  <span>{c.label}</span><span className="cbv">{c.v}</span>
+                </div>
+              ))}
+              <div className="callout">This also covers her lodging the whole stay, so it offsets hotels for the crew. Ask MD Anderson Social Work (713-792-6195) about fuel and travel grants to bring it down further.</div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* logistics */}
+        <section className="sec">
+          <div className="sec-head"><span className="sec-num">03</span><h2 className="serif">Her gear, sorted</h2></div>
+          <p className="sec-sub">Power, TPN, a lodging backup, and help with the bills.</p>
+          <div>
+            {LOGISTICS.map((l) => {
+              const open = !!openAcc[l.id];
+              return (
+                <div key={l.id} className="acc">
+                  <button className="acc-btn" onClick={() => toggleAcc(l.id)} aria-expanded={open}>
+                    <span className="at serif">{l.t}</span><Chev open={open} />
+                  </button>
+                  <div className={"exp" + (open ? " open" : "")}>
+                    <div><div className="acc-inner">{l.body}</div></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* caveats */}
+        <section className="sec">
+          <div className="sec-head"><span className="sec-num">04</span><h2 className="serif">Read before you book</h2></div>
+          <p className="sec-sub">The honest fine print, so no one burns a day or a deposit.</p>
+          <div className="cav">
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {CAVEATS.map(([h, b], i) => (<li key={i}><b>{h}</b>{b}</li>))}
+            </ul>
+          </div>
+        </section>
+
+        <footer className="foot">
+          Put together to make the booking easier to split up. Prices and availability shift with the season, so confirm on each call. The move that unlocks the rest: lock the RV (with its power sorted) and the Houston park, then work down the list.
+        </footer>
+      </div>
+    </div>
+  );
+}
