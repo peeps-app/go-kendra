@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3ECDC">
+<title>Getting her to Houston — Kendra's RV plan</title>
+<meta name="description" content="The RV plan for getting Kendra from Denver to MD Anderson: where to rent near Denver, how to keep her oxygen and TPN powered, where to park by the hospital, and a cheap errand car.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..500&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3ECDC; --surface:#FBF6EA; --ink:#2A231C; --ink-soft:#6D5F4E;
+  --line:#E3D7BF; --marigold:#BE852B; --marigold-tint:#F0E4C6;
+  --pine:#3B5A4D; --pine-tint:#DCE6DE; --brick:#A8442A;
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);min-height:100vh;
+  font-family:'Hanken Grotesk',system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.55;overflow-wrap:break-word;}
+.shell{max-width:940px;margin:0 auto;padding:0 20px 96px;}
+.eyebrow{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);}
+.serif{font-family:'Fraunces',Georgia,serif;font-weight:500;letter-spacing:-.01em;}
+a.tel{color:inherit;text-decoration:none;border-bottom:1.5px solid var(--marigold);
+  font-family:'Space Mono',monospace;white-space:nowrap;}
+a.tel:active,a.tel:hover{background:var(--marigold-tint);}
+a.link{color:var(--pine);text-decoration:none;border-bottom:1px solid var(--pine-tint);}
+a.link:active,a.link:hover{border-bottom-color:var(--pine);}
+
+/* hero */
+.hero{padding:64px 0 40px;border-bottom:1px solid var(--line);}
+.hero h1{font-size:clamp(36px,8vw,66px);line-height:1.02;margin:14px 0 0;}
+.route{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-top:24px;
+  font-family:'Space Mono',monospace;font-size:14px;}
+.route b{font-weight:700;} .route .arrow{color:var(--marigold);}
+.lede{font-size:clamp(16px,4.3vw,18px);max-width:60ch;margin:22px 0 0;color:var(--ink-soft);}
+.howto{margin-top:24px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;font-size:14px;color:var(--ink-soft);}
+.howto b{color:var(--ink);}
+
+/* sections */
+.sec{padding:48px 0 0;}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px;}
+.sec-num{font-family:'Space Mono',monospace;font-size:13px;color:var(--marigold);}
+.sec h2{font-size:clamp(25px,6vw,34px);margin:0;}
+.sec-sub{color:var(--ink-soft);font-size:15.5px;margin:6px 0 24px;max-width:64ch;}
+
+/* call board */
+.board{display:grid;gap:12px;}
+.callcard{background:var(--surface);border:1px solid var(--line);border-radius:15px;
+  padding:17px 16px 15px;transition:opacity .25s ease,border-color .2s ease;}
+.callcard.done{opacity:.55;border-color:var(--pine);}
+.cc-top{display:flex;gap:12px;align-items:flex-start;}
+.cc-rank{font-family:'Space Mono',monospace;font-size:13px;color:var(--marigold);
+  border:1px solid var(--marigold);border-radius:8px;padding:3px 8px;flex:none;margin-top:2px;}
+.cc-body{flex:1;min-width:0;}
+.cc-name{font-family:'Fraunces',serif;font-size:19px;line-height:1.2;}
+.cc-why{color:var(--ink-soft);font-size:14px;margin-top:4px;}
+.cc-nums{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;align-items:center;}
+.cc-nums .lbl{margin-right:6px;}
+.cc-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;
+  padding-top:13px;border-top:1px dashed var(--line);}
+.who{flex:1 1 140px;min-width:0;background:var(--paper);border:1px solid var(--line);
+  border-radius:9px;padding:9px 11px;font-family:inherit;font-size:15px;color:var(--ink);}
+.who::placeholder{color:#a9997f;} .who:focus{outline:none;border-color:var(--marigold);}
+.donebtn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:1.5px solid var(--pine);
+  background:transparent;color:var(--pine);border-radius:9px;padding:9px 14px;font-family:inherit;
+  font-size:14px;font-weight:600;transition:background .15s ease,color .15s ease;}
+.donebtn.on{background:var(--pine);color:#fff;}
+.box{width:15px;height:15px;border:1.5px solid currentColor;border-radius:4px;
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
+.boardnote{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:14px;font-size:13px;color:var(--ink-soft);}
+.reset{background:none;border:none;color:var(--brick);font-family:inherit;font-size:13px;cursor:pointer;text-decoration:underline;padding:0;}
+
+/* plan blocks */
+.plan{display:grid;gap:18px;}
+.pblock{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 18px 16px;}
+.pblock .ph{font-family:'Fraunces',serif;font-size:20px;margin:0;}
+.pblock .psub{font-size:13.5px;color:var(--ink-soft);margin:4px 0 12px;}
+.pcard{padding:15px 0;border-top:1px solid var(--line);}
+.pcard:first-of-type{border-top:none;}
+.pcard-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.pcard-h .pn{font-weight:700;font-size:16px;}
+.pcard-loc{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+.pcard-note{font-size:14px;color:var(--ink-soft);margin-top:6px;}
+.pricetag{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.02em;
+  background:#EFE7D3;color:#6a4e18;padding:2px 7px;border-radius:6px;white-space:nowrap;}
+.tag2{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 8px;border-radius:20px;background:var(--pine);color:#fff;}
+.tag2.alt{background:var(--marigold-tint);color:#8a5f16;}
+.tag2.gray{background:#E7DFCD;color:var(--ink-soft);}
+.gen{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.03em;padding:2px 8px;border-radius:6px;white-space:nowrap;}
+.gen.free{background:var(--pine-tint);color:var(--pine);}
+.gen.meter{background:#EAD9D2;color:var(--brick);}
+.gen.vary{background:var(--marigold-tint);color:#8a5f16;}
+.meta{display:flex;flex-wrap:wrap;gap:7px 14px;margin:8px 0 2px;align-items:center;font-size:13px;}
+
+/* warning */
+.warn{background:#F4E2DB;border:1px solid #E3B9AB;border-left:5px solid var(--brick);border-radius:14px;padding:18px 18px;}
+.warn .wt{font-family:'Fraunces',serif;font-size:18px;color:var(--brick);margin:0 0 4px;}
+.warn .wl{font-size:12px;color:var(--brick);margin:0 0 12px;font-family:'Space Mono',monospace;letter-spacing:.04em;text-transform:uppercase;}
+.warn ul{margin:0;padding-left:18px;} .warn li{margin:9px 0;font-size:14.5px;color:var(--ink);line-height:1.5;}
+.warn b{color:var(--brick);}
+
+/* timeline */
+.tl-item{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:13px 0;}
+.tl-item + .tl-item{border-top:1px dashed var(--line);}
+.tl-date{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--marigold);padding-top:2px;}
+.tll{font-weight:700;font-size:15.5px;}
+.tlm{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+.tls{font-size:13.5px;color:var(--ink-soft);margin-top:5px;}
+.tl-item.hi .tl-date,.tl-item.hi .tll{color:var(--brick);}
+
+.callout{background:var(--marigold-tint);border-radius:10px;padding:12px 14px;font-size:13.5px;color:var(--ink);margin-top:14px;}
+.callout b{color:var(--ink);}
+
+/* cost */
+.cb-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;color:var(--ink-soft);}
+.cb-row:first-child{border-top:none;}
+.cb-row .cbl{flex:1 1 auto;min-width:0;} .cb-row .cbv{font-family:'Space Mono',monospace;white-space:nowrap;color:var(--ink);}
+.cb-row.total{border-top:2px solid var(--ink);font-weight:700;color:var(--ink);margin-top:2px;padding-top:11px;}
+.cb-row.total .cbv{color:var(--brick);}
+
+/* accordions */
+.acc{border-bottom:1px solid var(--line);}
+.acc-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:none;border:none;cursor:pointer;padding:18px 4px;font-family:inherit;color:inherit;text-align:left;}
+.acc-btn .at{font-family:'Fraunces',serif;font-size:18px;}
+.chev{transition:transform .3s ease;color:var(--ink-soft);flex:none;}
+.chev.open{transform:rotate(180deg);}
+.exp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s ease;}
+.exp.open{grid-template-rows:1fr;} .exp>div{overflow:hidden;}
+.acc-inner{padding:0 4px 20px;font-size:14.5px;color:var(--ink-soft);}
+.acc-inner p{margin:0 0 11px;} .acc-inner b{color:var(--ink);}
+.acc-inner ul{margin:0 0 11px;padding-left:20px;} .acc-inner li{margin:6px 0;}
+
+/* caveats + footer */
+.cav{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 20px 8px;}
+.cav ul{margin:0;padding-left:18px;}
+.cav li{margin:0 0 14px;font-size:14px;color:var(--ink-soft);line-height:1.5;}
+.cav b{color:var(--ink);}
+.foot{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-soft);}
+
+.rise{animation:rise .6s cubic-bezier(.2,.7,.3,1) both;}
+@keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+/* ---- mobile ---- */
+@media (max-width:600px){
+  .shell{padding:0 15px 72px;}
+  .hero{padding:40px 0 30px;}
+  .sec{padding:38px 0 0;}
+  .pblock{padding:18px 15px 13px;}
+  .warn{padding:16px 15px;}
+  .cav{padding:20px 16px 6px;}
+  .tl-item{grid-template-columns:76px 1fr;gap:10px;}
+  .cc-top{gap:11px;}
+  .donebtn,.who{padding:10px 13px;}
+}
+@media (max-width:380px){
+  .tl-item{grid-template-columns:1fr;gap:3px;}
+  .tl-date{padding-top:0;}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- hero -->
+  <header class="hero rise">
+    <div class="eyebrow">Kendra's RV plan · shared</div>
+    <h1 class="serif">Getting her to Houston.</h1>
+    <div class="route">
+      <span><b>Denver, CO</b></span>
+      <span class="arrow">———›</span>
+      <span><b>MD Anderson</b>, Houston</span>
+      <span style="color:var(--marigold)">·</span>
+      <span>Aug 19, 2026</span>
+    </div>
+    <p class="lede">We're taking an RV: our own quiet room on wheels, a bed she can lie on her side in, power and cooling for her gear, and space for all four of us. Below is where to rent it near Denver, how to keep her oxygen and TPN powered, and where to park minutes from her appointment.</p>
+    <div class="howto"><b>How to use this:</b> the calls in section 1 are the plan. Put your name on the ones you'll take and mark them done so nobody double-dials. Your notes save on this device.</div>
+  </header>
+
+  <!-- 01 calls -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="serif">Day 1 calls</h2></div>
+    <p class="sec-sub">In order. Claim the ones you'll take. Tap a number to dial from your phone.</p>
+    <div class="board" id="board"></div>
+    <div class="boardnote">
+      <span id="donecount">0 of 6 done</span><span>·</span>
+      <span>Notes save on this device.</span>
+      <span id="resetwrap" hidden>·<button class="reset" id="reset">Reset</button></span>
+    </div>
+  </section>
+
+  <!-- 02 RV plan -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="serif">The RV plan</h2></div>
+    <p class="sec-sub">Rent it near Denver, keep her gear powered, drive down in gentle legs, and park minutes from MD Anderson. Leave the 15th, appointment the 19th, home around the 24th.</p>
+    <div class="plan">
+
+      <div class="warn">
+        <div class="wt serif">Read this first: powering her oxygen &amp; TPN</div>
+        <div class="wl">the one thing that makes or breaks the trip</div>
+        <ul>
+          <li>No standard rental Class C has an inverter, so the 120V wall outlets are <b>DEAD</b> while driving unless the onboard generator is running. Plan to run the generator the whole time you're on the road.</li>
+          <li>The generator shuts off at 1/4 tank and must be off while refueling, so there <b>will</b> be short power gaps. Bridge them with a portable lithium power station (1,000 to 2,000Wh, pure sine) for her oxygen concentrator and TPN pump.</li>
+          <li>The RV fridge only cools to about <b>60°F</b>, too warm for TPN. Keep TPN in a dedicated medical-grade 12V cooler at ~40°F, not the RV fridge.</li>
+          <li>At full-hookup parks you're fine: 30-amp shore power runs the concentrator, pump, and cooler indefinitely. Confirm each rig comes with the right shore cord and adapters.</li>
+        </ul>
+      </div>
+
+      <!-- rent -->
+      <div class="pblock">
+        <div class="ph serif">Rent it, near Denver</div>
+        <div class="psub">Ranked for this trip. The generator matters more than the sticker price, because she needs hours of power a day.</div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">El Monte RV</span><span class="tag2">best value + power</span><span class="pricetag">~$3,100–$3,500 all-in</span><span class="gen free">generator: free + unlimited</span></div>
+          <div class="pcard-loc">Denver depot, Louviers CO (~21 mi from downtown)</div>
+          <div class="meta"><a class="link" href="https://www.elmonterv.com/rv-rental-locations/denver-colorado" target="_blank" rel="noreferrer">elmonterv.com ↗</a></div>
+          <div class="pcard-note">The only major fleet with free unlimited generator use, which is exactly what running oxygen and a TPN pump for hours needs, and it undercuts Cruise America on total cost. C25 sleeps ~5, C30 sleeps more. Per-mile charge (~$0.35 to $0.39); ask if extending to 14 nights unlocks their all-inclusive unlimited-mileage rate. Still no inverter, so see the power note above.</div>
+        </div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">Peer-to-peer (Outdoorsy / RVshare / RVezy)</span><span class="tag2 alt">best IF rig is upgraded</span><span class="pricetag">~$3,000–$4,200 all-in</span><span class="gen vary">generator: varies by owner</span></div>
+          <div class="pcard-loc">Private owners across the Denver metro</div>
+          <div class="meta"><a class="link" href="https://www.outdoorsy.com" target="_blank" rel="noreferrer">outdoorsy.com ↗</a></div>
+          <div class="pcard-note">The only realistic way to power her devices WHILE DRIVING without a running generator: some private rigs have big pure-sine inverters, lithium batteries, and solar. Filter for "inverter," "lithium," or "solar" and ask the owner point-blank if it runs a 120V oxygen concentrator and infusion pump continuously and holds the fridge near 40°F. Many listings include unlimited miles, which matters over 2,000+ miles. Round-trip return to Denver, which you're doing.</div>
+        </div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">Cruise America</span><span class="tag2 gray">fallback</span><span class="pricetag">~$4,300–$5,300 all-in</span><span class="gen meter">generator: $3.50/hr (ask for ~$8/day)</span></div>
+          <div class="pcard-loc">8950 Federal Blvd, Federal Heights CO (also Frederick)</div>
+          <div class="meta"><a class="tel" href="tel:+13034821120">303-482-1120</a><a class="link" href="https://www.cruiseamerica.com" target="_blank" rel="noreferrer">cruiseamerica.com ↗</a></div>
+          <div class="pcard-note">Fine as a fallback, but the generator is metered at $3.50/hour, which gets expensive when you must run it for hours of medical power. Insist on their prepaid ~$8/day unlimited generator rate instead. C25 sleeps 5, C30 sleeps 7. ~100 mi/night included, $0.38/mile over.</div>
+        </div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">Road Bear RV</span><span class="tag2 gray">pricier, newer</span><span class="pricetag">~$5,000–$6,500+ all-in</span><span class="gen vary">generator: standard</span></div>
+          <div class="pcard-loc">7685 Dahlia St, Commerce City CO</div>
+          <div class="meta"><a class="link" href="https://www.roadbearrv.com" target="_blank" rel="noreferrer">roadbearrv.com ↗</a></div>
+          <div class="pcard-note">Newer, nicer interiors if her comfort is the priority and the budget allows, but noticeably pricier with no generator-cost advantage over El Monte.</div>
+        </div>
+
+        <div class="callout">Also worth a quote but no real advantage here: Apollo (3280 Chambers Rd, Aurora) and Britz (Commerce City), both same parent company as Road Bear and El Monte. Skip for this trip: Escape Campervans and roadsurfer (van conversions with no generator and batteries that can't hold medical loads off shore power), and local dealers B&amp;B RV, Windish, and Camping World, which have largely exited short-term rentals.</div>
+      </div>
+
+      <!-- drive -->
+      <div class="pblock">
+        <div class="ph serif">The drive down</div>
+        <div class="psub">About 1,030 miles, done in two days with one overnight. Two long driving days, so keep her reclined with frequent short stops.</div>
+        <div class="tl">
+          <div class="tl-item"><div class="tl-date">Fri Aug 15</div><div><div class="tll">Denver → Childress, TX</div><div class="tlm">~545 mi · ~8.5 hr</div><div class="tls">Your one overnight, roughly the midpoint. Treetop RV Park (940-585-8747): concrete pads, shade, 30/50-amp full hookups. Or Love RV Park (940-537-1359, ~$30, simple full hookups).</div></div></div>
+          <div class="tl-item"><div class="tl-date">Sat Aug 16</div><div><div class="tll">Childress → Houston</div><div class="tlm">~490 mi · ~7.5 hr</div><div class="tls">Arrive your Houston base. Rest the 17th and 18th before the appointment.</div></div></div>
+          <div class="tl-item hi"><div class="tl-date">Tue Aug 19</div><div><div class="tll">MD Anderson appointment</div><div class="tls">Take the South Main shuttle, or drive the errand car in.</div></div></div>
+          <div class="tl-item"><div class="tl-date">~Sun Aug 24</div><div><div class="tll">Head home to Colorado</div><div class="tlm">one overnight in Childress</div><div class="tls">Same single stop back to Denver, return the RV around Aug 26.</div></div></div>
+        </div>
+        <div class="callout"><b>Two big days back to back.</b> Because she's fragile, plan frequent short stops, keep her reclined, and lean on the buffer days (the 17th and 18th) to recover before the appointment. If you'd rather a slightly shorter second day, or Childress is full, Vernon, TX is a good alternate overnight (Rocking A RV Park, 940-552-2821).</div>
+      </div>
+
+      <!-- base -->
+      <div class="pblock">
+        <div class="ph serif">Base near MD Anderson</div>
+        <div class="psub">Full-hookup parks by the Texas Medical Center, most with a free shuttle to the door.</div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">South Main RV Park</span><span class="tag2">top pick</span><span class="pricetag">~$46–$60/night</span></div>
+          <div class="meta"><a class="tel" href="tel:+17136670120">713-667-0120</a><a class="link" href="https://southmainrv.com" target="_blank" rel="noreferrer">southmainrv.com ↗</a></div>
+          <div class="pcard-note">Free weekday shuttle right to the Texas Medical Center with MD Anderson stops, so she doesn't have to be loaded into the rig for every visit. About 3 miles to TMC, shaded, full hookups, and staff used to MD Anderson families (they'll even do after-hours runs for a small fee). Book Aug 17 to 24 and ask for the weekly rate.</div>
+        </div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">Medical Center RV Resort</span><span class="tag2 alt">closest</span><span class="pricetag">~$57–$84/night</span></div>
+          <div class="meta"><a class="tel" href="tel:+17135615335">713-561-5335</a></div>
+          <div class="pcard-note">The closest of the bunch, very clean, wheelchair-friendly, free shuttle, 30 and 50-amp full hookups, with daily, weekly, and monthly rates.</div>
+        </div>
+
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">Houston / Med Center KOA Holiday</span><span class="tag2 gray">backup</span><span class="pricetag">KOA rates</span></div>
+          <div class="meta"><a class="tel" href="tel:+17138047840">713-804-7840</a></div>
+          <div class="pcard-note">A KOA with shuttle service, gym and laundry, and a team used to long medical stays. Good if the other two are full.</div>
+        </div>
+      </div>
+
+      <!-- errand car -->
+      <div class="pblock">
+        <div class="ph serif">A cheap errand car in Houston</div>
+        <div class="psub">So you're not moving the whole rig for a grocery run.</div>
+        <div class="pcard">
+          <div class="pcard-h"><span class="pn">Enterprise — Texas Medical Center</span><span class="tag2">patient discount</span><span class="pricetag">~$250–$400/week economy</span></div>
+          <div class="pcard-loc">6829 Greenbriar St, Houston TX 77030 (minutes from MD Anderson)</div>
+          <div class="meta"><a class="tel" href="tel:+17135205558">713-520-5558</a><a class="tel" href="tel:+18888489992">888-848-9992</a></div>
+          <div class="pcard-note">Book through MD Anderson Patient Travel Services (888-848-9992) with reference ID #06C2863 for the patient discount (5% off base rates plus access to patient rates, which can beat the plain 5%). Pick up and return at the same Medical Center branch, so it's just for errands during the stay. Renters 21+; a debit card works with conditions; extra driver $15/day (spouse free).</div>
+          <div class="pcard-note" style="margin-top:8px">Cheaper-looking daily rates live at the airports (Dollar, Thrifty), but those are 20 to 30 minutes away and not worth it for daily errands. Turo can deliver a car near the Medical Center (~$63/day and up), but the Enterprise patient discount usually wins.</div>
+        </div>
+      </div>
+
+      <!-- cost -->
+      <div class="pblock">
+        <div class="ph serif">What it runs</div>
+        <div class="psub">A ballpark for the full round trip. Get the all-in rental quote in writing.</div>
+        <div class="cb-row"><span class="cbl">RV rental (El Monte C25, ~11–12 nights in Aug)</span><span class="cbv">~$2,900–$3,400</span></div>
+        <div class="cb-row"><span class="cbl">Fuel (~2,050 mi + generator hours, 8–10 mpg)</span><span class="cbv">~$700–$900</span></div>
+        <div class="cb-row"><span class="cbl">Houston park (~8 nights)</span><span class="cbv">~$450–$640</span></div>
+        <div class="cb-row"><span class="cbl">Overnight park (1 night each way)</span><span class="cbv">~$60–$110</span></div>
+        <div class="cb-row"><span class="cbl">Houston errand car (~1 week economy)</span><span class="cbv">~$250–$400</span></div>
+        <div class="cb-row"><span class="cbl">Backup lithium power station + cooler</span><span class="cbv">~$300–$600</span></div>
+        <div class="cb-row total"><span class="cbl">All in</span><span class="cbv">~$4,700–$6,100</span></div>
+        <div class="callout">This also covers her lodging the whole stay, so it offsets hotels for the crew. Ask MD Anderson Social Work (713-792-6195) about fuel and travel grants to bring it down further.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 03 gear -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="serif">Her gear, sorted</h2></div>
+    <p class="sec-sub">Power, TPN, a lodging backup, and help with the bills.</p>
+    <div id="accs">
+      <div class="acc" data-open="1">
+        <button class="acc-btn"><span class="at serif">Power for her gear on the road</span><svg class="chev open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="exp open"><div><div class="acc-inner">
+          <p><b>At the parks:</b> every stop on the plan has full hookups, so 30-amp shore power runs her oxygen concentrator, the TPN pump, and a cooler overnight with no fuss.</p>
+          <p><b>While driving:</b> fleet rigs have no inverter, so the outlets only work with the generator running. Run it the whole drive, and lean on the backup lithium power station during fuel stops (the generator and engine must be off to refuel). Carry a full set of spare POC batteries too.</p>
+        </div></div></div>
+      </div>
+      <div class="acc">
+        <button class="acc-btn"><span class="at serif">TPN in the RV</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="exp"><div><div class="acc-inner">
+          <ul>
+            <li>Do NOT rely on the RV fridge for TPN. It only reaches about 60°F. Use a dedicated medical-grade 12V cooler at ~40°F, and confirm the exact temperature range with her pharmacy.</li>
+            <li>Carry a physician letter listing every supply (pump, bags, collapsible IV pole, lines, needles, vitamin vials). The Oley Foundation (oley.org) has sample travel letters.</li>
+            <li>Ask the home-infusion pharmacy for enough for the round trip, and have them ship refills to the Houston park if the stay runs long.</li>
+            <li>Keep flushing supplies and a sharps container within easy reach, not buried in storage.</li>
+          </ul>
+        </div></div></div>
+      </div>
+      <div class="acc">
+        <button class="acc-btn"><span class="at serif">Lodging backup (if you're not all in the RV)</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="exp"><div><div class="acc-inner">
+          <p>The RV covers her lodging, but if a companion wants a bed off the rig: <b>ACS Hope Lodge Houston</b> (6801 Ardmore St) is free with no income test for a patient in active treatment plus one caregiver. Call 713-848-8905.</p>
+          <p>MD Anderson's <b>Jesse H. Jones Rotary House</b> offers a discounted medical rate and accessible rooms. Guest relations 713-794-4750.</p>
+        </div></div></div>
+      </div>
+      <div class="acc">
+        <button class="acc-btn"><span class="at serif">Financial &amp; travel grants</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="exp"><div><div class="acc-inner">
+          <p><b>National:</b> Family Reach (transportation grants during active treatment), Patient Advocate Foundation, and Good Days (travel assistance) can offset fuel and campground costs.</p>
+          <p><b>Colorado:</b> Ray of Hope Cancer Foundation (rayofhopecolorado.org) offers gas and travel grants for CO patients. Cancer League of Colorado helps with travel when treatment isn't available locally.</p>
+        </div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 caveats -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="serif">Read before you book</h2></div>
+    <p class="sec-sub">The honest fine print, so no one burns a day or a deposit.</p>
+    <div class="cav">
+      <ul>
+        <li><b>Nail down the power before anything else.</b> Fleet rigs have no inverter, so plan to run the generator while driving and bring a lithium power station for the gaps. If you can find a peer-to-peer rig with a big inverter and lithium batteries, that's the quietest, safest way to keep her gear running on the move.</li>
+        <li><b>The RV fridge is too warm for TPN.</b> It only cools to ~60°F. A medical-grade cooler at ~40°F is not optional. Confirm her TPN's temperature range with the pharmacy.</li>
+        <li><b>Book now, it's peak August.</b> El Monte and the medical-center RV spots both fill up. Reserve the RV and South Main before the rest of the list.</li>
+        <li><b>Two long driving days.</b> With one overnight, each day is 7 to 8.5 hours. Keep her reclined, stop often, and lean on the buffer days (the 17th and 18th) to recover before the appointment. Vernon, TX is a good alternate overnight if Childress is full.</li>
+        <li><b>Prices are estimates.</b> RV rates swing with August demand and fees stack (generator, mileage, insurance, kit). Get the all-in quote in writing, and ask peer-to-peer hosts about unlimited mileage.</li>
+        <li><b>Oxygen and fuel don't mix.</b> Turn the generator and engine off when refueling, and handle her oxygen equipment carefully at fuel stops.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Put together to make the booking easier to split up. Prices and availability shift with the season, so confirm on each call. The move that unlocks the rest: lock the RV (with its power sorted) and the Houston park, then work down the list.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  // ---- Day 1 calls (rendered from data; board saves per-device) ----
+  var CALLS = [
+    {id:"rv",rank:"01",name:"Reserve the RV",why:"Get a quote from El Monte (Louviers) for a C25 or C30 for about Aug 14 to 27, and confirm their free unlimited generator. In parallel, search Outdoorsy and RVshare for a Denver rig that lists a big inverter plus lithium batteries, the only setup that powers her gear while driving without running a generator.",nums:[],web:"https://www.elmonterv.com/rv-rental-locations/denver-colorado"},
+    {id:"houbase",rank:"02",name:"Book the Houston base",why:"Reserve South Main RV Park for about Aug 17 to 24. Confirm the free weekday MD Anderson shuttle and ask for the weekly rate.",nums:[{label:"South Main",v:"713-667-0120"}],web:"https://southmainrv.com"},
+    {id:"care",rank:"03",name:"Her care team + TPN pharmacy",why:"Confirm she's cleared for a multi-day drive, get a physician letter listing her oxygen and TPN supplies, confirm the exact fridge temp her TPN needs, and line up enough TPN for the round trip.",nums:[]},
+    {id:"power",rank:"04",name:"Buy the backup power kit",why:"Order a portable lithium power station (roughly 1,000 to 2,000Wh, pure sine) to run her oxygen and TPN pump during fuel stops and generator gaps, plus a medical-grade 12V cooler that holds ~40°F for the TPN bags. The RV fridge only reaches ~60°F, too warm for TPN.",nums:[]},
+    {id:"route",rank:"05",name:"Reserve the overnight stop",why:"One night each way in Childress, TX, the midpoint. Book a full-hookup site so she has shore power overnight. Vernon, TX is the backup if Childress is full.",nums:[{label:"Treetop RV",v:"940-585-8747"},{label:"Love RV Park",v:"940-537-1359"}]},
+    {id:"car",rank:"06",name:"Book the Houston errand car",why:"Reserve a cheap economy car through Enterprise at the Texas Medical Center for about Aug 17 to 24. Book through MD Anderson Patient Travel Services and give the patient discount reference ID.",nums:[{label:"MD Anderson travel",v:"888-848-9992"},{label:"Enterprise TMC",v:"713-520-5558"}]}
+  ];
+  var KEY = "kendra-rv-board-v1";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e){ state = {}; }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  function tel(v){ return "tel:+1" + v.replace(/[^0-9]/g,""); }
+  function esc(s){ var d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+  var board = document.getElementById("board");
+  CALLS.forEach(function(c){
+    var st = state[c.id] || {};
+    var card = document.createElement("div");
+    card.className = "callcard" + (st.done ? " done" : "");
+    var numsHtml = "";
+    if (c.nums.length || c.web){
+      numsHtml += '<div class="cc-nums">';
+      c.nums.forEach(function(n){
+        numsHtml += '<span style="font-size:13px"><span class="eyebrow lbl">'+esc(n.label)+'</span><a class="tel" href="'+tel(n.v)+'">'+esc(n.v)+'</a></span>';
+      });
+      if (c.web){ numsHtml += '<a class="link" href="'+c.web+'" target="_blank" rel="noreferrer">website ↗</a>'; }
+      numsHtml += '</div>';
+    }
+    card.innerHTML =
+      '<div class="cc-top"><span class="cc-rank">'+c.rank+'</span><div class="cc-body">'+
+        '<div class="cc-name serif">'+esc(c.name)+'</div>'+
+        '<div class="cc-why">'+esc(c.why)+'</div>'+ numsHtml +
+      '</div></div>'+
+      '<div class="cc-ctrl">'+
+        '<input class="who" placeholder="Who\'s on it?" value="'+esc(st.who||"")+'">'+
+        '<button class="donebtn'+(st.done?" on":"")+'"><span class="box">'+(st.done?"✓":"")+'</span>'+(st.done?"Done":"Mark done")+'</button>'+
+      '</div>';
+    var input = card.querySelector(".who");
+    input.addEventListener("input", function(){
+      state[c.id] = state[c.id] || {}; state[c.id].who = input.value; save();
+    });
+    var btn = card.querySelector(".donebtn");
+    btn.addEventListener("click", function(){
+      state[c.id] = state[c.id] || {}; state[c.id].done = !state[c.id].done; save();
+      card.classList.toggle("done", !!state[c.id].done);
+      btn.classList.toggle("on", !!state[c.id].done);
+      btn.querySelector(".box").textContent = state[c.id].done ? "✓" : "";
+      btn.childNodes[1].nodeValue = state[c.id].done ? "Done" : "Mark done";
+      updateCount();
+    });
+    board.appendChild(card);
+  });
+
+  function updateCount(){
+    var done = CALLS.filter(function(c){ return state[c.id] && state[c.id].done; }).length;
+    document.getElementById("donecount").textContent = done + " of " + CALLS.length + " done";
+    document.getElementById("resetwrap").hidden = done === 0 &&
+      !CALLS.some(function(c){ return state[c.id] && state[c.id].who; });
+  }
+  updateCount();
+
+  document.getElementById("reset").addEventListener("click", function(){
+    state = {}; save();
+    document.querySelectorAll(".callcard").forEach(function(card,i){
+      card.classList.remove("done");
+      card.querySelector(".who").value = "";
+      var b = card.querySelector(".donebtn");
+      b.classList.remove("on"); b.querySelector(".box").textContent = "";
+      b.childNodes[1].nodeValue = "Mark done";
+    });
+    updateCount();
+  });
+
+  // ---- accordions ----
+  document.querySelectorAll("#accs .acc-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var exp = btn.nextElementSibling;
+      var chev = btn.querySelector(".chev");
+      exp.classList.toggle("open");
+      chev.classList.toggle("open");
+    });
+  });
+})();
+</script>
+</body>
+</html>
