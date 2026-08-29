@@ -1335,16 +1335,10 @@ function bootLoad(){
     });
   }
 
-  if(!S.user){
-    var remembered=loadRememberedUser();
-    if(remembered && !applyUserSession(remembered)) saveRememberedUser(null,false);
-  }
-  if(!validStoredUser(S.user) || S.role!==S.user.role){
-    saveRememberedUser(null,false);
-    S.user=null; S.role=null;
-  }
-  // Always land on the memorial screen first, even for a remembered session —
-  // it must be seen on every visit, not skippable via auto-login.
+  // No remembered session is ever restored — every visit requires fresh
+  // login. Purge any session data stored by an older build too.
+  try{ localStorage.removeItem('gk-remember-session'); localStorage.removeItem('gk-u'); }catch(_pe){}
+  S.user=null; S.role=null;
   S.v = 'pw';
   setupFirebaseSync(); // wire real-time listeners + initial Firebase pull
   window._bootPhase=false; // Firebase writes now safe
@@ -1841,13 +1835,15 @@ function renderPw() {
     +'<div id="pw-hero" style="width:140px;height:140px;margin-bottom:20px;"></div>'
     +'<div style="font-family:var(--serif);font-size:32px;font-style:italic;color:var(--pud);margin-bottom:14px;text-align:center;">Go Kendra</div>'
     +'<div style="font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:32px;text-align:center;max-width:340px;text-wrap:balance;">Kenny passed away at 10:00am on August 29, surrounded by family and well wishes from friends. She put up the strongest fight up until the end. There were lots of smiles and laughs. No tears. Just bopping along to Taylor Swift.</div>'
-    +'<input id="pw-user" type="text" autocapitalize="none" autocorrect="off" placeholder="Your name" onkeydown="if(event.key===\'Enter\')doLogin()" style="width:100%;max-width:320px;height:52px;border-radius:14px;border:1.5px solid var(--div);padding:0 16px;font-size:16px;font-family:var(--sans);outline:none;background:#fff;text-align:center;box-sizing:border-box;margin-bottom:10px;">'
-    +'<input id="pw-inp" type="password" placeholder="Password" onkeydown="if(event.key===\'Enter\')doLogin()" style="width:100%;max-width:320px;height:52px;border-radius:14px;border:1.5px solid var(--div);padding:0 16px;font-size:16px;font-family:var(--sans);outline:none;background:#fff;text-align:center;box-sizing:border-box;">'
-    +'<label style="width:100%;max-width:320px;display:flex;align-items:center;gap:9px;margin-top:10px;font-size:12.5px;color:var(--ink3);font-family:var(--sans);justify-content:center;">'
-      +'<input id="pw-remember" type="checkbox" checked style="width:18px;height:18px;accent-color:var(--pu);"> Keep me signed in on this device'
-    +'</label>'
-    +'<button onclick="doLogin()" style="margin-top:12px;width:100%;max-width:320px;height:52px;background:var(--ink);color:#fff;border:none;border-radius:26px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--sans);">Enter</button>'
-    +'<div id="pw-err" style="margin-top:12px;font-size:13px;color:var(--ro);min-height:20px;text-align:center;"></div>'
+    +'<details style="width:100%;max-width:320px;">'
+      +'<summary style="cursor:pointer;text-align:center;font-size:13px;color:var(--ink3);font-family:var(--sans);padding:8px 0;">Log in</summary>'
+      +'<div style="padding-top:12px;display:flex;flex-direction:column;gap:10px;">'
+        +'<input id="pw-user" type="text" autocapitalize="none" autocorrect="off" placeholder="Your name" onkeydown="if(event.key===\'Enter\')doLogin()" style="width:100%;height:52px;border-radius:14px;border:1.5px solid var(--div);padding:0 16px;font-size:16px;font-family:var(--sans);outline:none;background:#fff;text-align:center;box-sizing:border-box;">'
+        +'<input id="pw-inp" type="password" placeholder="Password" onkeydown="if(event.key===\'Enter\')doLogin()" style="width:100%;height:52px;border-radius:14px;border:1.5px solid var(--div);padding:0 16px;font-size:16px;font-family:var(--sans);outline:none;background:#fff;text-align:center;box-sizing:border-box;">'
+        +'<button onclick="doLogin()" style="width:100%;height:52px;background:var(--ink);color:#fff;border:none;border-radius:26px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--sans);">Enter</button>'
+        +'<div id="pw-err" style="font-size:13px;color:var(--ro);min-height:20px;text-align:center;"></div>'
+      +'</div>'
+    +'</details>'
     +'</div>';
   var hero=document.getElementById('pw-hero');
   if(hero) hero.innerHTML=SL;
@@ -7104,43 +7100,11 @@ function validStoredUser(u){
 function isKendraLoginName(name){
   return String(name||'').trim().toLowerCase()==='kendra';
 }
-function validAutoRestoreUser(u){
-  // Only newly issued limited cheer-squad sessions may auto-restore.
-  // Existing gokenny sessions without this version are forced to re-login.
-  // Patient/care/fam sessions require password entry every load for privacy.
-  return !!(validStoredUser(u)&&u.role==='friends'&&u.authVersion===AUTH_SESSION_VERSION);
-}
-function loadRememberedUser(){
-  try{
-    if(localStorage.getItem('gk-remember-session')!=='1') return null;
-    var raw=localStorage.getItem('gk-u');
-    var u=raw?JSON.parse(raw):null;
-    if(typeof u==='string'){ try{u=JSON.parse(u);}catch(_e){} }
-    if(!u || u.authVersion!==AUTH_SESSION_VERSION){
-      saveRememberedUser(null,false);
-      return null;
-    }
-    if(!validAutoRestoreUser(u)) return null;
-    return {role:'friends',name:String(u.name||'').trim(),authVersion:AUTH_SESSION_VERSION};
-  }catch(e){ return null; }
-}
-function saveRememberedUser(u, remember){
-  try{
-    if(remember&&validAutoRestoreUser(u)){
-      localStorage.setItem('gk-remember-session','1');
-      localStorage.setItem('gk-u',JSON.stringify({role:'friends',name:u.name,authVersion:AUTH_SESSION_VERSION}));
-    } else {
-      localStorage.removeItem('gk-remember-session');
-      localStorage.removeItem('gk-u');
-    }
-  }catch(e){}
-}
 function applyUserSession(u){
   if(!validStoredUser(u)) return false;
   var role=String(u.role||'');
   if(role==='patient' && !isKendraLoginName(u.name)) return false;
   S.user={role:role,name:u.name};
-  if(role==='friends') S.user.authVersion=AUTH_SESSION_VERSION;
   S.role=role;
   S.v='app';
   S.tab=(role==='friends')?'squad':'home';
@@ -7148,7 +7112,6 @@ function applyUserSession(u){
 }
 
 function doLogout(){
-  saveRememberedUser(null,false);
   S.user=null; S.role=null; S.v='pw'; S.tab='home';
   R();
 }
@@ -7163,7 +7126,6 @@ function doLogin(){
   if(!uname){ if(err) err.textContent='Please enter your name'; return; }
   // Password alone decides role, except Kendra view requires BOTH Kendra's password and name Kendra.
   // Cheer password is checked first and can only produce limited friends view.
-  saveRememberedUser(null,false);
   var matched = false, role=null;
   if(v===PW_FRIENDS || v===AUTH_PASSWORDS.cheer){ role='friends'; matched=true; }
   else if(v===PW_PATIENT){
@@ -7176,15 +7138,11 @@ function doLogin(){
   else if(v===PW_CARE){ role='care'; matched=true; }
   else if(v===PW_FAM){ role='fam'; matched=true; }
   if(matched){
-    var rememberEl=document.getElementById('pw-remember');
-    var remember=rememberEl?!!rememberEl.checked:true;
     applyUserSession({role:role,name:uname});
-    saveRememberedUser(S.user,remember);
     try{ R(); }catch(e){}
   } else {
     if(err) err.textContent='Incorrect password';
   }
-  // early return guard already removed
   return;
 }
 
