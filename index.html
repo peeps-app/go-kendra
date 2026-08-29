@@ -1343,7 +1343,9 @@ function bootLoad(){
     saveRememberedUser(null,false);
     S.user=null; S.role=null;
   }
-  S.v = S.user ? 'app' : 'pw';
+  // Always land on the memorial screen first, even for a remembered session —
+  // it must be seen on every visit, not skippable via auto-login.
+  S.v = 'pw';
   setupFirebaseSync(); // wire real-time listeners + initial Firebase pull
   window._bootPhase=false; // Firebase writes now safe
   R();
