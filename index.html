@@ -2,6 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+// ── FORCE-FRESH CHECK ────────────────────────────────────────────
+// "Add to Home Screen" apps on iOS/Android can get stuck showing a
+// stale cached copy indefinitely, with no reload button available in
+// standalone mode. This runs on every open (and every time the app is
+// resumed from the background) and actively re-fetches this exact page
+// straight from the server, bypassing any cache. If the server's copy
+// is newer than what's currently running, it forces a real reload.
+// Bump APP_VERSION on every deploy that must reach installed devices.
+var APP_VERSION = 'memorial-2026-08-29-2';
+(function(){
+  function checkForFresh(){
+    try{
+      fetch(location.pathname, {cache:'no-store'}).then(function(r){ return r.text(); }).then(function(html){
+        var m = html.match(/var APP_VERSION = '([^']+)'/);
+        if(m && m[1] && m[1] !== APP_VERSION){
+          location.replace(location.pathname + '?fresh=' + Date.now());
+        }
+      }).catch(function(){});
+    }catch(_e){}
+  }
+  checkForFresh();
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='visible') checkForFresh();
+  });
+  setInterval(checkForFresh, 120000); // safety net every 2 minutes while open
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Go Kendra</title>
